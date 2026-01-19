@@ -670,24 +670,20 @@ let appState = {
   payments: [],
   usdPurchases: [],
   currentTab: 'dashboard',
-  settings: {
-    defaultBuyRate: 255,
-    defaultSellRate: 357,
-    currency: 'DZD',
-    storageMode: 'local',
-    backendUrl: '',
-    autoSaveEnabled: true,
-    autoSaveIntervalMinutes: 60,
-    cloudProvider: 'firebase',
-    firebaseConfig: {
-      apiKey: '',
-      authDomain: '',
-      projectId: '',
-      storageBucket: '',
-      messagingSenderId: '',
-      appId: ''
-    }
+settings: {
+  storageMode: 'cloud',
+  cloudProvider: 'firebase',
+  autoSaveEnabled: true,
+
+  firebaseConfig: {
+    apiKey: "AIzaSyC-1uQnZRLzqUoTMQ_oaXNZh-QQROfOEqw",
+    authDomain: "sponsorhichem.firebaseapp.com",
+    projectId: "sponsorhichem",
+    storageBucket: "sponsorhichem.firebasestorage.app",
+    messagingSenderId: "499965988228",
+    appId: "1:499965988228:web:ecdbd5b005c23b6d5c61d1"
   }
+}
 };
 
 let autoSaveTimer = null;
