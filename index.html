@@ -778,13 +778,13 @@ settings: {
 
 }
 };
- <script>
+
 // === FIREBASE CONFIG & INIT ===
 const firebaseConfig = { ... };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
-</script>
+
 
 
 
@@ -838,17 +838,7 @@ document.addEventListener('DOMContentLoaded', async function()
 } else {
   await loadFromLocalStorage();
 }
-<div id="loginScreen">
-  <div class="login-card">
-    <h2>Sponsoring Manager</h2>
 
-    <input type="email" id="loginEmail" placeholder="Email">
-    <input type="password" id="loginPassword" placeholder="Mot de passe">
-
-    <button onclick="login()">Connexion</button>
-    <p id="loginError"></p>
-  </div>
-</div>
                           #loginScreen {
   position: fixed;
   inset: 0;
