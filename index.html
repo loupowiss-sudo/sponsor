@@ -11,6 +11,73 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script>
+// === FIREBASE CONFIG & INIT ===
+const firebaseConfig = {
+  apiKey: "AIzaSyC-1uQnZRLzqUoTMQ_oaXNZh-QQROfOEqw",
+  authDomain: "sponsorhichem.firebaseapp.com",
+  projectId: "sponsorhichem",
+  storageBucket: "sponsorhichem.firebasestorage.app",
+  messagingSenderId: "499965988228",
+  appId: "1:499965988228:web:ecdbd5b005c23b6d5c61d1"
+};
+</script>
+<script>
+// === AUTHENTIFICATION EMAIL / MOT DE PASSE ===
+
+// Met à jour l'UI selon l'état de connexion
+function updateAuthUI(user) {
+  const appContainer = document.querySelector('.max-w-7xl');
+  const loginContainer = document.getElementById('loginContainer'); // à créer si pas encore
+  if (user) {
+    // Connecté
+    if (appContainer) appContainer.style.display = 'block';
+    if (loginContainer) loginContainer.style.display = 'none';
+  } else {
+    // Déconnecté
+    if (appContainer) appContainer.style.display = 'none';
+    if (loginContainer) loginContainer.style.display = 'flex';
+  }
+}
+
+// Connexion
+async function loginWithEmailPassword(email, password) {
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    showToast('Connexion réussie', 'success');
+  } catch (error) {
+    console.error('Erreur de connexion:', error);
+    showToast('Email ou mot de passe incorrect', 'error');
+  }
+}
+
+// Déconnexion
+async function logout() {
+  try {
+    await auth.signOut();
+    showToast('Déconnexion réussie', 'success');
+  } catch (error) {
+    console.error('Erreur de déconnexion:', error);
+    showToast('Erreur lors de la déconnexion', 'error');
+  }
+}
+
+// Listener global
+auth.onAuthStateChanged((user) => {
+  console.log('Auth state changed:', user ? user.email : 'not logged in');
+  updateAuthUI(user);
+});
+</script>
+<script>
+
+// Initialiser Firebase une seule fois
+firebase.initializeApp(firebaseConfig);
+
+// Références pratiques
+const auth = firebase.auth();
+const db = firebase.firestore();
+</script>
+
 
   <style>
     .fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
@@ -34,7 +101,32 @@
   </style>
 </head>
 <body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen p-4 md:p-6 font-sans text-slate-800">
-  <div class="max-w-7xl mx-auto space-y-6">
+  <!-- LOGIN CONTAINER -->
+  <div id="loginContainer" class="min-h-screen flex items-center justify-center">
+    <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-md w-full border">
+      <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">
+        Connexion Sponsoring Manager PRO
+      </h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold mb-2">Email</label>
+          <input id="loginEmail" type="email"
+                 class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-2">Mot de passe</label>
+          <input id="loginPassword" type="password"
+                 class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+        <button id="loginButton"
+                class="w-full mt-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow hover:shadow-lg transition-all">
+          Se connecter
+        </button>
+      </div>
+    </div>
+  </div>
+  
+<div class="max-w-7xl mx-auto space-y-6">
 
     <!-- HEADER -->
     <header class="bg-white rounded-3xl shadow-2xl p-6 md:p-8 border fade-in">
@@ -71,6 +163,11 @@
             <i class="fas fa-chart-bar"></i>
             <span class="hidden sm:inline">Statistiques</span>
           </button>
+            <button onclick="logout()"
+          class="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-gray-700 to-gray-900 text-white font-bold rounded-xl hover:shadow-lg transition-all shadow flex items-center gap-2">
+    <i class="fas fa-sign-out-alt"></i>
+    <span class="hidden sm:inline">Déconnexion</span>
+     </button>
         </div>
       </div>
     </header>
@@ -679,14 +776,6 @@ settings: {
   cloudProvider: 'firebase',
   autoSaveEnabled: true,
 
-  firebaseConfig: {
-    apiKey: "AIzaSyC-1uQnZRLzqUoTMQ_oaXNZh-QQROfOEqw",
-    authDomain: "sponsorhichem.firebaseapp.com",
-    projectId: "sponsorhichem",
-    storageBucket: "sponsorhichem.firebasestorage.app",
-    messagingSenderId: "499965988228",
-    appId: "1:499965988228:web:ecdbd5b005c23b6d5c61d1"
-  }
 }
 };
   firebase.initializeApp(appState.settings.firebaseConfig);
@@ -697,8 +786,23 @@ const db = firebase.firestore();
 
 let autoSaveTimer = null;
 
-document.addEventListener('DOMContentLoaded', async function() {
-  console.log('🚀 Sponsoring Manager PRO - Initialisation');
+document.addEventListener('DOMContentLoaded', async function()
+  // Bouton de connexion
+  const loginButton = document.getElementById('loginButton');
+  if (loginButton) {
+    loginButton.addEventListener('click', function() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      if (!email || !password) {
+        showToast('Email et mot de passe requis', 'error');
+        return;
+      }
+      loginWithEmailPassword(email, password);
+    });
+  }
+ {
+  
+    console.log('🚀 Sponsoring Manager PRO - Initialisation');
   if (appState.settings.storageMode === 'cloud') {
   await loadFromCloud();
     async function loadFromCloud() {
@@ -780,6 +884,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 <div id="app" style="display:none;">
   <!-- TOUT TON SITE EXISTANT ICI -->
+    const appContainer = document.querySelector('.max-w-7xl');
+  const loginContainer = document.getElementById('loginContainer');
+  if (appContainer) appContainer.style.display = 'none';
+  if (loginContainer) loginContainer.style.display = 'flex';
+
 </div>
 
   showTab('dashboard');
@@ -1435,16 +1544,15 @@ function saveToLocalStorage() {
       localStorage.setItem('sponsoringManagerData', JSON.stringify(appState));
       refreshAutoSaveTimer();
     });
-  } else if (appState.settings && appState.settings.storageMode === 'cloud' && appState.settings.cloudProvider === 'firebase' && appState.settings.firebaseConfig && appState.settings.firebaseConfig.apiKey) {
-    if (!window.firebase.apps.length) { firebase.initializeApp(appState.settings.firebaseConfig); }
-    const db = firebase.firestore();
-    db.collection('appState').doc('main').set(appState).then(() => {
-      refreshAutoSaveTimer();
-    }).catch(() => {
-      localStorage.setItem('sponsoringManagerData', JSON.stringify(appState));
-      refreshAutoSaveTimer();
-    });
-  } else {
+  } else if (appState.settings && appState.settings.storageMode === 'cloud'
+           && appState.settings.cloudProvider === 'firebase') {
+  db.collection('appState').doc('main').set(appState).then(() => {
+    refreshAutoSaveTimer();
+  }).catch(() => {
+    localStorage.setItem('sponsoringManagerData', JSON.stringify(appState));
+    refreshAutoSaveTimer();
+  });
+} else {
     localStorage.setItem('sponsoringManagerData', JSON.stringify(appState));
     refreshAutoSaveTimer();
   }
@@ -1463,20 +1571,19 @@ async function loadFromLocalStorage() {
         }
       }
     } catch (e) {}
-  } else if (appState.settings && appState.settings.storageMode === 'cloud' && appState.settings.cloudProvider === 'firebase' && appState.settings.firebaseConfig && appState.settings.firebaseConfig.apiKey) {
-    try {
-      if (!window.firebase.apps.length) { firebase.initializeApp(appState.settings.firebaseConfig); }
-      const db = firebase.firestore();
-      const snap = await db.collection('appState').doc('main').get();
-      if (snap.exists) {
-        const data = snap.data();
-        if (data && Object.keys(data).length) {
-          appState = data;
-          return;
-        }
+} else if (appState.settings && appState.settings.storageMode === 'cloud'
+           && appState.settings.cloudProvider === 'firebase') {
+  try {
+    const snap = await db.collection('appState').doc('main').get();
+    if (snap.exists) {
+      const data = snap.data();
+      if (data && Object.keys(data).length) {
+        appState = data;
+        return;
       }
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
+}
   if (saved) {
     appState = JSON.parse(saved);
   } else {
@@ -1502,14 +1609,22 @@ async function loadFromLocalStorage() {
       ],
       currentTab: 'dashboard',
       settings: {
-        defaultBuyRate: 255,
-        defaultSellRate: 357,
-        currency: 'DZD',
-        storageMode: 'local',
-        backendUrl: '',
-        autoSaveEnabled: true,
-        autoSaveIntervalMinutes: 60
-      }
+         defaultBuyRate: 255,
+         defaultSellRate: 357,
+         currency: 'DZD',
+            storageMode: 'cloud',           // utiliser Firestore
+  cloudProvider: 'firebase',
+  firebaseConfig: {
+    apiKey: "AIzaSyC-1uQnZRLzqUoTMQ_oaXNZh-QQROfOEqw",
+    authDomain: "sponsorhichem.firebaseapp.com",
+    projectId: "sponsorhichem",
+    storageBucket: "sponsorhichem.firebasestorage.app",
+    messagingSenderId: "499965988228",
+    appId: "1:499965988228:web:ecdbd5b005c23b6d5c61d1"
+  },
+  autoSaveEnabled: true,
+  autoSaveIntervalMinutes: 60
+}
     };
   }
 }
