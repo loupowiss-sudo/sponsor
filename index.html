@@ -36,16 +36,20 @@ const db   = firebase.firestore();
 
 // Met à jour l'UI selon l'état de connexion
 function updateAuthUI(user) {
-  const appContainer = document.querySelector('.max-w-7xl');
+  const appContainer   = document.querySelector('.max-w-7xl');
   const loginContainer = document.getElementById('loginContainer');
+
   if (user) {
-    if (appContainer) appContainer.style.display = 'block';
+    // Connecté
+    if (appContainer)   appContainer.style.display = 'block';
     if (loginContainer) loginContainer.style.display = 'none';
   } else {
-    if (appContainer) appContainer.style.display = 'none';
+    // Déconnecté
+    if (appContainer)   appContainer.style.display = 'none';
     if (loginContainer) loginContainer.style.display = 'flex';
   }
 }
+
 
 async function loginWithEmailPassword(email, password) {
   try {
@@ -774,10 +778,14 @@ settings: {
 
 }
 };
-  firebase.initializeApp(appState.settings.firebaseConfig);
-
+ <script>
+// === FIREBASE CONFIG & INIT ===
+const firebaseConfig = { ... };
+firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.firestore();
+const db   = firebase.firestore();
+</script>
+
 
 
 let autoSaveTimer = null;
