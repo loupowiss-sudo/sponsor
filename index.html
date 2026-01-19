@@ -689,6 +689,11 @@ settings: {
   }
 }
 };
+  firebase.initializeApp(appState.settings.firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
 
 let autoSaveTimer = null;
 
@@ -725,6 +730,57 @@ document.addEventListener('DOMContentLoaded', async function() {
 } else {
   await loadFromLocalStorage();
 }
+<div id="loginScreen">
+  <div class="login-card">
+    <h2>Sponsoring Manager</h2>
+
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Mot de passe">
+
+    <button onclick="login()">Connexion</button>
+    <p id="loginError"></p>
+  </div>
+</div>
+                          #loginScreen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #111, #1e1e1e);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-card {
+  background: white;
+  padding: 30px;
+  width: 320px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.login-card button {
+  width: 100%;
+  padding: 12px;
+  background: black;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+#loginError {
+  color: red;
+}
+
+
+<div id="app" style="display:none;">
+  <!-- TOUT TON SITE EXISTANT ICI -->
+</div>
 
   showTab('dashboard');
   updateDashboard();
@@ -752,6 +808,27 @@ function setupClientSearchListeners() {
     }
   });
 }
+  function login() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+
+  auth.signInWithEmailAndPassword(email, password)
+    .catch(error => {
+      document.getElementById('loginError').textContent = error.message;
+    });
+}
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+    loadFromCloud(); // charge les données
+  } else {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+});
 
 function showTab(tabId) {
   console.log('📌 Changement d\'onglet vers:', tabId);
