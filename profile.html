@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profil</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 480px; margin: 40px auto; }
+    button { padding: 10px; }
+    pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Profil</h1>
+  <pre id="me"></pre>
+  <button id="logout">Se déconnecter</button>
+  <script>
+    async function getMe() {
+      const res = await fetch('/me');
+      const data = await res.json();
+      if (!data.ok) window.location.href = '/';
+      else document.getElementById('me').textContent = JSON.stringify(data.user, null, 2);
+    }
+    getMe();
+    document.getElementById('logout').addEventListener('click', async () => {
+      const res = await fetch('/logout');
+      const data = await res.json();
+      if (data.ok) window.location.href = '/';
+    });
+  </script>
+</body>
+</html>
