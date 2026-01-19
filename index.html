@@ -9,8 +9,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
   <style>
     .fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
@@ -696,6 +696,32 @@ document.addEventListener('DOMContentLoaded', async function() {
   console.log('🚀 Sponsoring Manager PRO - Initialisation');
   if (appState.settings.storageMode === 'cloud') {
   await loadFromCloud();
+    async function loadFromCloud() {
+  try {
+    const doc = await db.collection('appState').doc('main').get();
+
+    if (doc.exists) {
+      const data = doc.data();
+      Object.assign(appState, data);
+      console.log('☁️ Données chargées depuis Firebase');
+    } else {
+      console.log('☁️ Aucun document cloud, création...');
+      await saveToCloud();
+    }
+    async function saveToCloud() {
+  try {
+    await db.collection('appState').doc('main').set(appState);
+    console.log('☁️ Données sauvegardées sur Firebase');
+  } catch (err) {
+    console.error('Erreur sauvegarde cloud:', err);
+  }
+}
+
+  } catch (err) {
+    console.error('Erreur chargement cloud:', err);
+  }
+}
+
 } else {
   await loadFromLocalStorage();
 }
