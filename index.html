@@ -31,6 +31,64 @@
   const db   = firebase.firestore();
   </script>
 
+  <!-- Fallbacks globaux pour éviter les ReferenceError en production -->
+  <script>
+    (function () {
+      if (typeof window.showTab !== 'function') {
+        window.showTab = function (tabId) {
+          document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+          const activeSection = document.getElementById(tabId);
+          if (activeSection) activeSection.classList.remove('hidden');
+          const appContainer = document.getElementById('appContainer');
+          const loginContainer = document.getElementById('loginContainer');
+          if (appContainer) appContainer.style.display = 'block';
+          if (loginContainer) loginContainer.style.display = 'none';
+        };
+      }
+      if (typeof window.importData !== 'function') {
+        window.importData = function () {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'application/json';
+          input.onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = evt => {
+              try {
+                const data = JSON.parse(evt.target.result);
+                if (window.appState && data) Object.assign(window.appState, data);
+                if (typeof renderTables === 'function') renderTables();
+                alert('Import réussi');
+              } catch (err) {
+                alert('Erreur lors de l’import');
+              }
+            };
+            reader.readAsText(file);
+          };
+          input.click();
+        };
+      }
+      if (typeof window.backupData !== 'function') {
+        window.backupData = function () {
+          const dataStr = JSON.stringify(window.appState || {}, null, 2);
+          const blob = new Blob([dataStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'sponsoring-manager-backup.json';
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+      }
+      if (typeof window.showStats !== 'function') {
+        window.showStats = function () {
+          alert('Statistiques: à implémenter');
+        };
+      }
+    })();
+  </script>
+
   <script>
   // === AUTHENTIFICATION EMAIL / MOT DE PASSE ===
 
