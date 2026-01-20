@@ -165,23 +165,7 @@
     loginWithGithub();
   }
 
-  auth.onAuthStateChanged(async (user) => {
-    updateAuthUI(user);
-    if (user) {
-      await loadFromCloud();
-      ensureInitialData();
-      renderTables();
-      populateClientDropdown();
-      populateOfferSelect();
-      populatePaymentClientSelect();
-      showTab('dashboard');
-    } else {
-      window.APP_DATA = undefined;
-      loadFromLocalStorage();
-      renderTables();
-      showTab('dashboard');
-    }
-  });
+  // onAuthStateChanged déplacé plus bas après la définition des fonctions
   </script>
 
   <style>
@@ -1232,6 +1216,23 @@
       if (!Array.isArray(appState.payments)) appState.payments = [];
       if (!Array.isArray(appState.usdPurchases)) appState.usdPurchases = [];
     }
+
+    // Exposer les fonctions en global pour les attributs onclick
+    window.showTab = showTab;
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+    window.backupData = backupData;
+    window.importData = importData;
+    window.showStats = showStats;
+    window.logout = logout;
+    // Actions tables
+    window.addClient = addClient;
+    window.deleteClient = deleteClient;
+    window.addTransaction = addTransaction;
+    window.deleteTransaction = deleteTransaction;
+    window.addPayment = addPayment;
+    window.addUsdPurchase = addUsdPurchase;
+    window.deleteUsdPurchase = deleteUsdPurchase;
 
     // === GESTION CLIENTS / OFFRES / TRANSACTIONS / PAIEMENTS / USD ===
     function addClient() {
