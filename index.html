@@ -1312,7 +1312,43 @@
       if (activityCount) activityCount.textContent = `${latest.length} transactions récentes`;
     }
 
+    function recalculateClientStats() {
+      const txns = appState.transactions || [];
+      const pays = appState.payments || [];
+      const spentMap = {};
+      const countMap = {};
+      const unpaidTxnMap = {};
+      const payMap = {};
+
+      txns.forEach(t => {
+        const cid = t.clientId;
+        const price = Number(t.priceDzd || 0);
+        spentMap[cid] = (spentMap[cid] || 0) + price;
+        countMap[cid] = (countMap[cid] || 0) + 1;
+        if (!t.paid) {
+          unpaidTxnMap[cid] = (unpaidTxnMap[cid] || 0) + price;
+        }
+      });
+      pays.forEach(p => {
+        const cid = p.clientId;
+        const amt = Number(p.amount || 0);
+        payMap[cid] = (payMap[cid] || 0) + amt;
+      });
+
+      (appState.clients || []).forEach(c => {
+        const cid = c.id;
+        const totalSpent = spentMap[cid] || 0;
+        const txnCount = countMap[cid] || 0;
+        const unpaidFromTxns = unpaidTxnMap[cid] || 0;
+        const paidAmounts = payMap[cid] || 0;
+        c.totalSpent = totalSpent;
+        c.transactionsCount = txnCount;
+        c.unpaid = Math.max(0, unpaidFromTxns - paidAmounts);
+      });
+    }
+
     function renderTables() {
+      recalculateClientStats();
       renderClientsTable();
       renderTransactionsTable();
       renderPaymentsTable();
@@ -1433,23 +1469,19 @@
       const buyRate = Number(document.getElementById('buyRate').value || 0);
       const paid = document.getElementById('transactionPaid').checked;
 
-      let amount = 0;
-      let priceDzd = 0;
-      let duration = '';
+      // Toujours utiliser les champs saisis (remplis automatiquement si une offre est sélectionnée)
+      const amount = Number(document.getElementById('standardDollarAmount').value || 0);
+      const priceDzd = Number(document.getElementById('standardPriceDzd').value || 0);
+      let duration = document.getElementById('standardDuration').value || '';
 
+      // Si une offre est sélectionnée, reprendre sa durée par défaut si le champ est vide
       if (offerId) {
         const offer = appState.offers.find(o => o.id === offerId);
         if (!offer) {
           showToast('Offre introuvable', 'error');
           return;
         }
-        amount = Number(offer.costPerUnit || 0);
-        priceDzd = Number(offer.price || 0);
-        duration = offer.duration || '';
-      } else {
-        amount = Number(document.getElementById('standardDollarAmount').value || 0);
-        priceDzd = Number(document.getElementById('standardPriceDzd').value || 0);
-        duration = document.getElementById('standardDuration').value || '';
+        if (!duration) duration = offer.duration || '';
       }
 
       if (!clientId) {
@@ -1476,7 +1508,7 @@
         clientId,
         clientName: client.name,
         offerId: offerId || null,
-        offerName: offerId ? (appState.offers.find(o => o.id === offerId)?.name || '') : 'Standard',
+        offerName: offerId ? (appState.offers.find(o => o.id === offerId)?.name || '') : 'Offre Standard',
         amount,
         priceDzd,
         totalDzd,
@@ -1487,11 +1519,7 @@
 
       appState.transactions.push(transaction);
 
-      client.totalSpent = Number(client.totalSpent || 0) + priceDzd;
-      if (!paid) {
-        client.unpaid = Number(client.unpaid || 0) + priceDzd;
-      }
-      client.transactionsCount = Number(client.transactionsCount || 0) + 1;
+      // Les stats client seront recalculées globalement pour robustesse
 
       renderTables();
       autoSave();
@@ -1510,7 +1538,13 @@
         return;
       }
 
-      const client = appState.clients.find(c => c.id === clientId);
+      let client = appState.clients.find(c => c.id === clientId);
+      if (!client) {
+        // Fallback: rechercher par nom affiché si l'id ne correspond pas
+        const sel = document.getElementById('paymentClientSelect');
+        const selectedName = sel?.options[sel.selectedIndex]?.text || '';
+        client = appState.clients.find(c => (c.name || '').trim() === selectedName.trim());
+      }
       if (!client) {
         showToast('Client introuvable', 'error');
         return;
@@ -1630,7 +1664,7 @@
       const standardFields = document.getElementById('standardFields');
       if (!select || !details || !standardFields) return;
 
-      select.innerHTML = '<option value="">Sélectionner une offre...</option>';
+      select.innerHTML = '<option value="">Offre Standard (saisie manuelle)</option>';
 
       appState.offers.forEach(offer => {
         const option = document.createElement('option');
