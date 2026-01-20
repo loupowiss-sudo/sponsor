@@ -29,6 +29,16 @@
 
   const auth = firebase.auth();
   const db   = firebase.firestore();
+  try {
+    db.settings({
+      experimentalAutoDetectLongPolling: true,
+      useFetchStreams: false,
+      ignoreUndefinedProperties: true,
+    });
+    console.log('Firestore settings applied for constrained environments');
+  } catch (e) {
+    console.warn('Unable to apply Firestore settings', e);
+  }
   </script>
 
   <!-- Fallbacks globaux pour éviter les ReferenceError en production -->
@@ -1005,6 +1015,8 @@
         }
       } catch (err) {
         console.error('Erreur chargement cloud:', err);
+        showToast('Erreur Firestore: lecture interrompue, passage en mode local.', 'error');
+        loadFromLocalStorage();
       }
     }
 
@@ -1017,6 +1029,8 @@
         console.log('☁️ Données sauvegardées sur Firebase');
       } catch (err) {
         console.error('Erreur sauvegarde cloud:', err);
+        showToast('Erreur Firestore: sauvegarde non effectuée, stockage local utilisé.', 'error');
+        saveToLocalStorage();
       }
     }
 
