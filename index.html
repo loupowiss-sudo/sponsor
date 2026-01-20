@@ -945,6 +945,7 @@
         storageMode: 'cloud',
         cloudProvider: 'firebase',
         autoSaveEnabled: true,
+        seedDefaults: true,
       },
     };
 
@@ -1460,7 +1461,7 @@
     }
 
     function ensureInitialData() {
-      if (!Array.isArray(appState.offers) || appState.offers.length === 0) {
+      if (appState.settings.seedDefaults && (!Array.isArray(appState.offers) || appState.offers.length === 0)) {
         appState.offers = [
           { id: generateId('offer'), name: 'USD Standard', description: 'Achat standard de dollars', price: 30000, costPerUnit: 100, duration: 'N/A' },
           { id: generateId('offer'), name: 'Pack 500$', description: 'Pack pour 500 dollars', price: 150000, costPerUnit: 500, duration: 'N/A' },
@@ -1484,6 +1485,7 @@
     window.exportPDF = exportPDF;
     window.exportClientsCSV = exportClientsCSV;
     window.manualSave = manualSave;
+    window.purgeAllData = purgeAllData;
     // Actions tables
     window.addClient = addClient;
     window.addOffer = addOffer;
