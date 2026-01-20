@@ -1487,6 +1487,7 @@
     // Actions tables
     window.addClient = addClient;
     window.addOffer = addOffer;
+    window.editClient = editClient;
     window.prepareAddOffer = prepareAddOffer;
     window.editOffer = editOffer;
     window.deleteOffer = deleteOffer;
@@ -1537,6 +1538,24 @@
       autoSave();
     }
 
+    function editClient(id) {
+      const client = appState.clients.find(c => c.id === id);
+      if (!client) { showToast('Client introuvable', 'error'); return; }
+      const newName = prompt('Nom du client', client.name || '');
+      if (newName === null) return;
+      const newContact = prompt('Contact', client.contact || '');
+      if (newContact === null) return;
+      const newNotes = prompt('Notes', client.notes || '');
+      if (newNotes === null) return;
+      client.name = newName.trim() || client.name;
+      client.contact = newContact.trim();
+      client.notes = newNotes.trim();
+      renderClientsTable();
+      populateClientDropdown();
+      autoSave();
+      showToast('Client modifié', 'success');
+    }
+
     function prepareAddOffer() {
       editingOfferId = null;
       document.getElementById('newOfferName').value = '';
@@ -1570,7 +1589,14 @@
 
     function deleteOffer(id) {
       if(!confirm('Voulez-vous vraiment supprimer cette offre ?')) return;
+      const before = appState.offers.length;
+      const offerById = appState.offers.find(o => o.id === id);
       appState.offers = appState.offers.filter(o => o.id !== id);
+      if (appState.offers.length === before) {
+        if (offerById) {
+          appState.offers = appState.offers.filter(o => !(o.name === offerById.name && Number(o.price||0) === Number(offerById.price||0)));
+        }
+      }
       renderOffersGrid();
       populateOfferSelect();
       autoSave();
