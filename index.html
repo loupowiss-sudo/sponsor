@@ -991,6 +991,52 @@
       if (modal) modal.classList.add('hidden');
     }
 
+    // Normaliser les données (ajouter des id manquants, valeurs par défaut)
+    function normalizeAppState() {
+      let changed = false;
+      const ensureId = (item, prefix) => {
+        if (!item.id) {
+          item.id = generateId(prefix);
+          changed = true;
+        }
+      };
+      try {
+        (appState.offers || []).forEach(o => {
+          ensureId(o, 'offer');
+          if (typeof o.price !== 'number') { o.price = Number(o.price || 0); changed = true; }
+          if (typeof o.costPerUnit !== 'number') { o.costPerUnit = Number(o.costPerUnit || 0); changed = true; }
+          if (!('description' in o)) { o.description = ''; changed = true; }
+          if (!('duration' in o)) { o.duration = 'N/A'; changed = true; }
+        });
+        (appState.clients || []).forEach(c => {
+          ensureId(c, 'client');
+          if (!('contact' in c)) { c.contact = ''; changed = true; }
+          if (!('notes' in c)) { c.notes = ''; changed = true; }
+        });
+        (appState.transactions || []).forEach(t => {
+          ensureId(t, 'txn');
+          if (!('date' in t)) { t.date = new Date().toISOString().slice(0, 10); changed = true; }
+          if (!('createdAt' in t)) { t.createdAt = Date.now(); changed = true; }
+        });
+        (appState.payments || []).forEach(p => {
+          ensureId(p, 'pay');
+          if (!('date' in p)) { p.date = new Date().toISOString().slice(0, 10); changed = true; }
+        });
+        (appState.usdPurchases || []).forEach(u => {
+          ensureId(u, 'usd');
+          if (!('date' in u)) { u.date = new Date().toISOString().slice(0, 10); changed = true; }
+        });
+      } catch (e) {
+        console.warn('Normalisation échouée', e);
+      }
+      if (changed) {
+        try { saveToLocalStorage(); } catch (e) {}
+        if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+          saveToCloud();
+        }
+      }
+    }
+
     // === LOCAL STORAGE ===
     function saveToLocalStorage() {
       localStorage.setItem('sponsoringManagerPro', JSON.stringify(appState));
@@ -1003,6 +1049,7 @@
           const parsed = JSON.parse(data);
           Object.assign(appState, parsed);
           console.log('📦 Données chargées depuis le localStorage');
+          normalizeAppState();
         } catch (e) {
           console.error('Erreur parse localStorage', e);
         }
@@ -1021,6 +1068,7 @@
           const data = raw?.data ?? raw;
           Object.assign(appState, data);
           console.log('☁️ Données utilisateur chargées depuis Firebase');
+          normalizeAppState();
           try {
             const localStr = localStorage.getItem('sponsoringManagerPro');
             if (localStr) {
@@ -1039,6 +1087,7 @@
         } else {
           console.log('☁️ Aucun document pour cet utilisateur, initialisation...');
           ensureInitialData();
+          normalizeAppState();
           await saveToCloud();
         }
       } catch (err) {
