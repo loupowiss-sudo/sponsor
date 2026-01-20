@@ -180,11 +180,11 @@
           <input id="loginPassword" type="password"
                  class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
         </div>
-        <button id="loginButton"
+        <button id="loginButton" type="button"
                 class="w-full mt-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow hover:shadow-lg transition-all">
           Se connecter
         </button>
-       <button id="loginGithubButton"
+       <button id="loginGithubButton" type="button"
         class="w-full mt-2 py-3 bg-gradient-to-r from-gray-800 to-black text-white font-bold rounded-xl shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
   <i class="fab fa-github"></i>
   Connexion GitHub
@@ -1585,7 +1585,8 @@
     const loginGithubButton = document.getElementById('loginGithubButton');
 
     if (loginButton) {
-      loginButton.addEventListener('click', function () {
+      loginButton.addEventListener('click', function (e) {
+        e.preventDefault();
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value.trim();
         if (!email || !password) {
@@ -1593,12 +1594,15 @@
           return;
         }
         if (auth.currentUser) return;
+        console.log('Login button clicked');
         loginWithEmailPassword(email, password);
       });
     }
 
     if (loginGithubButton) {
-      loginGithubButton.addEventListener('click', function () {
+      loginGithubButton.addEventListener('click', function (e) {
+        e.preventDefault();
+        console.log('GitHub button clicked');
         loginWithGithub();
       });
     }
