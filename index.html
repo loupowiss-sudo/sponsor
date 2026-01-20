@@ -928,6 +928,7 @@
       payments: [],
       usdPurchases: [],
       currentTab: 'dashboard',
+      lastUpdated: 0,
       settings: {
         storageMode: 'cloud',
         cloudProvider: 'firebase',
@@ -1008,6 +1009,21 @@
           const data = raw?.data ?? raw;
           Object.assign(appState, data);
           console.log('☁️ Données utilisateur chargées depuis Firebase');
+          try {
+            const localStr = localStorage.getItem('sponsoringManagerPro');
+            if (localStr) {
+              const localData = JSON.parse(localStr);
+              const localUpdated = Number(localData?.lastUpdated || 0);
+              const cloudUpdated = Number(appState?.lastUpdated || 0);
+              if (localUpdated > cloudUpdated) {
+                Object.assign(appState, localData);
+                await saveToCloud();
+                console.log('☁️ Fusion locale > cloud effectuée');
+              }
+            }
+          } catch (e) {
+            console.warn('Fusion locale/cloud impossible', e);
+          }
         } else {
           console.log('☁️ Aucun document pour cet utilisateur, initialisation...');
           ensureInitialData();
@@ -1023,8 +1039,9 @@
     async function saveToCloud() {
       try {
         const user = auth.currentUser;
-        if (!user) { console.warn('Pas d’utilisateur connecté'); return; }
+        if (!user) { console.warn('Pas d’utilisateur connecté'); saveToLocalStorage(); return; }
         const uid = user.uid;
+        appState.lastUpdated = Date.now();
         await db.collection('users').doc(uid).set({ data: appState }, { merge: true });
         console.log('☁️ Données sauvegardées sur Firebase');
       } catch (err) {
@@ -1036,8 +1053,15 @@
 
     function autoSave() {
       if (!appState.settings.autoSaveEnabled) return;
+      appState.lastUpdated = Date.now();
       if (appState.settings.storageMode === 'cloud') {
-        saveToCloud();
+        const u = auth.currentUser;
+        if (u) {
+          saveToCloud();
+        } else {
+          saveToLocalStorage();
+          showToast('Non connecté: import sauvegardé en local.', 'info');
+        }
       } else {
         saveToLocalStorage();
       }
@@ -1704,6 +1728,7 @@
             const data = JSON.parse(evt.target.result);
             Object.assign(appState, data);
             renderTables();
+            appState.lastUpdated = Date.now();
             autoSave();
             showToast('Import réussi', 'success');
           } catch (err) {
