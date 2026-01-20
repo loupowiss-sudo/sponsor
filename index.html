@@ -165,12 +165,21 @@
     loginWithGithub();
   }
 
-  auth.onAuthStateChanged((user) => {
+  auth.onAuthStateChanged(async (user) => {
     updateAuthUI(user);
     if (user) {
-      loadAppData().then(applyLoadedData);
+      await loadFromCloud();
+      ensureInitialData();
+      renderTables();
+      populateClientDropdown();
+      populateOfferSelect();
+      populatePaymentClientSelect();
+      showTab('dashboard');
     } else {
       window.APP_DATA = undefined;
+      loadFromLocalStorage();
+      renderTables();
+      showTab('dashboard');
     }
   });
   </script>
@@ -934,13 +943,18 @@
     // === CLOUD (FIRESTORE) ===
     async function loadFromCloud() {
       try {
-        const doc = await db.collection('appState').doc('main').get();
+        const user = auth.currentUser;
+        if (!user) { console.warn('Pas d’utilisateur connecté'); return; }
+        const uid = user.uid;
+        const doc = await db.collection('users').doc(uid).get();
         if (doc.exists) {
-          const data = doc.data();
+          const raw = doc.data();
+          const data = raw?.data ?? raw;
           Object.assign(appState, data);
-          console.log('☁️ Données chargées depuis Firebase');
+          console.log('☁️ Données utilisateur chargées depuis Firebase');
         } else {
-          console.log('☁️ Aucun document cloud, création...');
+          console.log('☁️ Aucun document pour cet utilisateur, initialisation...');
+          ensureInitialData();
           await saveToCloud();
         }
       } catch (err) {
@@ -950,7 +964,10 @@
 
     async function saveToCloud() {
       try {
-        await db.collection('appState').doc('main').set(appState);
+        const user = auth.currentUser;
+        if (!user) { console.warn('Pas d’utilisateur connecté'); return; }
+        const uid = user.uid;
+        await db.collection('users').doc(uid).set({ data: appState }, { merge: true });
         console.log('☁️ Données sauvegardées sur Firebase');
       } catch (err) {
         console.error('Erreur sauvegarde cloud:', err);
@@ -1200,6 +1217,20 @@
       renderUsdPurchasesTable();
       renderRecentTransactions();
       updateDashboard();
+    }
+
+    function ensureInitialData() {
+      if (!Array.isArray(appState.offers) || appState.offers.length === 0) {
+        appState.offers = [
+          { id: generateId('offer'), name: 'USD Standard', description: 'Achat standard de dollars', price: 30000, costPerUnit: 100, duration: 'N/A' },
+          { id: generateId('offer'), name: 'Pack 500$', description: 'Pack pour 500 dollars', price: 150000, costPerUnit: 500, duration: 'N/A' },
+          { id: generateId('offer'), name: 'Service Premium', description: 'Service premium pour clients VIP', price: 50000, costPerUnit: 150, duration: '30 jours' },
+        ];
+      }
+      if (!Array.isArray(appState.clients)) appState.clients = [];
+      if (!Array.isArray(appState.transactions)) appState.transactions = [];
+      if (!Array.isArray(appState.payments)) appState.payments = [];
+      if (!Array.isArray(appState.usdPurchases)) appState.usdPurchases = [];
     }
 
     // === GESTION CLIENTS / OFFRES / TRANSACTIONS / PAIEMENTS / USD ===
