@@ -1011,7 +1011,7 @@
     async function loadFromCloud() {
       try {
         const user = auth.currentUser;
-        if (!user) { console.warn('Pas d’utilisateur connecté'); return; }
+        if (!user) { console.warn('Pas d’utilisateur connecté'); loadFromLocalStorage(); showToast('Non connecté: chargement des données locales.', 'info'); return; }
         const uid = user.uid;
         const doc = await db.collection('users').doc(uid).get();
         if (doc.exists) {
@@ -1837,10 +1837,9 @@
 
     console.log('🚀 Sponsoring Manager PRO - Initialisation');
 
-    if (appState.settings.storageMode === 'cloud') {
+    loadFromLocalStorage();
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
       await loadFromCloud();
-    } else {
-      loadFromLocalStorage();
     }
 
     showTab('dashboard');
@@ -1866,4 +1865,3 @@
 </script>
 </body>
 </html>
-
