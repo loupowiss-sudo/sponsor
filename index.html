@@ -75,7 +75,9 @@
       showToast('Connexion réussie', 'success');
     } catch (error) {
       console.error('Erreur de connexion:', error);
-      showToast('Email ou mot de passe incorrect', 'error');
+      const box = document.getElementById('loginError');
+      if (box) box.textContent = firebaseErrorMessage(error);
+      showToast(firebaseErrorMessage(error), 'error');
     }
   }
 
@@ -96,7 +98,9 @@
       showToast('Connexion GitHub réussie', 'success');
     } catch (error) {
       console.error('Erreur GitHub:', error);
-      showToast('Erreur de connexion GitHub', 'error');
+      const box = document.getElementById('loginError');
+      if (box) box.textContent = firebaseErrorMessage(error);
+      showToast(firebaseErrorMessage(error), 'error');
     }
   }
 
@@ -129,6 +133,36 @@
     if (!data) return;
     window.APP_DATA = data;
     // Ici, applique data à ton UI (listes, tableaux, etc.)
+  }
+
+  function firebaseErrorMessage(err) {
+    const code = err?.code || '';
+    switch (code) {
+      case 'auth/invalid-email': return 'Email invalide';
+      case 'auth/user-not-found': return 'Utilisateur introuvable';
+      case 'auth/wrong-password': return 'Mot de passe incorrect';
+      case 'auth/too-many-requests': return 'Trop de tentatives, réessayez plus tard';
+      case 'auth/operation-not-allowed': return 'Méthode non activée dans Firebase (activer Email/Mot de passe ou GitHub)';
+      case 'auth/popup-blocked': return 'Popup bloquée par le navigateur, autorisez-la';
+      case 'auth/popup-closed-by-user': return 'Popup fermée avant la connexion';
+      case 'auth/account-exists-with-different-credential': return 'Email déjà utilisé avec un autre fournisseur';
+      default: return 'Erreur de connexion';
+    }
+  }
+
+  function handleLoginClick() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    const box = document.getElementById('loginError');
+    if (!email || !password) {
+      if (box) box.textContent = 'Email et mot de passe requis';
+      return;
+    }
+    loginWithEmailPassword(email, password);
+  }
+
+  function handleGithubClick() {
+    loginWithGithub();
   }
 
   auth.onAuthStateChanged((user) => {
@@ -171,20 +205,21 @@
       </h2>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-semibold mb-2">Email</label>
+          <label for="loginEmail" class="block text-sm font-semibold mb-2">Email</label>
           <input id="loginEmail" type="email"
                  class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
         </div>
         <div>
-          <label class="block text-sm font-semibold mb-2">Mot de passe</label>
+          <label for="loginPassword" class="block text-sm font-semibold mb-2">Mot de passe</label>
           <input id="loginPassword" type="password"
                  class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
         </div>
-        <button id="loginButton" type="button"
+        <div id="loginError" class="text-red-600 text-sm"></div>
+        <button id="loginButton" type="button" onclick="handleLoginClick()"
                 class="w-full mt-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow hover:shadow-lg transition-all">
           Se connecter
         </button>
-       <button id="loginGithubButton" type="button"
+       <button id="loginGithubButton" type="button" onclick="handleGithubClick()"
         class="w-full mt-2 py-3 bg-gradient-to-r from-gray-800 to-black text-white font-bold rounded-xl shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
   <i class="fab fa-github"></i>
   Connexion GitHub
