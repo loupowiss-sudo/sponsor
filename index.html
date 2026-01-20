@@ -73,6 +73,13 @@
     try {
       await auth.signInWithEmailAndPassword(email, password);
       showToast('Connexion réussie', 'success');
+      updateAuthUI(auth.currentUser);
+      ensureInitialData();
+      renderTables();
+      populateClientDropdown();
+      populateOfferSelect();
+      populatePaymentClientSelect();
+      showTab('dashboard');
     } catch (error) {
       console.error('Erreur de connexion:', error);
       const box = document.getElementById('loginError');
@@ -96,6 +103,13 @@
       const provider = new firebase.auth.GithubAuthProvider();
       await auth.signInWithPopup(provider);
       showToast('Connexion GitHub réussie', 'success');
+      updateAuthUI(auth.currentUser);
+      ensureInitialData();
+      renderTables();
+      populateClientDropdown();
+      populateOfferSelect();
+      populatePaymentClientSelect();
+      showTab('dashboard');
     } catch (error) {
       console.error('Erreur GitHub:', error);
       const box = document.getElementById('loginError');
