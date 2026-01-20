@@ -1384,12 +1384,14 @@
     window.manualSave = manualSave;
     // Actions tables
     window.addClient = addClient;
+    window.addOffer = addOffer;
     window.deleteClient = deleteClient;
     window.addTransaction = addTransaction;
     window.deleteTransaction = deleteTransaction;
     window.addPayment = addPayment;
     window.addUsdPurchase = addUsdPurchase;
     window.deleteUsdPurchase = deleteUsdPurchase;
+    window.editTransaction = editTransaction;
 
     // === GESTION CLIENTS / OFFRES / TRANSACTIONS / PAIEMENTS / USD ===
     function addClient() {
@@ -1601,6 +1603,31 @@
       appState.transactions = appState.transactions.filter(t => t.id !== id);
       renderTables();
       autoSave();
+    }
+
+    function editTransaction(id) {
+      const t = appState.transactions.find(x => x.id === id);
+      if (!t) { showToast('Transaction introuvable', 'error'); return; }
+      const amountStr = prompt('Montant $', String(t.amount || 0));
+      if (amountStr === null) return;
+      const priceStr = prompt('Prix vente (DZD)', String(t.priceDzd || 0));
+      if (priceStr === null) return;
+      const durationStr = prompt('Durée', String(t.duration || ''));
+      if (durationStr === null) return;
+      const paidStr = prompt('Payée ? (oui/non)', (t.paid ? 'oui' : 'non'));
+      if (paidStr === null) return;
+      const amount = Number(amountStr);
+      const priceDzd = Number(priceStr);
+      const paid = /^oui$/i.test((paidStr || '').trim());
+      if (!amount || !priceDzd) { showToast('Valeurs invalides', 'error'); return; }
+      // Recalculer total et profit en conservant le taux d’achat existant si possible
+      const buyRateGuess = t.amount ? (Number(t.totalDzd || 0) / Number(t.amount || 1)) : Number(document.getElementById('buyRate')?.value || 0);
+      const totalDzd = amount * Number(buyRateGuess || 0);
+      const profit = priceDzd - totalDzd;
+      Object.assign(t, { amount, priceDzd, totalDzd, profit, duration: durationStr, paid });
+      renderTables();
+      autoSave();
+      showToast('Transaction mise à jour', 'success');
     }
 
     function deleteUsdPurchase(id) {
