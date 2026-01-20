@@ -39,6 +39,11 @@
   } catch (e) {
     console.warn('Unable to apply Firestore settings', e);
   }
+  try {
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+  } catch (e) {
+    console.warn('Unable to set auth persistence', e);
+  }
   </script>
 
   <!-- Fallbacks globaux pour éviter les ReferenceError en production -->
@@ -318,6 +323,11 @@
           <button onclick="exportPDF()" class="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold rounded-xl hover:shadow-lg transition-all shadow flex items-center gap-2">
             <i class="fas fa-file-pdf"></i>
             <span class="hidden sm:inline">Export PDF</span>
+          </button>
+          <button onclick="manualSave()"
+                  class="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-bold rounded-xl hover:shadow-lg transition-all shadow flex items-center gap-2">
+            <i class="fas fa-save"></i>
+            <span class="hidden sm:inline">Sauvegarder</span>
           </button>
           <button onclick="backupData()" class="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-xl hover:shadow-lg transition-all shadow flex items-center gap-2">
             <i class="fas fa-download"></i>
@@ -1327,6 +1337,7 @@
     window.logout = logout;
     window.exportPDF = exportPDF;
     window.exportClientsCSV = exportClientsCSV;
+    window.manualSave = manualSave;
     // Actions tables
     window.addClient = addClient;
     window.deleteClient = deleteClient;
@@ -1780,6 +1791,22 @@
       showToast('Fonction statistiques à implémenter', 'info');
     }
 
+    function manualSave() {
+      try {
+        appState.lastUpdated = Date.now();
+        if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+          saveToCloud();
+          showToast('Sauvegarde cloud effectuée', 'success');
+        } else {
+          saveToLocalStorage();
+          showToast('Sauvegarde locale effectuée', 'success');
+        }
+      } catch (e) {
+        console.error(e);
+        showToast('Erreur lors de la sauvegarde', 'error');
+      }
+    }
+
     // === INITIALISATION GLOBALE ===
   document.addEventListener('DOMContentLoaded', async function () {
     const loginButton = document.getElementById('loginButton');
@@ -1824,6 +1851,19 @@
     calculatePreview();
     showToast('Bienvenue dans Sponsoring Manager PRO!', 'success');
   });
+  auth.onAuthStateChanged(async function (user) {
+    updateAuthUI(user);
+    if (user) {
+      await loadFromCloud();
+      ensureInitialData();
+      renderTables();
+      populateClientDropdown();
+      populateOfferSelect();
+      populatePaymentClientSelect();
+      showTab('dashboard');
+    }
+  });
 </script>
 </body>
 </html>
+
