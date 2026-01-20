@@ -115,23 +115,12 @@
     alert(message);
   }
 
-  function updateAuthUI(user) {
-    const appContainer   = document.getElementById('appContainer');
-    const loginContainer = document.getElementById('loginContainer');
-    if (user) {
-      if (appContainer)   appContainer.style.display = 'block';
-      if (loginContainer) loginContainer.style.display = 'none';
-    } else {
-      if (appContainer)   appContainer.style.display = 'none';
-      if (loginContainer) loginContainer.style.display = 'flex';
-    }
-  }
-
   async function loginWithEmailPassword(email, password) {
     try {
       await auth.signInWithEmailAndPassword(email, password);
       showToast('Connexion réussie', 'success');
       updateAuthUI(auth.currentUser);
+      await loadFromCloud();
       ensureInitialData();
       renderTables();
       populateClientDropdown();
@@ -162,6 +151,7 @@
       await auth.signInWithPopup(provider);
       showToast('Connexion GitHub réussie', 'success');
       updateAuthUI(auth.currentUser);
+      await loadFromCloud();
       ensureInitialData();
       renderTables();
       populateClientDropdown();
@@ -1297,6 +1287,8 @@
     window.importData = importData;
     window.showStats = showStats;
     window.logout = logout;
+    window.exportPDF = exportPDF;
+    window.exportClientsCSV = exportClientsCSV;
     // Actions tables
     window.addClient = addClient;
     window.deleteClient = deleteClient;
@@ -1714,6 +1706,37 @@
       showToast('Fonction export PDF à implémenter', 'info');
     }
 
+    function exportClientsCSV() {
+      try {
+        const rows = [['Nom', 'Contact', 'Total dépensé', 'Impayé', 'Transactions']];
+        (appState.clients || []).forEach(c => {
+          rows.push([
+            c.name || '',
+            c.contact || '',
+            String(c.totalSpent || 0).replace(/\./g, ','),
+            String(c.unpaid || 0).replace(/\./g, ','),
+            String(c.transactionsCount || 0),
+          ]);
+        });
+        const csv = rows.map(r => r.map(field => {
+          const s = String(field ?? '');
+          if (/[",;\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+          return s;
+        }).join(';')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'clients.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Export CSV des clients réussi', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Erreur export CSV', 'error');
+      }
+    }
+
     function showStats() {
       showToast('Fonction statistiques à implémenter', 'info');
     }
@@ -1762,5 +1785,6 @@
     calculatePreview();
     showToast('Bienvenue dans Sponsoring Manager PRO!', 'success');
   });
+</script>
 </body>
 </html>
