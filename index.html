@@ -939,6 +939,7 @@
       usdPurchases: [],
       currentTab: 'dashboard',
       lastUpdated: 0,
+      sync: { pendingCloudSave: false, retryDelayMs: 5000 },
       settings: {
         storageMode: 'cloud',
         cloudProvider: 'firebase',
@@ -1054,26 +1055,33 @@
         appState.lastUpdated = Date.now();
         await db.collection('users').doc(uid).set({ data: appState }, { merge: true });
         console.log('☁️ Données sauvegardées sur Firebase');
+        appState.sync.pendingCloudSave = false;
       } catch (err) {
         console.error('Erreur sauvegarde cloud:', err);
         showToast('Erreur Firestore: sauvegarde non effectuée, stockage local utilisé.', 'error');
         saveToLocalStorage();
+        appState.sync.pendingCloudSave = true;
       }
     }
 
-    function autoSave() {
+    function scheduleCloudRetry() {
+      if (!appState.sync.pendingCloudSave) return;
+      if (!(appState.settings.storageMode === 'cloud' && auth.currentUser)) return;
+      setTimeout(async () => {
+        if (appState.sync.pendingCloudSave) {
+          await saveToCloud();
+          scheduleCloudRetry();
+        }
+      }, appState.sync.retryDelayMs || 5000);
+    }
+
+    async function autoSave() {
       if (!appState.settings.autoSaveEnabled) return;
       appState.lastUpdated = Date.now();
-      if (appState.settings.storageMode === 'cloud') {
-        const u = auth.currentUser;
-        if (u) {
-          saveToCloud();
-        } else {
-          saveToLocalStorage();
-          showToast('Non connecté: import sauvegardé en local.', 'info');
-        }
-      } else {
-        saveToLocalStorage();
+      saveToLocalStorage();
+      if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+        await saveToCloud();
+        scheduleCloudRetry();
       }
     }
 
@@ -1860,6 +1868,14 @@
       populateOfferSelect();
       populatePaymentClientSelect();
       showTab('dashboard');
+    }
+  });
+  window.addEventListener('beforeunload', function () {
+    try { saveToLocalStorage(); } catch (e) {}
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      try { saveToLocalStorage(); } catch (e) {}
     }
   });
 </script>
