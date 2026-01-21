@@ -15,6 +15,159 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
   <script>
+  // === TRADUCTIONS ===
+  const TRANSLATIONS = {
+      fr: {
+          nav_info: "Informations",
+          nav_offers: "Nos Offres",
+          nav_method: "Méthode de travail",
+          nav_payment: "Paiement",
+          nav_order: "Commander un Sponsor",
+          nav_custom: "Nos Réalisations",
+          client_title: "Espace Client",
+          client_subtitle: "Bienvenue dans votre espace dédié",
+          btn_back: "Retour Connexion",
+          info_title: "Informations Générales",
+          info_desc: "Bienvenue sur notre plateforme de sponsoring. Ici, vous pouvez consulter nos offres, comprendre notre fonctionnement et passer commande directement sans avoir besoin de créer un compte.",
+          info_speed: "Rapidité",
+          info_speed_desc: "Traitement rapide de vos demandes.",
+          info_security: "Sécurité",
+          info_security_desc: "Paiements et données sécurisés.",
+          info_support: "Support",
+          info_support_desc: "Assistance disponible pour vous aider.",
+          offers_title: "Nos Offres Disponibles",
+          offers_subtitle: "Sélectionnez une offre pour voir les détails.",
+          btn_details: "Voir détails",
+          method_title: "Méthode de Travail",
+          payment_title: "Moyens de Paiement",
+          payment_subtitle: "Voici les coordonnées pour effectuer vos paiements :",
+          order_title: "Commander un Sponsor",
+          lbl_platform: "Plateforme",
+          opt_choose_platform: "-- Choisir une plateforme --",
+          lbl_objective: "Objectif",
+          opt_choose_objective: "-- Choisir l'objectif --",
+          opt_followers: "Plus d'abonnés",
+          opt_messages: "Messages",
+          opt_conversion: "Conversion sur site",
+          lbl_target_network: "Réseau cible pour les abonnés",
+          lbl_msg_dest: "Destination des messages",
+          lbl_site_link: "Lien du site web",
+          lbl_offer_chosen: "Offre Choisie",
+          opt_choose_offer: "-- Choisir une offre --",
+          lbl_pub_link: "Lien de la publication (Post/Reel/Video)",
+          lbl_payment_method: "Moyen de paiement utilisé",
+          opt_choose_payment: "-- Choisir --",
+          lbl_proof: "Preuve de Paiement (Photo/Capture)",
+          btn_submit: "Envoyer la Commande",
+          calc_title: "Calculateur RedotPay",
+          calc_desc: "Entrez le montant en DZD que vous souhaitez dépenser, nous calculerons le montant USD à envoyer.",
+          lbl_amount_dzd: "Montant DZD",
+          lbl_to_send: "À envoyer (USD)",
+          lbl_rate: "Taux: 1 USD = 250 DZD",
+          meta_config: "Configuration Meta",
+          tiktok_config: "Configuration TikTok",
+          ph_insta: "@moncompte",
+          ph_fb: "Ma Page",
+          ph_website: "https://monsite.com",
+          ph_pub_link: "https://...",
+          ph_amount: "ex: 5000",
+          lbl_insta_name: "Nom du compte Instagram",
+          lbl_fb_name: "Nom de la page Facebook",
+          lbl_both: "Les deux",
+          lbl_pub_link: "Lien de la publication (Post/Reel/Video)",
+          opt_cash: "Espèces / Autre",
+          lbl_upload_proof_hint: "Cliquez ou déposez votre reçu ici"
+      },
+      ar: {
+          nav_info: "معلومات",
+          nav_offers: "عروضنا",
+          nav_method: "طريقة العمل",
+          nav_payment: "دفع",
+          nav_order: "طلب رعاية",
+          nav_custom: "إنجازاتنا",
+          client_title: "منطقة العميل",
+          client_subtitle: "مرحبًا بك في مساحتك الخاصة",
+          btn_back: "العودة لتسجيل الدخول",
+          info_title: "معلومات عامة",
+          info_desc: "مرحبًا بك في منصة الرعاية الخاصة بنا. هنا يمكنك الاطلاع على عروضنا وفهم كيفية عملنا وطلب الرعاية مباشرة دون الحاجة لإنشاء حساب.",
+          info_speed: "سرعة",
+          info_speed_desc: "معالجة سريعة لطلباتكم.",
+          info_security: "أمان",
+          info_security_desc: "مدفوعات وبيانات آمنة.",
+          info_support: "دعم",
+          info_support_desc: "مساعدة متاحة لخدمتكم.",
+          offers_title: "عروضنا المتاحة",
+          offers_subtitle: "اختر عرضًا لمعرفة التفاصيل.",
+          btn_details: "عرض التفاصيل",
+          method_title: "طريقة العمل",
+          payment_title: "طرق الدفع",
+          payment_subtitle: "إليك تفاصيل الدفع:",
+          order_title: "طلب رعاية",
+          lbl_platform: "المنصة",
+          opt_choose_platform: "-- اختر منصة --",
+          lbl_objective: "الهدف",
+          opt_choose_objective: "-- اختر الهدف --",
+          opt_followers: "زيادة المتابعين",
+          opt_messages: "رسائل",
+          opt_conversion: "تحويل للموقع",
+          lbl_target_network: "الشبكة المستهدفة للمتابعين",
+          lbl_msg_dest: "وجهة الرسائل",
+          lbl_site_link: "رابط الموقع",
+          lbl_offer_chosen: "العرض المختار",
+          opt_choose_offer: "-- اختر عرضًا --",
+          lbl_pub_link: "رابط المنشور (بوست/ريلز/فيديو)",
+          lbl_payment_method: "طريقة الدفع المستخدمة",
+          opt_choose_payment: "-- اختر --",
+          lbl_proof: "إثبات الدفع (صورة)",
+          btn_submit: "إرسال الطلب",
+          calc_title: "حاسبة RedotPay",
+          calc_desc: "أدخل المبلغ بالدينار الذي تريد إنفاقه، وسنحسب المبلغ بالدولار الذي يجب إرساله.",
+          lbl_amount_dzd: "المبلغ (DZD)",
+          lbl_to_send: "للإرسال (USD)",
+          lbl_rate: "سعر الصرف: 1 دولار = 250 دج",
+          meta_config: "إعدادات Meta",
+          tiktok_config: "إعدادات TikTok",
+          ph_insta: "@حسابي",
+          ph_fb: "صفحتي",
+          ph_website: "https://mysite.com",
+          ph_pub_link: "https://...",
+          ph_amount: "مثال: 5000",
+          lbl_insta_name: "اسم حساب انستغرام",
+          lbl_fb_name: "اسم صفحة فيسبوك",
+          lbl_both: "كلاهما",
+          lbl_pub_link: "رابط المنشور (Post/Reel/Video)",
+          opt_cash: "نقدا / آخر",
+          lbl_upload_proof_hint: "اضغط أو قم بإسقاط الإيصال هنا"
+      }
+  };
+
+  function setLanguage(lang) {
+      const isAr = lang === 'ar';
+      document.documentElement.lang = lang;
+      document.documentElement.dir = isAr ? 'rtl' : 'ltr';
+      
+      const t = TRANSLATIONS[lang] || TRANSLATIONS.fr;
+      
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+          const key = el.getAttribute('data-i18n');
+          if(t[key]) {
+              if((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && key.startsWith('ph_')) {
+                  el.placeholder = t[key];
+              } else {
+                  el.textContent = t[key];
+              }
+          }
+      });
+
+      // Update Custom Tab Title if dynamic
+      if(window.appState && window.appState.customSection && window.appState.customSection.title) {
+          const customTitle = document.getElementById('clientCustomTabTitle');
+          const customHeader = document.getElementById('clientCustomTitle');
+          if(customTitle) customTitle.textContent = window.appState.customSection.title;
+          if(customHeader) customHeader.textContent = window.appState.customSection.title;
+      }
+  }
+
   // === FIREBASE CONFIG & INIT ===
   const firebaseConfig = {
     apiKey: "AIzaSyC-1uQnZRLzqUoTMQ_oaXNZh-QQROfOEqw",
@@ -295,9 +448,384 @@
   <i class="fab fa-github"></i>
   Connexion GitHub
 </button>
+        <div class="relative flex py-5 items-center">
+          <div class="flex-grow border-t border-gray-300"></div>
+          <span class="flex-shrink-0 mx-4 text-gray-400">Ou</span>
+          <div class="flex-grow border-t border-gray-300"></div>
+        </div>
+        <button onclick="showClientSpace()" type="button"
+                class="w-full py-3 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-xl shadow hover:bg-blue-50 transition-all flex items-center justify-center gap-2">
+          <i class="fas fa-user-tag"></i>
+          Espace Client (Accès Libre)
+        </button>
       </div>
     </div>
   </div>
+
+  <!-- CLIENT SPACE CONTAINER -->
+  <div id="clientSpaceContainer" class="min-h-screen p-4 md:p-6" style="display:none;">
+    <div class="max-w-4xl mx-auto space-y-6">
+      <!-- Header Client -->
+      <header class="bg-white rounded-3xl shadow-2xl p-6 border flex flex-col md:flex-row justify-between items-center gap-4 fade-in">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 bg-gradient-to-r from-teal-500 to-emerald-600 rounded-2xl flex items-center justify-center">
+            <i class="fas fa-store text-white text-2xl"></i>
+          </div>
+          <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800" data-i18n="client_title">Espace Client</h1>
+            <p class="text-gray-600" data-i18n="client_subtitle">Bienvenue dans votre espace dédié</p>
+          </div>
+        </div>
+        <button onclick="hideClientSpace()" class="px-6 py-2 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-all">
+          <i class="fas fa-arrow-left mr-2"></i> <span data-i18n="btn_back">Retour Connexion</span>
+        </button>
+      </header>
+
+      <!-- Navigation Client -->
+      <nav class="bg-white rounded-3xl shadow-xl p-4 border fade-in">
+        <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+          <button onclick="showClientTab('client-infos')" class="client-tab-btn px-4 py-2 rounded-xl font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all active-client-tab" data-tab="client-infos">
+            <i class="fas fa-info-circle mr-2"></i> <span data-i18n="nav_info">Informations</span>
+          </button>
+          <button onclick="showClientTab('client-offres')" class="client-tab-btn px-4 py-2 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all" data-tab="client-offres">
+            <i class="fas fa-tags mr-2"></i> <span data-i18n="nav_offers">Nos Offres</span>
+          </button>
+          <button onclick="showClientTab('client-method')" class="client-tab-btn px-4 py-2 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all" data-tab="client-method">
+            <i class="fas fa-cogs mr-2"></i> <span data-i18n="nav_method">Méthode de travail</span>
+          </button>
+          <button onclick="showClientTab('client-payment')" class="client-tab-btn px-4 py-2 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all" data-tab="client-payment">
+            <i class="fas fa-wallet mr-2"></i> <span data-i18n="nav_payment">Paiement</span>
+          </button>
+          <button onclick="showClientTab('client-order')" class="client-tab-btn px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow hover:shadow-lg transition-all" data-tab="client-order">
+            <i class="fas fa-shopping-cart mr-2"></i> <span data-i18n="nav_order">Commander un Sponsor</span>
+          </button>
+          <button onclick="showClientTab('client-custom')" class="client-tab-btn px-4 py-2 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all" data-tab="client-custom">
+            <i class="fas fa-star mr-2"></i> <span id="clientCustomTabTitle" data-i18n="nav_custom">Nos Réalisations</span>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Client Content Sections -->
+      <div class="bg-white rounded-3xl shadow-2xl p-6 md:p-8 border min-h-[400px] fade-in relative">
+        
+        <!-- INFO SECTION -->
+        <div id="client-infos" class="client-tab-content">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800" data-i18n="info_title">Informations Générales</h2>
+          <p class="text-gray-600 leading-relaxed" data-i18n="info_desc">
+            Bienvenue sur notre plateforme de sponsoring. Ici, vous pouvez consulter nos offres, comprendre notre fonctionnement et passer commande directement sans avoir besoin de créer un compte.
+          </p>
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <i class="fas fa-bolt text-blue-500 text-2xl mb-2"></i>
+              <h3 class="font-bold text-gray-800" data-i18n="info_speed">Rapidité</h3>
+              <p class="text-sm text-gray-600" data-i18n="info_speed_desc">Traitement rapide de vos demandes.</p>
+            </div>
+            <div class="p-4 bg-green-50 rounded-xl border border-green-100">
+              <i class="fas fa-shield-alt text-green-500 text-2xl mb-2"></i>
+              <h3 class="font-bold text-gray-800" data-i18n="info_security">Sécurité</h3>
+              <p class="text-sm text-gray-600" data-i18n="info_security_desc">Paiements et données sécurisés.</p>
+            </div>
+            <div class="p-4 bg-purple-50 rounded-xl border border-purple-100">
+              <i class="fas fa-headset text-purple-500 text-2xl mb-2"></i>
+              <h3 class="font-bold text-gray-800" data-i18n="info_support">Support</h3>
+              <p class="text-sm text-gray-600" data-i18n="info_support_desc">Assistance disponible pour vous aider.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- OFFRES SECTION -->
+        <div id="client-offres" class="client-tab-content hidden">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800" data-i18n="offers_title">Nos Offres Disponibles</h2>
+          <p class="text-gray-500 mb-6" data-i18n="offers_subtitle">Sélectionnez une offre pour voir les détails.</p>
+          <!-- Placeholder for dynamic offers if needed, for now static example -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="border rounded-2xl p-4 hover:shadow-lg transition-all cursor-pointer bg-gray-50">
+              <div class="flex justify-between items-center mb-2">
+                <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">Populaire</span>
+                <span class="text-xl font-bold text-gray-800">Pack Starter</span>
+              </div>
+              <p class="text-gray-600 text-sm mb-4">Idéal pour commencer votre visibilité.</p>
+              <button class="w-full py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50" data-i18n="btn_details">Voir détails</button>
+            </div>
+            <div class="border rounded-2xl p-4 hover:shadow-lg transition-all cursor-pointer bg-gray-50">
+               <div class="flex justify-between items-center mb-2">
+                <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold">Pro</span>
+                <span class="text-xl font-bold text-gray-800">Pack Growth</span>
+              </div>
+              <p class="text-gray-600 text-sm mb-4">Pour une croissance accélérée.</p>
+              <button class="w-full py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50" data-i18n="btn_details">Voir détails</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- METHODE SECTION -->
+        <div id="client-method" class="client-tab-content hidden">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800" data-i18n="method_title">Méthode de Travail</h2>
+          <div id="clientMethodContent" class="space-y-4">
+             <!-- Content loaded from appState.settings.workMethodText -->
+          </div>
+        </div>
+
+        <!-- CUSTOM SECTION -->
+        <div id="client-custom" class="client-tab-content hidden">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800" id="clientCustomTitle" data-i18n="nav_custom">Nos Réalisations</h2>
+          <div id="clientCustomContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+             <!-- Content loaded via JS -->
+          </div>
+        </div>
+
+        <!-- PAIEMENT SECTION -->
+        <div id="client-payment" class="client-tab-content hidden">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800" data-i18n="payment_title">Moyens de Paiement</h2>
+          <p class="mb-6 text-gray-600" data-i18n="payment_subtitle">Voici les coordonnées pour effectuer vos paiements :</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- CCP -->
+            <div class="p-6 border border-yellow-200 bg-yellow-50 rounded-2xl relative overflow-hidden">
+               <div class="absolute top-0 right-0 w-24 h-24 bg-yellow-200 rounded-full -mr-12 -mt-12 opacity-50"></div>
+               <div class="relative z-10">
+                 <h3 class="font-bold text-xl text-yellow-800 mb-2 flex items-center gap-2">
+                   <i class="fas fa-university"></i> CCP
+                 </h3>
+                 <div class="space-y-1 text-yellow-900 font-medium">
+                   <p>Numéro : <span class="font-mono text-lg">0044032948</span> Clé <span class="font-mono">28</span></p>
+                   <p class="uppercase">BENDJEDDOU HICHEM</p>
+                   <p class="text-sm opacity-75">CITE VERT BT28 ODF OULED FAYET - 16094</p>
+                 </div>
+               </div>
+            </div>
+
+            <!-- BaridiMob -->
+            <div class="p-6 border border-blue-200 bg-blue-50 rounded-2xl relative overflow-hidden">
+               <div class="absolute top-0 right-0 w-24 h-24 bg-blue-200 rounded-full -mr-12 -mt-12 opacity-50"></div>
+               <div class="relative z-10">
+                 <h3 class="font-bold text-xl text-blue-800 mb-2 flex items-center gap-2">
+                   <i class="fas fa-mobile-alt"></i> BaridiMob
+                 </h3>
+                 <div class="space-y-1 text-blue-900 font-medium">
+                   <p class="font-mono text-lg tracking-wider">00799999004403294836</p>
+                 </div>
+               </div>
+            </div>
+
+            <!-- RedotPay -->
+            <div class="p-6 border border-red-200 bg-red-50 rounded-2xl relative overflow-hidden md:col-span-2">
+               <div class="absolute top-0 right-0 w-24 h-24 bg-red-200 rounded-full -mr-12 -mt-12 opacity-50"></div>
+               <div class="relative z-10">
+                 <h3 class="font-bold text-xl text-red-800 mb-2 flex items-center gap-2">
+                   <i class="fas fa-credit-card"></i> RedotPay
+                 </h3>
+                 <div class="flex flex-col md:flex-row gap-6 justify-between items-start">
+                     <div class="space-y-1 text-red-900 font-medium">
+                       <p>ID : <span class="font-mono text-2xl tracking-wider">1956595423</span></p>
+                       <p class="text-sm opacity-75">Binance Pay / USDT / RedotPay Transfer</p>
+                     </div>
+                     <div class="bg-white p-4 rounded-xl border border-red-100 shadow-sm w-full md:w-auto">
+                        <p class="text-xs text-gray-500 mb-1">Taux de conversion</p>
+                        <p class="font-bold text-gray-800">1 USD = 250 DZD</p>
+                     </div>
+                 </div>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMMANDER SECTION (COMPLEX FORM) -->
+        <div id="client-order" class="client-tab-content hidden">
+          <h2 class="text-2xl font-bold mb-6 text-gray-800" data-i18n="order_title">Commander un Sponsor</h2>
+          
+          <form id="orderForm" onsubmit="handleOrderSubmit(event)" class="space-y-6">
+            
+            <!-- 1. Platform Selection -->
+            <div>
+              <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_platform">Plateforme</label>
+              <select id="platformSelect" onchange="updateFormLogic()" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
+                <option value="" data-i18n="opt_choose_platform">-- Choisir une plateforme --</option>
+                <option value="meta">Meta (Instagram / Facebook)</option>
+                <option value="tiktok">TikTok</option>
+              </select>
+            </div>
+
+            <!-- META SECTION (Conditional) -->
+            <div id="metaSection" class="hidden space-y-4 border-l-4 border-blue-500 pl-4 bg-blue-50 p-4 rounded-r-xl">
+              <h3 class="font-bold text-blue-800" data-i18n="meta_config">Configuration Meta</h3>
+              
+              <!-- Meta Objective -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_objective">Objectif</label>
+                <select id="metaObjective" onchange="updateMetaLogic()" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="" data-i18n="opt_choose_objective">-- Choisir l'objectif --</option>
+                  <option value="followers" data-i18n="opt_followers">Plus d'abonnés</option>
+                  <option value="messages" data-i18n="opt_messages">Messages</option>
+                  <option value="conversion" data-i18n="opt_conversion">Conversion sur site</option>
+                </select>
+              </div>
+
+              <!-- Meta: Followers Options -->
+              <div id="metaFollowersOptions" class="hidden">
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_target_network">Réseau cible pour les abonnés</label>
+                <div class="flex gap-4">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="metaFollowersTarget" value="instagram" class="w-4 h-4 text-blue-600"> Instagram
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="metaFollowersTarget" value="facebook" class="w-4 h-4 text-blue-600"> Facebook
+                  </label>
+                </div>
+              </div>
+
+              <!-- Meta: Messages Options -->
+              <div id="metaMessagesOptions" class="hidden">
+                 <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_msg_dest">Réception des messages sur</label>
+                 <div class="flex gap-4 flex-wrap">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="metaMsgTarget" value="instagram" class="w-4 h-4 text-blue-600"> Instagram
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="metaMsgTarget" value="facebook" class="w-4 h-4 text-blue-600"> Facebook
+                  </label>
+                   <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="metaMsgTarget" value="both" class="w-4 h-4 text-blue-600"> <span data-i18n="lbl_both">Les deux</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Common Meta Inputs -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_insta_name">Nom du compte Instagram</label>
+                  <input type="text" id="metaInstaName" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="@moncompte" data-i18n="ph_insta">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_fb_name">Nom de la page Facebook</label>
+                  <input type="text" id="metaFbName" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ma Page" data-i18n="ph_fb">
+                </div>
+              </div>
+            </div>
+
+            <!-- TIKTOK SECTION (Conditional) -->
+            <div id="tiktokSection" class="hidden space-y-4 border-l-4 border-black pl-4 bg-gray-50 p-4 rounded-r-xl">
+              <h3 class="font-bold text-gray-800" data-i18n="tiktok_config">Configuration TikTok</h3>
+              
+              <!-- TikTok Objective -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_objective">Objectif</label>
+                <select id="tiktokObjective" onchange="updateTikTokLogic()" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-black outline-none">
+                  <option value="" data-i18n="opt_choose_objective">-- Choisir l'objectif --</option>
+                  <option value="conversion" data-i18n="opt_conversion">Site Web (Conversion)</option>
+                  <option value="messages" data-i18n="opt_messages">Messages</option>
+                </select>
+              </div>
+
+              <!-- TikTok: Messages Options -->
+              <div id="tiktokMessagesOptions" class="hidden">
+                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_msg_dest">Destination des messages</label>
+                <div class="flex gap-4 flex-wrap">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="tiktokMsgTarget" value="tiktok" class="w-4 h-4 text-black"> TikTok
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="tiktokMsgTarget" value="facebook" class="w-4 h-4 text-black"> Facebook
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="tiktokMsgTarget" value="whatsapp" class="w-4 h-4 text-black"> WhatsApp
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- GLOBAL CONDITIONAL: Website Link (Shows if conversion selected in either platform) -->
+            <div id="websiteLinkSection" class="hidden">
+              <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_site_link">Lien du site web</label>
+              <input type="url" id="websiteUrl" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-green-500 outline-none" placeholder="https://monsite.com" data-i18n="ph_website">
+            </div>
+
+            <!-- GLOBAL FIELDS (Always visible once platform selected) -->
+            <div id="commonFields" class="hidden space-y-4 pt-4 border-t">
+              
+              <!-- Offer Selection -->
+              <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_offer_chosen">Offre Choisie</label>
+                <select id="orderOfferSelect" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
+                  <option value="" data-i18n="opt_choose_offer">-- Choisir une offre --</option>
+                  <option value="pack_starter">Pack Starter</option>
+                  <option value="pack_growth">Pack Growth</option>
+                  <option value="pack_elite">Pack Elite</option>
+                  <!-- Should be populated dynamically ideally -->
+                </select>
+              </div>
+
+              <!-- Publication Link -->
+              <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_pub_link">Lien de la publication (Post/Reel/Video)</label>
+                <input type="url" id="pubLink" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" placeholder="https://..." data-i18n="ph_pub_link">
+              </div>
+
+              <!-- Payment Method & Calculator -->
+              <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_payment_method">Moyen de paiement utilisé</label>
+                <select id="paymentMethodSelect" onchange="toggleRedotpayCalculator()" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white mb-4">
+                  <option value="" data-i18n="opt_choose_payment">-- Choisir --</option>
+                  <option value="ccp">CCP</option>
+                  <option value="baridimob">BaridiMob</option>
+                  <option value="redotpay">RedotPay</option>
+                  <option value="cash" data-i18n="opt_cash">Espèces / Autre</option>
+                </select>
+
+                <!-- RedotPay Calculator -->
+                <div id="redotpayCalculator" class="hidden animate-fade-in-down">
+                  <div class="bg-red-50 border border-red-100 p-4 rounded-lg">
+                    <h4 class="font-bold text-red-800 mb-2 text-sm flex items-center gap-2">
+                        <i class="fas fa-calculator"></i> <span data-i18n="calc_title">Calculateur RedotPay</span>
+                    </h4>
+                    <p class="text-xs text-red-600 mb-3" data-i18n="calc_desc">Entrez le montant en DZD que vous souhaitez dépenser, nous calculerons le montant USD à envoyer.</p>
+                    
+                    <div class="flex gap-4 items-end">
+                        <div class="flex-1">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1" data-i18n="lbl_amount_dzd">Montant DZD</label>
+                            <input type="number" id="redotpayDzdAmount" oninput="calculateRedotpayUsd()" class="w-full p-2 border rounded-lg" placeholder="ex: 5000" data-i18n="ph_amount">
+                        </div>
+                        <div class="pb-2 text-gray-400">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1" data-i18n="lbl_to_send">À envoyer (USD)</label>
+                            <div id="redotpayUsdDisplay" class="font-mono text-xl font-bold text-red-600 bg-white p-2 rounded-lg border border-red-100 text-center">
+                                0.00 $
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-center text-gray-400 mt-2" data-i18n="lbl_rate">Taux: 1 USD = 250 DZD</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Payment Proof -->
+              <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_proof">Preuve de paiement (Photo)</label>
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-all cursor-pointer relative">
+                  <input type="file" id="paymentProof" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="previewFile(this)">
+                  <div id="filePreview" class="pointer-events-none">
+                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                    <p class="text-gray-500" data-i18n="lbl_upload_proof_hint">Cliquez ou déposez votre reçu ici</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Submit -->
+              <button type="submit" class="w-full py-4 bg-gradient-to-r from-green-600 to-teal-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all transform">
+                <i class="fas fa-paper-plane mr-2"></i> <span data-i18n="btn_submit">Envoyer la commande</span>
+              </button>
+
+            </div>
+
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
 
   <!-- APP CONTAINER (DASHBOARD) -->
   <div id="appContainer" class="max-w-7xl mx-auto space-y-6" style="display:none;">
@@ -392,6 +920,16 @@
                 class="tab-btn m-1 px-4 md:px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-teal-50 rounded-xl transition-all hover-scale flex items-center gap-2">
           <i class="fas fa-dollar-sign"></i>
           <span>Achats USD</span>
+        </button>
+        <button onclick="showTab('requests')" id="tab-requests"
+                class="tab-btn m-1 px-4 md:px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-yellow-50 rounded-xl transition-all hover-scale flex items-center gap-2">
+          <i class="fas fa-inbox"></i>
+          <span>Demandes <span id="requestsBadge" class="hidden bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-1">0</span></span>
+        </button>
+        <button onclick="showTab('custom-section-admin')" id="tab-custom-section-admin"
+                class="tab-btn m-1 px-4 md:px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-pink-50 rounded-xl transition-all hover-scale flex items-center gap-2">
+          <i class="fas fa-star"></i>
+          <span>Section Perso</span>
         </button>
       </div>
     </nav>
@@ -892,6 +1430,67 @@
           </div>
         </div>
       </section>
+
+      <!-- REQUESTS TAB -->
+      <section id="requests" class="tab-content hidden fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Requests List -->
+          <div class="lg:col-span-2 bg-white p-6 md:p-8 rounded-3xl shadow-xl border card-hover">
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+              <div>
+                <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+                  <i class="fas fa-inbox text-yellow-600"></i>
+                  Demandes Clients
+                </h2>
+                <p class="text-gray-600 text-sm mt-1">Gérez les commandes reçues depuis l'espace client</p>
+              </div>
+              <button onclick="renderRequests()" class="text-gray-500 hover:text-blue-600">
+                <i class="fas fa-sync-alt"></i> Actualiser
+              </button>
+            </div>
+            
+            <div class="overflow-x-auto rounded-xl border">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="bg-gradient-to-r from-gray-50 to-yellow-50">
+                    <th class="p-4 rounded-l-lg font-semibold text-gray-700">Date</th>
+                    <th class="p-4 font-semibold text-gray-700">Client / Contact</th>
+                    <th class="p-4 font-semibold text-gray-700">Plateforme</th>
+                    <th class="p-4 font-semibold text-gray-700">Offre</th>
+                    <th class="p-4 font-semibold text-gray-700">Paiement</th>
+                    <th class="p-4 rounded-r-lg font-semibold text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="requestsTableBody" class="divide-y divide-gray-100">
+                  <!-- Rempli par JavaScript -->
+                </tbody>
+              </table>
+            </div>
+            <div class="mt-4 text-center text-gray-500" id="requestsEmptyState">
+               Aucune demande pour le moment.
+            </div>
+          </div>
+
+          <!-- Site Content Management -->
+          <div class="bg-white p-6 md:p-8 rounded-3xl shadow-xl border card-hover">
+            <h2 class="text-xl font-bold flex items-center gap-2 mb-4">
+              <i class="fas fa-edit text-blue-600"></i>
+              Éditer "Méthode de travail"
+            </h2>
+            <p class="text-gray-600 text-sm mb-4">Modifiez le texte affiché dans l'espace client.</p>
+            
+            <textarea id="workMethodEditor" rows="12" 
+              class="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+              placeholder="HTML autorisé. Ex: <p>Étape 1...</p>"></textarea>
+            
+            <button onclick="saveWorkMethod()" 
+              class="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2">
+              <i class="fas fa-save"></i>
+              Enregistrer Modifications
+            </button>
+          </div>
+        </div>
+      </section>
     </div> <!-- fin .space-y-6 -->
 
     <!-- MODALS -->
@@ -922,6 +1521,51 @@
         </div>
       </div>
     </div>
+
+    <!-- CUSTOM SECTION ADMIN TAB -->
+    <section id="custom-section-admin" class="tab-content hidden fade-in">
+        <div class="bg-white p-6 md:p-8 rounded-3xl shadow-xl border mb-6">
+            <h2 class="text-xl font-bold flex items-center gap-2 mb-4">
+                <i class="fas fa-heading text-pink-600"></i>
+                Configuration de la Section
+            </h2>
+            <div class="flex gap-4 items-end">
+                <div class="flex-1">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Titre de la section</label>
+                    <input type="text" id="customSectionTitleInput" class="w-full p-3 border rounded-xl" placeholder="Ex: Nos Réalisations">
+                </div>
+                <button onclick="saveCustomSectionTitle()" class="px-6 py-3 bg-pink-600 text-white rounded-xl font-bold hover:bg-pink-700 transition-all">
+                    Enregistrer
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Add Category Form -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-3xl shadow-xl border h-fit">
+                <h3 class="font-bold text-lg mb-4 text-gray-800">Ajouter une Catégorie</h3>
+                <div class="space-y-4">
+                    <input id="newCatTitle" type="text" placeholder="Titre (ex: Projet X)" class="w-full p-3 border rounded-xl">
+                    <textarea id="newCatDesc" rows="3" placeholder="Description..." class="w-full p-3 border rounded-xl"></textarea>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-2">Image (URL)</label>
+                        <input id="newCatImage" type="url" placeholder="https://..." class="w-full p-3 border rounded-xl">
+                        <p class="text-xs text-gray-400 mt-1">Ou utilisez un lien d'image hébergée</p>
+                    </div>
+
+                    <button onclick="addCustomCategory()" class="w-full py-3 bg-gray-800 text-white rounded-xl font-bold hover:bg-black transition-all">
+                        <i class="fas fa-plus mr-2"></i> Ajouter
+                    </button>
+                </div>
+            </div>
+
+            <!-- Categories List -->
+            <div class="lg:col-span-2 space-y-4" id="adminCustomCategoriesList">
+                <!-- Rendered JS -->
+            </div>
+        </div>
+    </section>
 
     <div id="offerModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4 modal-backdrop">
       <div class="bg-white p-6 md:p-8 rounded-2xl w-full max-w-md modal-show">
@@ -1112,6 +1756,7 @@
       },
       expenses: [],
       recurringExpenses: [],
+      clientRequests: [],
     };
 
     // === UTILITAIRES ===
@@ -1199,6 +1844,48 @@
           if (!('category' in e)) { e.category = 'Autre'; changed = true; }
         });
         if (!Array.isArray(appState.recurringExpenses)) { appState.recurringExpenses = []; changed = true; }
+        if (!Array.isArray(appState.clientRequests)) { appState.clientRequests = []; changed = true; }
+        if (!appState.customSection) {
+            appState.customSection = {
+                title: "Nos Réalisations",
+                categories: [] 
+            };
+            changed = true;
+        }
+        if (!appState.settings.workMethodText) {
+             appState.settings.workMethodText = `
+<div class="space-y-4">
+  <div class="flex items-start gap-4">
+    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 font-bold">1</div>
+    <div>
+      <h3 class="font-bold text-gray-800">Choix de l'offre</h3>
+      <p class="text-gray-600">Vous sélectionnez le pack qui correspond à vos besoins (Instagram, Facebook, TikTok...).</p>
+    </div>
+  </div>
+  <div class="flex items-start gap-4">
+    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 font-bold">2</div>
+    <div>
+      <h3 class="font-bold text-gray-800">Configuration</h3>
+      <p class="text-gray-600">Vous remplissez les détails de votre campagne : liens, objectifs, cibles.</p>
+    </div>
+  </div>
+  <div class="flex items-start gap-4">
+    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 font-bold">3</div>
+    <div>
+      <h3 class="font-bold text-gray-800">Paiement</h3>
+      <p class="text-gray-600">Vous effectuez le paiement et envoyez la preuve directement via le formulaire.</p>
+    </div>
+  </div>
+  <div class="flex items-start gap-4">
+    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 font-bold">4</div>
+    <div>
+      <h3 class="font-bold text-gray-800">Lancement</h3>
+      <p class="text-gray-600">Notre équipe valide votre commande et lance la campagne sous 24-48h.</p>
+    </div>
+  </div>
+</div>`;
+             changed = true;
+        }
       } catch (e) {
         console.warn('Normalisation échouée', e);
       }
@@ -2534,8 +3221,525 @@
       showToast('Toutes les données ont été supprimées', 'success');
     }
 
-    // === INITIALISATION GLOBALE ===
+    // === REQUESTS TAB LOGIC ===
+    function renderRequests() {
+      const tbody = document.getElementById('requestsTableBody');
+      const emptyState = document.getElementById('requestsEmptyState');
+      const badge = document.getElementById('requestsBadge');
+      const editor = document.getElementById('workMethodEditor');
+
+      if (!tbody) return;
+
+      // Update editor with current content
+      if (editor && appState.settings.workMethodText) {
+         if (document.activeElement !== editor) { // Don't overwrite if user is typing
+            editor.value = appState.settings.workMethodText;
+         }
+      }
+
+      tbody.innerHTML = '';
+      const requests = (appState.clientRequests || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      if (requests.length === 0) {
+        emptyState.classList.remove('hidden');
+        if (badge) {
+             badge.textContent = '0';
+             badge.classList.add('hidden');
+        }
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      
+      // Count unread
+      const unreadCount = requests.filter(r => !r.read).length;
+      if (badge) {
+        badge.textContent = unreadCount;
+        if (unreadCount > 0) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
+      }
+
+      requests.forEach(req => {
+        const tr = document.createElement('tr');
+        tr.className = req.read ? 'bg-white hover:bg-gray-50' : 'bg-yellow-50 hover:bg-yellow-100 font-medium';
+        
+        let details = `<span class="block text-xs text-gray-500">${req.platform}</span>`;
+        if (req.metaObjective) details += `<span class="block text-xs text-gray-500">Obj: ${req.metaObjective}</span>`;
+        
+        tr.innerHTML = `
+          <td class="p-4 text-gray-600 whitespace-nowrap">
+            ${formatDate(req.date)}
+            <div class="text-xs text-gray-400">${new Date(req.date).toLocaleTimeString()}</div>
+          </td>
+          <td class="p-4">
+            <div class="font-bold text-gray-800">${req.instagram || req.facebook || 'Client'}</div>
+            ${req.pageFacebook ? `<div class="text-xs text-blue-600"><i class="fab fa-facebook"></i> ${req.pageFacebook}</div>` : ''}
+            ${req.websiteUrl ? `<div class="text-xs text-green-600"><i class="fas fa-link"></i> Site Web</div>` : ''}
+          </td>
+          <td class="p-4">
+            <span class="px-2 py-1 rounded-full text-xs font-bold ${req.platform === 'meta' ? 'bg-blue-100 text-blue-700' : 'bg-black text-white'}">
+              ${req.platform ? req.platform.toUpperCase() : 'N/A'}
+            </span>
+            ${req.metaObjective ? `<div class="text-xs mt-1">${req.metaObjective}</div>` : ''}
+          </td>
+          <td class="p-4">
+            <div class="font-bold text-purple-700">${req.offer || 'N/A'}</div>
+          </td>
+          <td class="p-4">
+            <div class="flex flex-col gap-1">
+                <span class="text-sm font-semibold">${req.paymentMethod || 'N/A'}</span>
+                ${req.paymentProof ? `<a href="${req.paymentProof}" target="_blank" class="text-xs text-blue-600 underline">Voir Preuve</a>` : '<span class="text-xs text-gray-400">Aucune preuve</span>'}
+            </div>
+          </td>
+          <td class="p-4 rounded-r-lg">
+            <div class="flex gap-2">
+              <button onclick="toggleRequestRead('${req.id}')" class="text-gray-500 hover:text-blue-600" title="${req.read ? 'Marquer comme non lu' : 'Marquer comme lu'}">
+                <i class="fas ${req.read ? 'fa-envelope-open' : 'fa-envelope'}"></i>
+              </button>
+              <button onclick="deleteRequest('${req.id}')" class="text-red-500 hover:text-red-700" title="Supprimer">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function toggleRequestRead(id) {
+      const req = appState.clientRequests.find(r => r.id === id);
+      if (req) {
+        req.read = !req.read;
+        renderRequests();
+        autoSave();
+      }
+    }
+
+    function deleteRequest(id) {
+      if(confirm('Supprimer cette demande ?')) {
+        appState.clientRequests = appState.clientRequests.filter(r => r.id !== id);
+        renderRequests();
+        autoSave();
+        showToast('Demande supprimée', 'success');
+      }
+    }
+
+    function saveWorkMethod() {
+      const editor = document.getElementById('workMethodEditor');
+      if (editor) {
+        appState.settings.workMethodText = editor.value;
+        autoSave();
+        showToast('Méthode de travail mise à jour', 'success');
+        // Update live if client space is open (though usually admin and client space are separate views, but good to have)
+        const clientContent = document.getElementById('clientMethodContent');
+        if(clientContent) clientContent.innerHTML = appState.settings.workMethodText;
+      }
+    }
+
+    // === CLIENT SPACE LOGIC ===
+
+    function showClientSpace() {
+    document.getElementById('loginContainer').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'none';
+    document.getElementById('clientSpaceContainer').style.display = 'block';
+    
+    renderClientOffers();
+    populateClientOrderOffers();
+  }
+
+  function hideClientSpace() {
+    document.getElementById('clientSpaceContainer').style.display = 'none';
+    document.getElementById('loginContainer').style.display = 'flex'; // Restore login flex
+  }
+  
+  function renderClientOffers() {
+    const container = document.querySelector('#client-offres .grid');
+    if(!container) return;
+    
+    // Check if we have offers in appState
+    if (appState && appState.offers && appState.offers.length > 0) {
+        container.innerHTML = '';
+        appState.offers.forEach(offer => {
+            const div = document.createElement('div');
+            div.className = 'border rounded-2xl p-4 hover:shadow-lg transition-all cursor-pointer bg-gray-50 flex flex-col justify-between';
+            div.innerHTML = `
+              <div>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">Offre</span>
+                    <span class="text-xl font-bold text-gray-800">${offer.name}</span>
+                </div>
+                <p class="text-gray-600 text-sm mb-4">${offer.description || 'Aucune description'}</p>
+                <div class="text-lg font-bold text-blue-600 mb-4">${formatCurrency(offer.price || 0)}</div>
+              </div>
+              <button onclick="selectClientOffer('${offer.id}')" class="w-full py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50">
+                Choisir cette offre
+              </button>
+            `;
+            container.appendChild(div);
+        });
+    } else {
+        // Fallback to static if no data (though static was removed in this replace, so we handle empty state)
+        container.innerHTML = '<p class="text-gray-500 col-span-2 text-center py-8">Aucune offre disponible pour le moment.</p>';
+    }
+  }
+
+  function populateClientOrderOffers() {
+    const select = document.getElementById('orderOfferSelect');
+    if(!select) return;
+    
+    // Keep the default option
+    select.innerHTML = '<option value="">-- Choisir une offre --</option>';
+    
+    if (appState && appState.offers && appState.offers.length > 0) {
+        appState.offers.forEach(offer => {
+            const opt = document.createElement('option');
+            opt.value = offer.name; // Use name for the order since ID might not mean much to the recipient without the DB
+            opt.textContent = `${offer.name} - ${formatCurrency(offer.price || 0)}`;
+            select.appendChild(opt);
+        });
+    }
+  }
+
+  function selectClientOffer(offerId) {
+    // Switch to order tab
+    showClientTab('client-order');
+    // Try to select it in the dropdown
+    const offer = appState.offers.find(o => o.id === offerId);
+    if(offer) {
+        const select = document.getElementById('orderOfferSelect');
+        if(select) {
+            // We populated values with names in populateClientOrderOffers
+            select.value = offer.name; 
+        }
+    }
+  }
+
+  function showClientTab(tabId) {
+    // Hide all contents
+    document.querySelectorAll('.client-tab-content').forEach(el => el.classList.add('hidden'));
+    // Show target
+    document.getElementById(tabId).classList.remove('hidden');
+    
+    // Update buttons
+    document.querySelectorAll('.client-tab-btn').forEach(btn => {
+      btn.classList.remove('bg-blue-100', 'text-blue-700', 'active-client-tab');
+      btn.classList.add('text-gray-600', 'hover:bg-gray-100');
+      if(btn.dataset.tab === tabId) {
+         btn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+         btn.classList.add('bg-blue-100', 'text-blue-700', 'active-client-tab');
+      }
+    });
+
+    // Dynamic content loading
+    if (tabId === 'client-method') {
+       const content = document.getElementById('clientMethodContent');
+       if (content) {
+          content.innerHTML = appState.settings.workMethodText || '<p>Information non disponible.</p>';
+       }
+    }
+  }
+
+  // === FORM LOGIC ===
+
+  function updateFormLogic() {
+    const platform = document.getElementById('platformSelect').value;
+    const metaSection = document.getElementById('metaSection');
+    const tiktokSection = document.getElementById('tiktokSection');
+    const commonFields = document.getElementById('commonFields');
+    const websiteSection = document.getElementById('websiteLinkSection');
+
+    // Reset visibility
+    metaSection.classList.add('hidden');
+    tiktokSection.classList.add('hidden');
+    commonFields.classList.add('hidden');
+    websiteSection.classList.add('hidden');
+
+    if (platform === 'meta') {
+      metaSection.classList.remove('hidden');
+      commonFields.classList.remove('hidden');
+      updateMetaLogic(); // Re-check internal meta state
+    } else if (platform === 'tiktok') {
+      tiktokSection.classList.remove('hidden');
+      commonFields.classList.remove('hidden');
+      updateTikTokLogic(); // Re-check internal tiktok state
+    }
+  }
+
+  function updateMetaLogic() {
+    const objective = document.getElementById('metaObjective').value;
+    const followersOpts = document.getElementById('metaFollowersOptions');
+    const messagesOpts = document.getElementById('metaMessagesOptions');
+    const websiteSection = document.getElementById('websiteLinkSection');
+
+    followersOpts.classList.add('hidden');
+    messagesOpts.classList.add('hidden');
+    websiteSection.classList.add('hidden');
+
+    if (objective === 'followers') {
+      followersOpts.classList.remove('hidden');
+    } else if (objective === 'messages') {
+      messagesOpts.classList.remove('hidden');
+    } else if (objective === 'conversion') {
+      websiteSection.classList.remove('hidden');
+    }
+  }
+
+  function updateTikTokLogic() {
+    const objective = document.getElementById('tiktokObjective').value;
+    const messagesOpts = document.getElementById('tiktokMessagesOptions');
+    const websiteSection = document.getElementById('websiteLinkSection');
+
+    messagesOpts.classList.add('hidden');
+    websiteSection.classList.add('hidden');
+
+    if (objective === 'messages') {
+      messagesOpts.classList.remove('hidden');
+    } else if (objective === 'conversion') {
+      websiteSection.classList.remove('hidden');
+    }
+  }
+
+  function previewFile(input) {
+    const preview = document.getElementById('filePreview');
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        preview.innerHTML = `<img src="${e.target.result}" class="h-32 mx-auto rounded-lg object-contain shadow-md">`;
+      }
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  function handleOrderSubmit(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Envoi en cours...';
+    btn.disabled = true;
+
+    // 1. Gather Basic Data
+    const platform = document.getElementById('platformSelect').value;
+    const paymentMethod = document.getElementById('paymentMethodSelect').value;
+    
+    // 2. Construct Order Data Object
+    const orderData = {
+        id: 'REQ-' + Date.now(),
+        date: new Date().toISOString(),
+        read: false,
+        platform: platform || 'N/A',
+        paymentMethod: paymentMethod || 'N/A',
+        paymentProof: null, // Will be set if file exists logic is added, for now null or handled separately if needed
+        status: 'pending'
+    };
+
+    // 3. Add Platform Specifics
+    if (platform === 'meta') {
+        orderData.metaObjective = document.getElementById('metaObjective').value;
+        const followersTarget = document.querySelector('input[name="metaFollowersTarget"]:checked');
+        if (followersTarget) orderData.metaFollowersTarget = followersTarget.value;
+        
+        const messagesTarget = document.querySelectorAll('input[name="metaMsgTarget"]:checked');
+        if (messagesTarget.length > 0) {
+             orderData.metaMessagesTarget = Array.from(messagesTarget).map(cb => cb.value).join(', ');
+        }
+    } else if (platform === 'tiktok') {
+        orderData.tiktokObjective = document.getElementById('tiktokObjective').value;
+        const tiktokMsg = document.querySelector('input[name="tiktokMsgTarget"]:checked');
+        if (tiktokMsg) orderData.tiktokMsgTarget = tiktokMsg.value;
+    }
+
+    // 4. Add User Inputs
+    orderData.instagram = document.getElementById('metaInstaName').value;
+    orderData.pageFacebook = document.getElementById('metaFbName').value;
+    orderData.offer = document.getElementById('orderOfferSelect').value;
+    orderData.websiteUrl = document.getElementById('websiteUrl').value;
+
+    // 5. RedotPay Logic
+    if (paymentMethod === 'redotpay') {
+          const dzdAmount = parseFloat(document.getElementById('redotpayDzdAmount').value || 0);
+          orderData.paymentDetails = {
+              method: 'RedotPay',
+              dzdAmount: dzdAmount,
+              usdToSend: dzdAmount / 250
+          };
+    }
+
+    // 6. Save
+    setTimeout(() => {
+      if(!appState.clientRequests) appState.clientRequests = [];
+      appState.clientRequests.push(orderData);
+      
+      if(appState.settings.storageMode === 'cloud' && auth.currentUser) {
+         saveToCloud(); 
+      } else {
+         saveToLocalStorage();
+      }
+
+      alert('✅ Commande envoyée avec succès ! Notre équipe vous contactera bientôt.');
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+      e.target.reset();
+      updateFormLogic();
+      const preview = document.getElementById('filePreview');
+      if(preview) {
+        preview.innerHTML = `
+          <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+          <p class="text-gray-500">Cliquez ou déposez votre reçu ici</p>
+        `;
+      }
+      if(paymentMethod) {
+        const calc = document.getElementById('redotpayCalculator');
+        if(calc) calc.classList.add('hidden');
+      }
+    }, 1500);
+  }
+
+  function toggleRedotpayCalculator() {
+    const select = document.getElementById('paymentMethodSelect');
+    const calc = document.getElementById('redotpayCalculator');
+    if(!select || !calc) return;
+    
+    if(select.value === 'redotpay') {
+        calc.classList.remove('hidden');
+    } else {
+        calc.classList.add('hidden');
+    }
+  }
+
+  function calculateRedotpayUsd() {
+    const dzdInput = document.getElementById('redotpayDzdAmount');
+    const usdDisplay = document.getElementById('redotpayUsdDisplay');
+    if(!dzdInput || !usdDisplay) return;
+    
+    const dzd = parseFloat(dzdInput.value);
+    if(isNaN(dzd) || dzd <= 0) {
+        usdDisplay.textContent = '0.00 $';
+        return;
+    }
+    
+    const usd = dzd / 250;
+    usdDisplay.textContent = usd.toFixed(2) + ' $';
+  }
+
+  // === GESTION SECTION PERSO (ADMIN) ===
+  function saveCustomSectionTitle() {
+      const input = document.getElementById('customSectionTitleInput');
+      if(input && input.value) {
+          appState.customSection.title = input.value;
+          saveToLocalStorage();
+          if(appState.settings.storageMode === 'cloud' && auth.currentUser) saveToCloud();
+          showToast('Titre mis à jour', 'success');
+          renderCustomSectionClient(); // Update client view if visible
+      }
+  }
+
+  function addCustomCategory() {
+      const title = document.getElementById('newCatTitle').value;
+      const desc = document.getElementById('newCatDesc').value;
+      const img = document.getElementById('newCatImage').value;
+
+      if(!title) { showToast('Titre requis', 'error'); return; }
+
+      const newCat = {
+          id: 'cat-' + Date.now(),
+          title,
+          desc,
+          image: img || 'https://via.placeholder.com/400x300?text=No+Image'
+      };
+
+      appState.customSection.categories.push(newCat);
+      saveToLocalStorage();
+      if(appState.settings.storageMode === 'cloud' && auth.currentUser) saveToCloud();
+      
+      showToast('Catégorie ajoutée', 'success');
+      renderCustomSectionAdmin();
+      renderCustomSectionClient(); // Update client view
+      
+      // Clear inputs
+      document.getElementById('newCatTitle').value = '';
+      document.getElementById('newCatDesc').value = '';
+      document.getElementById('newCatImage').value = '';
+  }
+
+  function deleteCustomCategory(id) {
+      if(confirm('Supprimer cette catégorie ?')) {
+          appState.customSection.categories = appState.customSection.categories.filter(c => c.id !== id);
+          saveToLocalStorage();
+          if(appState.settings.storageMode === 'cloud' && auth.currentUser) saveToCloud();
+          renderCustomSectionAdmin();
+          renderCustomSectionClient();
+          showToast('Catégorie supprimée', 'success');
+      }
+  }
+
+  function renderCustomSectionAdmin() {
+      const container = document.getElementById('adminCustomCategoriesList');
+      const titleInput = document.getElementById('customSectionTitleInput');
+      
+      if(titleInput && appState.customSection) titleInput.value = appState.customSection.title;
+
+      if(!container || !appState.customSection) return;
+
+      container.innerHTML = '';
+      appState.customSection.categories.forEach(cat => {
+          const div = document.createElement('div');
+          div.className = 'bg-white p-4 rounded-xl border flex gap-4 items-start shadow-sm';
+          div.innerHTML = `
+              <img src="${cat.image}" class="w-24 h-24 object-cover rounded-lg bg-gray-100">
+              <div class="flex-1">
+                  <h4 class="font-bold text-lg">${cat.title}</h4>
+                  <p class="text-sm text-gray-600">${cat.desc}</p>
+              </div>
+              <button onclick="deleteCustomCategory('${cat.id}')" class="text-red-500 hover:text-red-700 p-2">
+                  <i class="fas fa-trash"></i>
+              </button>
+          `;
+          container.appendChild(div);
+      });
+  }
+
+  // === RENDU CLIENT SECTION PERSO ===
+  function renderCustomSectionClient() {
+      const container = document.getElementById('clientCustomContent');
+      const title = document.getElementById('clientCustomTitle');
+      const tabTitle = document.getElementById('clientCustomTabTitle');
+
+      if(appState.customSection) {
+          if(title) title.textContent = appState.customSection.title;
+          if(tabTitle) tabTitle.textContent = appState.customSection.title;
+      }
+
+      if(!container || !appState.customSection) return;
+      
+      container.innerHTML = '';
+      if(appState.customSection.categories.length === 0) {
+          container.innerHTML = '<p class="text-gray-500 col-span-3 text-center py-8">Bientôt disponible...</p>';
+          return;
+      }
+
+      appState.customSection.categories.forEach(cat => {
+          const div = document.createElement('div');
+          div.className = 'bg-white rounded-2xl shadow-lg overflow-hidden border hover:shadow-xl transition-all';
+          div.innerHTML = `
+              <div class="h-48 bg-gray-200 overflow-hidden">
+                  <img src="${cat.image}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
+              </div>
+              <div class="p-6">
+                  <h3 class="text-xl font-bold text-gray-800 mb-2">${cat.title}</h3>
+                  <p class="text-gray-600 text-sm leading-relaxed">${cat.desc}</p>
+              </div>
+          `;
+          container.appendChild(div);
+      });
+  }
+
+  // === INITIALISATION GLOBALE ===
   document.addEventListener('DOMContentLoaded', async function () {
+    // Language Detection
+    const userLang = navigator.language.startsWith('ar') ? 'ar' : 'fr';
+    setLanguage(userLang);
+
     const loginButton = document.getElementById('loginButton');
     const loginGithubButton = document.getElementById('loginGithubButton');
 
