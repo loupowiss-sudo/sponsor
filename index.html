@@ -337,6 +337,10 @@
             <i class="fas fa-upload"></i>
             <span class="hidden sm:inline">Import JSON</span>
           </button>
+          <button onclick="purgeAllData()" class="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-red-700 to-red-800 text-white font-bold rounded-xl hover:shadow-lg transition-all shadow flex items-center gap-2">
+            <i class="fas fa-trash-alt"></i>
+            <span class="hidden sm:inline">Tout supprimer</span>
+          </button>
           <button onclick="showStats()" class="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg transition-all shadow flex items-center gap-2">
             <i class="fas fa-chart-bar"></i>
             <span class="hidden sm:inline">Statistiques</span>
@@ -624,6 +628,15 @@
             <table class="w-full text-left">
               <thead>
                 <tr class="bg-gradient-to-r from-gray-50 to-blue-50">
+              <th colspan="6" class="p-4">
+                <div class="flex gap-3 items-center">
+                  <input id="clientTableSearch" oninput="renderClientsTable()" type="text" placeholder="Rechercher un client par nom..."
+                         class="flex-1 p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                  <span class="text-sm text-gray-500">Tri: Impayé décroissant</span>
+                </div>
+              </th>
+            </tr>
+            <tr class="bg-gradient-to-r from-gray-50 to-blue-50">
                   <th class="p-4 rounded-l-lg font-semibold text-gray-700">Nom</th>
                   <th class="p-4 font-semibold text-gray-700">Contact</th>
                   <th class="p-4 font-semibold text-gray-700">Total Dépensé</th>
@@ -1179,12 +1192,23 @@
 
     function renderClientsTable() {
       const tbody = document.getElementById('clientsTableBody');
+      const searchInput = document.getElementById('clientTableSearch');
+      const searchTerm = (searchInput ? searchInput.value : '').toLowerCase();
       if (!tbody) return;
       tbody.innerHTML = '';
 
       let totalSpent = 0;
 
-      appState.clients.forEach(client => {
+      const sorted = [...appState.clients].sort((a, b) => {
+        const unpaidA = Number(a.unpaid || 0);
+        const unpaidB = Number(b.unpaid || 0);
+        if (unpaidB !== unpaidA) return unpaidB - unpaidA;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+      const filtered = sorted.filter(c => (c.name || '').toLowerCase().includes(searchTerm));
+
+      filtered.forEach(client => {
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
 
@@ -1212,7 +1236,7 @@
 
       const summary = document.getElementById('clientsSummary');
       const totalSpan = document.getElementById('clientsTotalSpent');
-      if (summary) summary.textContent = `${appState.clients.length} clients`;
+      if (summary) summary.textContent = `${filtered.length} clients`;
       if (totalSpan) totalSpan.textContent = `Total dépensé: ${formatCurrency(totalSpent)}`;
     }
 
@@ -1346,17 +1370,21 @@
       if (!container) return;
 
       container.innerHTML = '';
-      const latest = [...appState.transactions].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10);
+      const latest = [...(appState.transactions || [])]
+        .filter(t => (t.date || '') === today)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        .slice(0, 10);
 
       if (!latest.length) {
         container.innerHTML = `
           <div class="text-center py-10">
             <i class="fas fa-exchange-alt text-gray-300 text-4xl mb-3"></i>
-            <p class="text-gray-400 italic">Aucune transaction récente</p>
-            <p class="text-sm text-gray-500 mt-2">Les transactions apparaîtront ici</p>
+            <p class="text-gray-400 italic">Aucune transaction aujourd'hui</p>
+            <p class="text-sm text-gray-500 mt-2">Les transactions du jour apparaîtront ici</p>
           </div>
         `;
-        if (activityCount) activityCount.textContent = '0 transactions';
+        if (activityCount) activityCount.textContent = '0 transaction aujourd\'hui';
         return;
       }
 
@@ -1377,7 +1405,7 @@
         container.appendChild(div);
       });
 
-      if (activityCount) activityCount.textContent = `${latest.length} transactions récentes`;
+      if (activityCount) activityCount.textContent = `${latest.length} transactions aujourd'hui`;
     }
 
     function recalculateClientStats() {
@@ -2069,6 +2097,28 @@
       }
     }
 
+    async function purgeAllData() {
+      const ok = confirm('Cette action supprimera toutes les offres, clients, transactions, paiements et achats USD. Confirmez ?');
+      if (!ok) return;
+      appState.offers = [];
+      appState.clients = [];
+      appState.transactions = [];
+      appState.payments = [];
+      appState.usdPurchases = [];
+      appState.settings.seedDefaults = false;
+      appState.lastUpdated = Date.now();
+      saveToLocalStorage();
+      if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+        await saveToCloud();
+      }
+      populateClientDropdown();
+      populateOfferSelect();
+      populatePaymentClientSelect();
+      renderTables();
+      showTab('dashboard');
+      showToast('Toutes les données ont été supprimées', 'success');
+    }
+
     // === INITIALISATION GLOBALE ===
   document.addEventListener('DOMContentLoaded', async function () {
     const loginButton = document.getElementById('loginButton');
@@ -2099,6 +2149,7 @@
 
     console.log('🚀 Sponsoring Manager PRO - Initialisation');
 
+    updateAuthUI(auth.currentUser);
     loadFromLocalStorage();
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
       await loadFromCloud();
