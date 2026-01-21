@@ -377,6 +377,11 @@
           <i class="fas fa-gift"></i>
           <span>Offres</span>
         </button>
+        <button onclick="showTab('frais')" id="tab-frais"
+                class="tab-btn m-1 px-4 md:px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-rose-50 rounded-xl transition-all hover-scale flex items-center gap-2">
+          <i class="fas fa-receipt"></i>
+          <span>Frais</span>
+        </button>
         <button onclick="showTab('paiements')" id="tab-paiements"
                 class="tab-btn m-1 px-4 md:px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-orange-50 rounded-xl transition-all hover-scale flex items-center gap-2">
           <i class="fas fa-credit-card"></i>
@@ -422,6 +427,19 @@
               <span id="weekTransactions">0 transactions</span>
             </div>
           </div>
+        <div class="bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white p-5 md:p-6 rounded-2xl shadow-xl hover-scale card-hover">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-sm opacity-90 mb-2">Profit Mensuel Net</p>
+              <p id="monthProfitNet" class="text-2xl md:text-3xl font-black">0 DZD</p>
+            </div>
+            <i class="fas fa-calendar text-2xl opacity-80"></i>
+          </div>
+          <div class="mt-4 text-sm opacity-90">
+            <i class="fas fa-wallet mr-1"></i>
+            <span>Transactions du mois − Frais du mois</span>
+          </div>
+        </div>
           <div class="bg-gradient-to-br from-purple-500 to-pink-600 text-white p-5 md:p-6 rounded-2xl shadow-xl hover-scale card-hover">
             <div class="flex justify-between items-start">
               <div>
@@ -596,6 +614,18 @@
                 <p class="text-sm text-gray-500 mt-2">Les transactions apparaîtront ici</p>
               </div>
             </div>
+          </div>
+        </div>
+        <!-- TOP CLIENTS -->
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl border fade-in card-hover mt-6">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <i class="fas fa-trophy text-yellow-500"></i>
+              Top 10 Clients
+            </h2>
+          </div>
+          <div id="topClientsList" class="space-y-3">
+            <!-- Rempli par JavaScript -->
           </div>
         </div>
       </section>
@@ -808,6 +838,52 @@
           </div>
         </div>
       </section>
+      <!-- FRAIS TAB -->
+      <section id="frais" class="tab-content hidden fade-in">
+        <div class="bg-white p-6 md:p-8 rounded-3xl shadow-xl border card-hover">
+          <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+            <div>
+              <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+                <i class="fas fa-receipt text-rose-600"></i>
+                Gestion des Frais
+              </h2>
+              <p class="text-gray-600 text-sm mt-1">Salaire, abonnements (téléphone, internet), etc.</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="openModal('expenseModal')"
+                      class="px-4 md:px-6 py-2 bg-gradient-to-r from-rose-600 to-rose-700 text-white rounded-xl font-bold hover:shadow-lg transition-all flex items-center gap-2">
+                <i class="fas fa-plus"></i>
+                Ajouter Frais
+              </button>
+              <button onclick="openModal('expenseCategoryModal')"
+                      class="px-4 md:px-6 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl font-bold hover:shadow-lg transition-all flex items-center gap-2">
+                <i class="fas fa-tags"></i>
+                Gérer Catégories
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto rounded-xl border">
+            <table class="w-full text-left text-sm">
+              <thead>
+                <tr class="bg-gradient-to-r from-gray-50 to-rose-50">
+                  <th class="p-4 rounded-l-lg font-semibold text-gray-700">Date</th>
+                  <th class="p-4 font-semibold text-gray-700">Catégorie</th>
+                  <th class="p-4 font-semibold text-gray-700">Montant</th>
+                  <th class="p-4 rounded-r-lg font-semibold text-gray-700">Note</th>
+                  <th class="p-4 font-semibold text-gray-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="expensesTableBody" class="divide-y divide-gray-100">
+                <!-- Rempli par JavaScript -->
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-4 text-sm text-gray-500 flex justify-between items-center">
+            <span id="expensesSummary">0 frais</span>
+            <span id="expensesMonthTotal" class="font-bold text-rose-600">Total mensuel: 0 DZD</span>
+          </div>
+        </div>
+      </section>
     </div> <!-- fin .space-y-6 -->
 
     <!-- MODALS -->
@@ -913,6 +989,61 @@
       </div>
     </div>
 
+    <div id="expenseModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4 modal-backdrop">
+      <div class="bg-white p-6 md:p-8 rounded-2xl w-full max-w-md modal-show">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold flex items-center gap-2">
+            <i class="fas fa-receipt text-rose-600"></i>
+            Ajouter un Frais
+          </h3>
+          <button onclick="closeModal('expenseModal')" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        <input id="expenseDate" type="date"
+               class="w-full p-4 border rounded-xl mb-3 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
+        <select id="expenseCategory"
+                class="w-full p-4 border rounded-xl mb-3 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
+        </select>
+        <input id="expenseAmount" type="number" placeholder="Montant (DZD)"
+               class="w-full p-4 border rounded-xl mb-3 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
+        <textarea id="expenseNote" placeholder="Note (optionnel)"
+                  class="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all" rows="3"></textarea>
+        <div class="flex justify-end gap-3">
+          <button onclick="closeModal('expenseModal')" class="px-5 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
+            Annuler
+          </button>
+          <button onclick="addExpense()" class="px-5 py-2 bg-gradient-to-r from-rose-600 to-rose-700 text-white rounded-lg hover:shadow-lg transition-all font-medium">
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="expenseCategoryModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4 modal-backdrop">
+      <div class="bg-white p-6 md:p-8 rounded-2xl w-full max-w-md modal-show">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold flex items-center gap-2">
+            <i class="fas fa-tags text-indigo-600"></i>
+            Gérer les Catégories
+          </h3>
+          <button onclick="closeModal('expenseCategoryModal')" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        <div class="flex gap-2 mb-4">
+          <input id="newExpenseCategory" type="text" placeholder="Nouvelle catégorie"
+                 class="flex-1 p-4 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+          <button onclick="addExpenseCategory()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:shadow-lg transition-all">
+            Ajouter
+          </button>
+        </div>
+        <div id="expenseCategoriesList" class="space-y-2">
+          <!-- Rempli par JS -->
+        </div>
+      </div>
+    </div>
+
     <div id="usdPurchaseModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4 modal-backdrop">
       <div class="bg-white p-6 md:p-8 rounded-2xl w-full max-w-md modal-show">
         <div class="flex justify-between items-center mb-4">
@@ -959,7 +1090,9 @@
         cloudProvider: 'firebase',
         autoSaveEnabled: true,
         seedDefaults: true,
+        expenseCategories: ['Salaire', 'Téléphone', 'Internet'],
       },
+      expenses: [],
     };
 
     // === UTILITAIRES ===
@@ -1157,12 +1290,16 @@
       let todayProfit = 0;
       let weekProfit = 0;
       let totalProfit = 0;
+      let monthProfitGross = 0;
+      let monthExpenses = 0;
       let todayCount = 0;
       let weekCount = 0;
 
       const now = new Date();
       const startOfWeek = new Date(now);
       startOfWeek.setDate(now.getDate() - 7);
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
 
       transactions.forEach(t => {
         const profit = Number(t.profit || 0);
@@ -1178,11 +1315,25 @@
           weekProfit += profit;
           weekCount++;
         }
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+          monthProfitGross += profit;
+        }
       });
+
+      (appState.expenses || []).forEach(e => {
+        const d = new Date(e.date || today);
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+          monthExpenses += Number(e.amount || 0);
+        }
+      });
+
+      const monthNet = Math.max(0, monthProfitGross - monthExpenses);
 
       document.getElementById('todayProfit').textContent = formatCurrency(todayProfit);
       document.getElementById('weekProfit').textContent = formatCurrency(weekProfit);
       document.getElementById('totalProfit').textContent = formatCurrency(totalProfit);
+      const monthEl = document.getElementById('monthProfitNet');
+      if (monthEl) monthEl.textContent = formatCurrency(monthNet);
       document.getElementById('totalClients').textContent = appState.clients.length;
       document.getElementById('newClients').textContent = `${appState.clients.length} nouveaux ce mois`;
       document.getElementById('totalTransactions').textContent = `${transactions.length} transactions`;
@@ -1408,6 +1559,40 @@
       if (activityCount) activityCount.textContent = `${latest.length} transactions aujourd'hui`;
     }
 
+    function renderTopClients() {
+      const container = document.getElementById('topClientsList');
+      if (!container) return;
+      container.innerHTML = '';
+      const clients = [...(appState.clients || [])].sort((a, b) => {
+        const spentDiff = Number(b.totalSpent || 0) - Number(a.totalSpent || 0);
+        if (spentDiff !== 0) return spentDiff;
+        return Number(b.transactionsCount || 0) - Number(a.transactionsCount || 0);
+      }).slice(0, 10);
+      if (!clients.length) {
+        container.innerHTML = `
+          <div class="text-center py-6 text-gray-400">Pas de clients à classer pour l'instant</div>
+        `;
+        return;
+      }
+      clients.forEach((c, idx) => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-2xl';
+        div.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 flex items-center justify-center rounded-full bg-yellow-100 text-yellow-700 font-bold">${idx + 1}</span>
+            <div>
+              <p class="font-semibold text-gray-800">${c.name}</p>
+              <p class="text-xs text-gray-500">${c.transactionsCount || 0} transactions</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="font-bold text-emerald-600">${formatCurrency(c.totalSpent || 0)}</p>
+            <p class="text-xs text-red-600">Impayé: ${formatCurrency(c.unpaid || 0)}</p>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
     function recalculateClientStats() {
       const txns = appState.transactions || [];
       const pays = appState.payments || [];
@@ -1450,7 +1635,9 @@
       renderOffersGrid();
       renderPaymentsTable();
       renderUsdPurchasesTable();
+      renderExpensesTable();
       renderRecentTransactions();
+      renderTopClients();
       updateDashboard();
     }
 
@@ -1514,6 +1701,12 @@
     window.exportClientsCSV = exportClientsCSV;
     window.manualSave = manualSave;
     window.purgeAllData = purgeAllData;
+    window.addExpense = addExpense;
+    window.deleteExpense = deleteExpense;
+    window.populateExpenseCategorySelect = populateExpenseCategorySelect;
+    window.openModal = openModal;
+    window.addExpenseCategory = addExpenseCategory;
+    window.deleteExpenseCategory = deleteExpenseCategory;
     // Actions tables
     window.addClient = addClient;
     window.addOffer = addOffer;
@@ -1818,6 +2011,118 @@
       renderUsdPurchasesTable();
       autoSave();
       showToast('Achat USD enregistré', 'success');
+    }
+
+    function renderExpensesTable() {
+      const tbody = document.getElementById('expensesTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      const now = new Date();
+      const month = now.getMonth();
+      const year = now.getFullYear();
+      let monthTotal = 0;
+      (appState.expenses || []).forEach(e => {
+        const d = new Date(e.date || now);
+        if (d.getMonth() === month && d.getFullYear() === year) {
+          monthTotal += Number(e.amount || 0);
+        }
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        row.innerHTML = `
+          <td class="p-4 text-gray-700">${formatDate(e.date)}</td>
+          <td class="p-4 text-gray-800">${e.category || '-'}</td>
+          <td class="p-4 text-red-600 font-semibold">${formatCurrency(e.amount || 0)}</td>
+          <td class="p-4 text-gray-600">${e.note || '-'}</td>
+          <td class="p-4">
+            <button onclick="deleteExpense('${e.id}')" class="text-red-600 hover:text-red-800">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+      const summary = document.getElementById('expensesSummary');
+      const monthSpan = document.getElementById('expensesMonthTotal');
+      if (summary) summary.textContent = `${(appState.expenses || []).length} frais`;
+      if (monthSpan) monthSpan.textContent = `Total mensuel: ${formatCurrency(monthTotal)}`;
+    }
+
+    function populateExpenseCategorySelect() {
+      const select = document.getElementById('expenseCategory');
+      if (!select) return;
+      select.innerHTML = '';
+      (appState.settings.expenseCategories || []).forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        select.appendChild(opt);
+      });
+    }
+
+    function addExpense() {
+      const date = document.getElementById('expenseDate').value || new Date().toISOString().slice(0,10);
+      const category = document.getElementById('expenseCategory').value || 'Autre';
+      const amount = Number(document.getElementById('expenseAmount').value || 0);
+      const note = document.getElementById('expenseNote').value.trim();
+      if (!amount) { showToast('Montant requis', 'error'); return; }
+      appState.expenses.push({
+        id: generateId('exp'),
+        date,
+        category,
+        amount,
+        note,
+      });
+      closeModal('expenseModal');
+      renderExpensesTable();
+      autoSave();
+      updateDashboard();
+      showToast('Frais ajouté', 'success');
+    }
+
+    function deleteExpense(id) {
+      appState.expenses = (appState.expenses || []).filter(e => e.id !== id);
+      renderExpensesTable();
+      autoSave();
+      updateDashboard();
+    }
+
+    function addExpenseCategory() {
+      const input = document.getElementById('newExpenseCategory');
+      if (!input) return;
+      const name = input.value.trim();
+      if (!name) return;
+      const cats = appState.settings.expenseCategories || [];
+      if (!cats.includes(name)) cats.push(name);
+      appState.settings.expenseCategories = cats;
+      input.value = '';
+      renderExpenseCategoriesList();
+      populateExpenseCategorySelect();
+      autoSave();
+    }
+
+    function deleteExpenseCategory(name) {
+      const cats = appState.settings.expenseCategories || [];
+      appState.settings.expenseCategories = cats.filter(c => c !== name);
+      renderExpenseCategoriesList();
+      populateExpenseCategorySelect();
+      autoSave();
+    }
+
+    function renderExpenseCategoriesList() {
+      const list = document.getElementById('expenseCategoriesList');
+      if (!list) return;
+      list.innerHTML = '';
+      (appState.settings.expenseCategories || []).forEach(cat => {
+        const div = document.createElement('div');
+        div.className = 'flex justify-between items-center p-3 border rounded-xl';
+        div.innerHTML = `
+          <span class="font-medium text-gray-800">${cat}</span>
+          <button onclick="deleteExpenseCategory('${cat}')" class="text-red-600 hover:text-red-800">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+        `;
+        list.appendChild(div);
+      });
     }
 
     function deleteTransaction(id) {
@@ -2158,6 +2463,7 @@
     showTab('dashboard');
     populateClientDropdown();
     populateOfferSelect();
+    populateExpenseCategorySelect();
     populatePaymentClientSelect();
     renderTables();
     calculatePreview();
