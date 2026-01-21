@@ -32,6 +32,7 @@
   try {
     db.settings({
       experimentalAutoDetectLongPolling: true,
+      experimentalForceLongPolling: true,
       useFetchStreams: false,
       ignoreUndefinedProperties: true,
     });
@@ -605,7 +606,14 @@
                 <i class="fas fa-history text-purple-600"></i>
                 Activité Récente
               </h2>
-              <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full" id="activityCount">0 transactions</span>
+              <div class="flex items-center gap-3">
+                <select id="recentFilter" onchange="renderRecentTransactions()" class="p-2 border rounded-xl text-sm">
+                  <option value="today">Aujourd'hui</option>
+                  <option value="week">Cette semaine</option>
+                  <option value="month">Ce mois</option>
+                </select>
+                <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full" id="activityCount">0 transactions</span>
+              </div>
             </div>
             <div id="recentTransactions" class="space-y-4 max-h-[500px] overflow-y-auto pr-2">
               <div class="text-center py-10">
@@ -1009,6 +1017,10 @@
                class="w-full p-4 border rounded-xl mb-3 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all">
         <textarea id="expenseNote" placeholder="Note (optionnel)"
                   class="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all" rows="3"></textarea>
+        <label class="flex items-center gap-2 mb-4">
+          <input id="expenseRecurring" type="checkbox" class="w-5 h-5 accent-rose-600">
+          <span class="text-sm font-semibold text-gray-700">Récurrence mensuelle</span>
+        </label>
         <div class="flex justify-end gap-3">
           <button onclick="closeModal('expenseModal')" class="px-5 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
             Annuler
@@ -1085,14 +1097,19 @@
       currentTab: 'dashboard',
       lastUpdated: 0,
       sync: { pendingCloudSave: false, retryDelayMs: 5000 },
+      syncQueue: [],
+      syncTimer: null,
+      syncThrottleMs: 2000,
       settings: {
         storageMode: 'cloud',
         cloudProvider: 'firebase',
         autoSaveEnabled: true,
         seedDefaults: true,
         expenseCategories: ['Salaire', 'Téléphone', 'Internet'],
+        topClientsWeights: { spent: 0.7, transactions: 0.3, unpaid: -0.2 },
       },
       expenses: [],
+      recurringExpenses: [],
     };
 
     // === UTILITAIRES ===
@@ -1173,6 +1190,13 @@
           ensureId(u, 'usd');
           if (!('date' in u)) { u.date = new Date().toISOString().slice(0, 10); changed = true; }
         });
+        (appState.expenses || []).forEach(e => {
+          ensureId(e, 'exp');
+          if (!('date' in e)) { e.date = new Date().toISOString().slice(0, 10); changed = true; }
+          if (typeof e.amount !== 'number') { e.amount = Number(e.amount || 0); changed = true; }
+          if (!('category' in e)) { e.category = 'Autre'; changed = true; }
+        });
+        if (!Array.isArray(appState.recurringExpenses)) { appState.recurringExpenses = []; changed = true; }
       } catch (e) {
         console.warn('Normalisation échouée', e);
       }
@@ -1276,10 +1300,20 @@
       if (!appState.settings.autoSaveEnabled) return;
       appState.lastUpdated = Date.now();
       saveToLocalStorage();
-      if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
-        await saveToCloud();
-        scheduleCloudRetry();
-      }
+      enqueueCloudSave();
+    }
+
+    function enqueueCloudSave() {
+      appState.syncQueue.push({ ts: Date.now() });
+      if (appState.syncTimer) return;
+      appState.syncTimer = setTimeout(async () => {
+        appState.syncTimer = null;
+        if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+          await saveToCloud();
+          appState.syncQueue = [];
+          scheduleCloudRetry();
+        }
+      }, appState.syncThrottleMs || 2000);
     }
 
     // === DASHBOARD / RENDU ===
@@ -1518,12 +1552,25 @@
     function renderRecentTransactions() {
       const container = document.getElementById('recentTransactions');
       const activityCount = document.getElementById('activityCount');
+      const filterEl = document.getElementById('recentFilter');
       if (!container) return;
 
       container.innerHTML = '';
-      const today = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - 7);
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const mode = filterEl ? filterEl.value : 'today';
+      const isInPeriod = (dStr) => {
+        const d = new Date(dStr || todayStr);
+        if (mode === 'today') return dStr === todayStr;
+        if (mode === 'week') return d >= startOfWeek;
+        if (mode === 'month') return d >= startOfMonth;
+        return true;
+      };
       const latest = [...(appState.transactions || [])]
-        .filter(t => (t.date || '') === today)
+        .filter(t => isInPeriod(t.date))
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
         .slice(0, 10);
 
@@ -1531,11 +1578,11 @@
         container.innerHTML = `
           <div class="text-center py-10">
             <i class="fas fa-exchange-alt text-gray-300 text-4xl mb-3"></i>
-            <p class="text-gray-400 italic">Aucune transaction aujourd'hui</p>
-            <p class="text-sm text-gray-500 mt-2">Les transactions du jour apparaîtront ici</p>
+            <p class="text-gray-400 italic">Aucune transaction dans la période</p>
+            <p class="text-sm text-gray-500 mt-2">Les transactions sélectionnées apparaîtront ici</p>
           </div>
         `;
-        if (activityCount) activityCount.textContent = '0 transaction aujourd\'hui';
+        if (activityCount) activityCount.textContent = '0 transaction';
         return;
       }
 
@@ -1556,18 +1603,18 @@
         container.appendChild(div);
       });
 
-      if (activityCount) activityCount.textContent = `${latest.length} transactions aujourd'hui`;
+      if (activityCount) activityCount.textContent = `${latest.length} transactions`;
     }
 
     function renderTopClients() {
       const container = document.getElementById('topClientsList');
       if (!container) return;
       container.innerHTML = '';
-      const clients = [...(appState.clients || [])].sort((a, b) => {
-        const spentDiff = Number(b.totalSpent || 0) - Number(a.totalSpent || 0);
-        if (spentDiff !== 0) return spentDiff;
-        return Number(b.transactionsCount || 0) - Number(a.transactionsCount || 0);
-      }).slice(0, 10);
+      const w = appState.settings?.topClientsWeights || { spent: 0.7, transactions: 0.3, unpaid: -0.2 };
+      const score = c => (Number(c.totalSpent || 0) * w.spent) + (Number(c.transactionsCount || 0) * w.transactions) + (Number(c.unpaid || 0) * w.unpaid);
+      const clients = [...(appState.clients || [])]
+        .sort((a, b) => score(b) - score(a))
+        .slice(0, 10);
       if (!clients.length) {
         container.innerHTML = `
           <div class="text-center py-6 text-gray-400">Pas de clients à classer pour l'instant</div>
@@ -2016,6 +2063,7 @@
     function renderExpensesTable() {
       const tbody = document.getElementById('expensesTableBody');
       if (!tbody) return;
+      applyRecurringExpensesForCurrentMonth();
       tbody.innerHTML = '';
       const now = new Date();
       const month = now.getMonth();
@@ -2059,20 +2107,63 @@
       });
     }
 
+    function applyRecurringExpensesForCurrentMonth() {
+      const now = new Date();
+      const month = now.getMonth();
+      const year = now.getFullYear();
+      (appState.recurringExpenses || []).forEach(def => {
+        const exists = (appState.expenses || []).some(e => {
+          const d = new Date(e.date || now);
+          return e.recurringId === def.id && d.getMonth() === month && d.getFullYear() === year;
+        });
+        if (!exists) {
+          const dateStr = new Date(year, month, 1).toISOString().slice(0, 10);
+          appState.expenses.push({
+            id: generateId('exp'),
+            date: dateStr,
+            category: def.category,
+            amount: Number(def.amount || 0),
+            note: def.note || '',
+            recurringId: def.id,
+          });
+        }
+      });
+    }
+
     function addExpense() {
       const date = document.getElementById('expenseDate').value || new Date().toISOString().slice(0,10);
       const category = document.getElementById('expenseCategory').value || 'Autre';
       const amount = Number(document.getElementById('expenseAmount').value || 0);
       const note = document.getElementById('expenseNote').value.trim();
+      const recurring = !!document.getElementById('expenseRecurring')?.checked;
       if (!amount) { showToast('Montant requis', 'error'); return; }
-      appState.expenses.push({
-        id: generateId('exp'),
-        date,
-        category,
-        amount,
-        note,
-      });
+      if (recurring) {
+        const rid = generateId('recur');
+        appState.recurringExpenses.push({
+          id: rid,
+          category,
+          amount,
+          note,
+        });
+        appState.expenses.push({
+          id: generateId('exp'),
+          date,
+          category,
+          amount,
+          note,
+          recurringId: rid,
+        });
+      } else {
+        appState.expenses.push({
+          id: generateId('exp'),
+          date,
+          category,
+          amount,
+          note,
+        });
+      }
       closeModal('expenseModal');
+      applyRecurringExpensesForCurrentMonth();
       renderExpensesTable();
       autoSave();
       updateDashboard();
@@ -2459,6 +2550,7 @@
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
       await loadFromCloud();
     }
+    applyRecurringExpensesForCurrentMonth();
 
     showTab('dashboard');
     populateClientDropdown();
@@ -2474,6 +2566,7 @@
     if (user) {
       await loadFromCloud();
       ensureInitialData();
+      applyRecurringExpensesForCurrentMonth();
       renderTables();
       populateClientDropdown();
       populateOfferSelect();
