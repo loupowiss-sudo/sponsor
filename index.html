@@ -1790,6 +1790,35 @@
       });
       const activeBtn = document.getElementById(`tab-${tabId}`);
       if (activeBtn) activeBtn.classList.add('active-tab');
+
+      // Auto-refresh data based on tab
+      if (tabId === 'requests') renderRequests();
+      if (tabId === 'paiements') renderPaymentsTable();
+      if (tabId === 'achats') renderUsdPurchasesTable();
+      if (tabId === 'frais') renderExpensesTable();
+      if (tabId === 'transactions') renderTransactionsTable();
+      if (tabId === 'custom-section-admin') renderCustomSectionAdmin();
+      
+      updateRequestsBadge();
+    }
+
+    // Expose functions globally to ensure HTML event handlers find them
+    window.toggleRedotpayCalculator = toggleRedotpayCalculator;
+    window.calculateRedotpayUsd = calculateRedotpayUsd;
+
+    function updateRequestsBadge() {
+        const badge = document.getElementById('requestsBadge');
+        if (!badge) return;
+        
+        const requests = appState.clientRequests || [];
+        const unreadCount = requests.filter(r => !r.read).length;
+        
+        badge.textContent = unreadCount;
+        if (unreadCount > 0) {
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
     }
 
     function openModal(id) {
@@ -1910,6 +1939,7 @@
           Object.assign(appState, parsed);
           console.log('📦 Données chargées depuis le localStorage');
           normalizeAppState();
+          updateRequestsBadge();
         } catch (e) {
           console.error('Erreur parse localStorage', e);
         }
@@ -3225,7 +3255,6 @@
     function renderRequests() {
       const tbody = document.getElementById('requestsTableBody');
       const emptyState = document.getElementById('requestsEmptyState');
-      const badge = document.getElementById('requestsBadge');
       const editor = document.getElementById('workMethodEditor');
 
       if (!tbody) return;
@@ -3240,25 +3269,15 @@
       tbody.innerHTML = '';
       const requests = (appState.clientRequests || []).sort((a, b) => new Date(b.date) - new Date(a.date));
 
+      updateRequestsBadge();
+
       if (requests.length === 0) {
         emptyState.classList.remove('hidden');
-        if (badge) {
-             badge.textContent = '0';
-             badge.classList.add('hidden');
-        }
         return;
       }
 
       emptyState.classList.add('hidden');
       
-      // Count unread
-      const unreadCount = requests.filter(r => !r.read).length;
-      if (badge) {
-        badge.textContent = unreadCount;
-        if (unreadCount > 0) badge.classList.remove('hidden');
-        else badge.classList.add('hidden');
-      }
-
       requests.forEach(req => {
         const tr = document.createElement('tr');
         tr.className = req.read ? 'bg-white hover:bg-gray-50' : 'bg-yellow-50 hover:bg-yellow-100 font-medium';
@@ -3575,6 +3594,8 @@
       } else {
          saveToLocalStorage();
       }
+      
+      updateRequestsBadge();
 
       alert('✅ Commande envoyée avec succès ! Notre équipe vous contactera bientôt.');
       btn.innerHTML = originalText;
