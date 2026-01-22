@@ -1623,6 +1623,25 @@
         </div>
       </div>
     </div>
+    
+    <!-- REQUEST DETAIL MODAL -->
+    <div id="requestDetailModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="flex justify-between items-center p-4 border-b">
+          <h3 class="text-xl font-bold">Détail de la demande</h3>
+          <button onclick="closeRequestModal()" class="text-gray-500 hover:text-gray-700">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        <div id="requestDetailContent" class="p-6 space-y-4">
+          <!-- Rempli par JS -->
+        </div>
+        <div class="p-4 border-t flex justify-end gap-2">
+          <button onclick="closeRequestModal()" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Fermer</button>
+          <button id="requestToggleProcessedBtn" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Marquer traité</button>
+        </div>
+      </div>
+    </div>
     <!-- CUSTOM SECTION ADMIN TAB -->
     <section id="custom-section-admin" class="tab-content hidden fade-in">
         <div class="bg-white p-6 md:p-8 rounded-3xl shadow-xl border mb-6">
@@ -1904,7 +1923,7 @@
       if (tabId === 'frais') renderExpensesTable();
       if (tabId === 'transactions') renderTransactionsTable();
       if (tabId === 'custom-section-admin') renderCustomSectionAdmin();
-      if (tabId === 'settings') renderSettingsAdmin();
+    if (tabId === 'settings') renderSettingsAdmin();
       
       updateRequestsBadge();
     }
@@ -1945,11 +1964,151 @@
     img.src = src;
     modal.classList.remove('hidden');
   }
+  
+  function renderSettingsAdmin() {
+    const container = document.getElementById('settingsContent');
+    if (!container) return;
+    if (!Array.isArray(appState.employees)) appState.employees = [];
+    const cloudStatus = (appState.settings.storageMode === 'cloud' && auth.currentUser) 
+      ? '<span class="text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded text-xs">Cloud connecté</span>'
+      : '<span class="text-gray-700 bg-gray-50 border border-gray-200 px-2 py-1 rounded text-xs">Mode local</span>';
+    container.innerHTML = `
+      <div class="bg-white p-6 rounded-2xl shadow border">
+        <h3 class="text-xl font-bold mb-4 flex items-center gap-2"><i class="fas fa-cog text-blue-600"></i> Paramètres</h3>
+        <div class="flex items-center justify-between mb-6">
+          <div class="text-sm text-gray-600">Statut: ${cloudStatus}</div>
+          <div class="text-xs text-gray-500">Dernière mise à jour: ${new Date(appState.lastUpdated || Date.now()).toLocaleString()}</div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-1 bg-gray-50 border rounded-xl p-4">
+            <h4 class="font-bold mb-3">Ajouter un employé</h4>
+            <input id="empUsername" type="text" placeholder="Nom d'utilisateur" class="w-full p-2 border rounded mb-2">
+            <input id="empPassword" type="password" placeholder="Mot de passe" class="w-full p-2 border rounded mb-3">
+            <button onclick="addEmployee()" class="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Ajouter</button>
+          </div>
+          <div class="lg:col-span-2">
+            <h4 class="font-bold mb-3">Employés</h4>
+            <div id="employeesList" class="space-y-3"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    const list = document.getElementById('employeesList');
+    list.innerHTML = '';
+    appState.employees.forEach(emp => {
+      const div = document.createElement('div');
+      div.className = 'flex items-center justify-between bg-white border rounded-xl p-3';
+      div.innerHTML = `
+        <div>
+          <div class="font-bold">${emp.username}</div>
+          <div class="text-xs text-gray-500">Créé le ${new Date(emp.createdAt || Date.now()).toLocaleDateString()}</div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="resetEmployeePassword('${emp.id}')" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 text-sm"><i class="fas fa-key mr-1"></i> Réinitialiser</button>
+          <button onclick="deleteEmployee('${emp.id}')" class="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"><i class="fas fa-trash mr-1"></i> Supprimer</button>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+  }
+  function addEmployee() {
+    const u = document.getElementById('empUsername').value.trim();
+    const p = document.getElementById('empPassword').value.trim();
+    if (!u || !p) { showToast('Nom utilisateur et mot de passe requis', 'error'); return; }
+    const emp = { id: generateId('emp'), username: u, password: p, createdAt: Date.now() };
+    appState.employees.push(emp);
+    autoSave();
+    renderSettingsAdmin();
+    showToast('Employé ajouté', 'success');
+    document.getElementById('empUsername').value = '';
+    document.getElementById('empPassword').value = '';
+  }
+  function deleteEmployee(id) {
+    if (!confirm('Supprimer cet employé ?')) return;
+    appState.employees = appState.employees.filter(e => e.id !== id);
+    autoSave();
+    renderSettingsAdmin();
+    showToast('Employé supprimé', 'success');
+  }
+  function resetEmployeePassword(id) {
+    const newPwd = prompt('Nouveau mot de passe:');
+    if (!newPwd) return;
+    const emp = appState.employees.find(e => e.id === id);
+    if (!emp) return;
+    emp.password = newPwd;
+    autoSave();
+    renderSettingsAdmin();
+    showToast('Mot de passe mis à jour', 'success');
+  }
   function closeImagePreview() {
     const modal = document.getElementById('imagePreviewModal');
     const img = document.getElementById('imagePreviewContent');
     if (!modal || !img) return;
     img.src = '';
+    modal.classList.add('hidden');
+  }
+  
+  function openRequestModal(id) {
+    const modal = document.getElementById('requestDetailModal');
+    const content = document.getElementById('requestDetailContent');
+    const btn = document.getElementById('requestToggleProcessedBtn');
+    const req = (appState.clientRequests || []).find(r => r.id === id);
+    if (!modal || !content || !req) return;
+    content.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div class="text-sm text-gray-500">Date</div>
+          <div class="font-bold">${new Date(req.date).toLocaleString()}</div>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500">Statut</div>
+          <div class="font-bold">${req.processed ? '<span class="text-green-700">Traité</span>' : '<span class="text-gray-700">Non traité</span>'}</div>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500">Plateforme</div>
+          <div class="font-bold">${(req.platform || '').toUpperCase()}</div>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500">Offre</div>
+          <div class="font-bold">${req.offer || '-'}</div>
+        </div>
+        <div class="md:col-span-2">
+          <div class="text-sm text-gray-500">Objectif</div>
+          <div>${req.metaObjective || req.tiktokObjective || '-'}</div>
+        </div>
+        <div class="md:col-span-2">
+          <div class="text-sm text-gray-500">Lien publication</div>
+          ${req.pubLink ? `<a href="${req.pubLink}" target="_blank" class="text-blue-600 hover:underline"><i class="fas fa-link mr-1"></i>${req.pubLink}</a>` : '<span class="text-gray-400">Aucun lien</span>'}
+        </div>
+        <div class="md:col-span-2">
+          <div class="text-sm text-gray-500">Note client</div>
+          <div class="bg-yellow-50 border border-yellow-100 p-3 rounded">${req.clientNote || '<span class="text-gray-400">Aucune</span>'}</div>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500">Moyen de paiement</div>
+          <div class="font-bold">${req.paymentMethod || '-'}</div>
+          ${req.paymentDetails ? `<div class="text-xs mt-1 text-gray-600">${req.paymentDetails.dzdAmount} DZD -> ${Number(req.paymentDetails.usdToSend || 0).toFixed(2)} $</div>` : ''}
+        </div>
+        <div>
+          <div class="text-sm text-gray-500">Preuve</div>
+          ${req.paymentProof ? (String(req.paymentProof).startsWith('data:') 
+             ? `<img src="${req.paymentProof}" class="h-32 rounded border cursor-pointer" onclick="openImagePreview('${req.paymentProof}')">`
+             : `<a href="${req.paymentProof}" target="_blank" class="text-blue-600 hover:underline"><i class="fas fa-link mr-1"></i>Ouvrir</a>`) 
+             : '<span class="text-gray-400">Aucune preuve</span>'}
+        </div>
+      </div>
+    `;
+    btn.onclick = function() {
+      req.processed = !req.processed;
+      autoSave();
+      renderRequests();
+      openRequestModal(id);
+    };
+    modal.classList.remove('hidden');
+  }
+  function closeRequestModal() {
+    const modal = document.getElementById('requestDetailModal');
+    if (!modal) return;
     modal.classList.add('hidden');
   }
     // Normaliser les données (ajouter des id manquants, valeurs par défaut)
@@ -3501,6 +3660,10 @@
       requests.forEach(req => {
         const tr = document.createElement('tr');
         tr.className = (req.read ? 'bg-white hover:bg-gray-50' : 'bg-yellow-50 hover:bg-yellow-100 font-medium') + (req.processed ? ' opacity-80' : '');
+        tr.addEventListener('click', (ev) => {
+          if (ev.target.closest('button')) return;
+          openRequestModal('${req.id}');
+        });
         
         let details = `<span class="block text-xs text-gray-500">${req.platform}</span>`;
         if (req.metaObjective) details += `<span class="block text-xs text-gray-500">Obj: ${req.metaObjective}</span>`;
@@ -3527,7 +3690,7 @@
           <td class="p-4">
             <div class="flex flex-col gap-1">
                 <span class="text-sm font-semibold">${req.paymentMethod || 'N/A'}</span>
-                ${req.paymentProof ? `<a href="${req.paymentProof}" target="_blank" class="text-xs text-blue-600 underline">Voir Preuve</a>` : '<span class="text-xs text-gray-400">Aucune preuve</span>'}
+                ${req.paymentProof ? (String(req.paymentProof).startsWith('data:') ? `<button class="text-xs text-blue-600 underline text-left" onclick="openImagePreview('${req.paymentProof}'); event.stopPropagation();"><i class="fas fa-image mr-1"></i> Voir Preuve</button>` : `<a href="${req.paymentProof}" target="_blank" class="text-xs text-blue-600 underline" onclick="event.stopPropagation();"><i class="fas fa-link mr-1"></i> Voir Preuve</a>`) : '<span class="text-xs text-gray-400">Aucune preuve</span>'}
                 <span class="text-xs ${req.processed ? 'text-green-700 bg-green-50' : 'text-gray-600 bg-gray-50'} px-2 py-1 rounded inline-block w-fit mt-1 border ${req.processed ? 'border-green-200' : 'border-gray-200'}">
                   ${req.processed ? 'Traité' : 'Non traité'}
                 </span>
@@ -3535,6 +3698,9 @@
           </td>
           <td class="p-4 rounded-r-lg">
             <div class="flex gap-2">
+              <button onclick="openRequestModal('${req.id}'); event.stopPropagation();" class="text-blue-600 hover:text-blue-800" title="Voir détails">
+                <i class="fas fa-eye"></i>
+              </button>
               <button onclick="toggleRequestProcessed('${req.id}')" class="${req.processed ? 'text-green-600 hover:text-green-800' : 'text-gray-500 hover:text-gray-700'}" title="${req.processed ? 'Marquer non traité' : 'Marquer traité'}">
                 <i class="fas ${req.processed ? 'fa-check-circle' : 'fa-circle'}"></i>
               </button>
@@ -3812,6 +3978,10 @@
        const content = document.getElementById('clientMethodContent');
        if (content) {
           content.innerHTML = appState.settings.workMethodText || '<p>Information non disponible.</p>';
+          content.querySelectorAll('img').forEach(img => {
+            img.style.cursor = 'pointer';
+            img.addEventListener('click', () => openImagePreview(img.src));
+          });
        }
     }
     if (tabId === 'client-custom') {
@@ -3890,7 +4060,15 @@
     }
   }
 
-  function handleOrderSubmit(e) {
+  function readFileAsDataURL(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleOrderSubmit(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn.innerHTML;
@@ -3907,9 +4085,10 @@
         id: 'REQ-' + Date.now(),
         date: new Date().toISOString(),
         read: false,
+        processed: false,
         platform: platform || 'N/A',
         paymentMethod: paymentMethod || 'N/A',
-        paymentProof: null, // Will be set if file exists logic is added, for now null or handled separately if needed
+        paymentProof: null,
         status: 'pending'
     };
 
@@ -3934,7 +4113,21 @@
     orderData.pageFacebook = document.getElementById('metaFbName').value;
     orderData.offer = document.getElementById('orderOfferSelect').value;
     orderData.websiteUrl = document.getElementById('websiteUrl').value;
+    orderData.pubLink = document.getElementById('pubLink').value;
     orderData.clientNote = document.getElementById('clientNote').value;
+
+    // 5.1 Payment Proof capture (base64)
+    const proofInput = document.getElementById('paymentProof');
+    if (proofInput && proofInput.files && proofInput.files[0]) {
+      const file = proofInput.files[0];
+      if (file.size <= 2 * 1024 * 1024) {
+        try {
+          orderData.paymentProof = await readFileAsDataURL(file);
+        } catch (err) {
+          console.warn('Erreur lecture preuve', err);
+        }
+      }
+    }
 
     // 5. RedotPay Logic
     if (paymentMethod === 'redotpay') {
