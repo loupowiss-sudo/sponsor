@@ -291,11 +291,42 @@
       if (appContainer)   appContainer.style.display = 'none';
       if (loginContainer) loginContainer.style.display = 'flex';
     }
+    async function forceCloudSave() {
+      try {
+        if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+          await saveToCloud();
+          scheduleCloudRetry();
+          showToast('Sauvegarde cloud forcée', 'success');
+          renderSettingsAdmin();
+        } else {
+          saveToLocalStorage();
+          showToast('Sauvegarde locale effectuée', 'success');
+        }
+      } catch (e) {
+        showToast('Erreur lors de la sauvegarde', 'error');
+      }
+    }
   }
 
   function showToast(message, type = 'info') {
     console.log(`[${type}]`, message);
     alert(message);
+  }
+
+  async function forceCloudSave() {
+    try {
+      if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+        await saveToCloud();
+        scheduleCloudRetry();
+        showToast('Sauvegarde cloud forcée', 'success');
+        renderSettingsAdmin();
+      } else {
+        saveToLocalStorage();
+        showToast('Sauvegarde locale effectuée', 'success');
+      }
+    } catch (e) {
+      showToast('Erreur lors de la sauvegarde', 'error');
+    }
   }
 
   async function loginWithEmailPassword(email, password) {
@@ -1011,6 +1042,9 @@
           <i class="fas fa-cog"></i>
           <span>Paramètres</span>
         </button>
+        <span id="syncIndicator" class="m-1 px-3 py-2 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded-xl hidden flex items-center gap-1">
+          <i class="fas fa-cloud"></i><span id="syncIndicatorText">Sync</span>
+        </span>
       </div>
     </nav>
 
@@ -1536,6 +1570,21 @@
               </button>
             </div>
             
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <input id="requestsSearch" type="text" placeholder="Recherche (client, offre, lien…)" class="w-full p-2 border rounded-lg text-sm" oninput="renderRequests()">
+              <select id="requestsStatusFilter" class="w-full p-2 border rounded-lg text-sm" onchange="renderRequests()">
+                <option value="all">Tous les statuts</option>
+                <option value="pending">En attente</option>
+                <option value="in_progress">En cours</option>
+                <option value="problematic">Problématique</option>
+                <option value="processed">Traité</option>
+              </select>
+              <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input id="requestsUnreadOnly" type="checkbox" onchange="renderRequests()">
+                Non lus uniquement
+              </label>
+            </div>
+            
             <div class="overflow-x-auto rounded-xl border">
               <table class="w-full text-left text-sm">
                 <thead>
@@ -1946,6 +1995,31 @@
             badge.classList.add('hidden');
         }
     }
+    
+    function updateSyncIndicator() {
+      const el = document.getElementById('syncIndicator');
+      const txt = document.getElementById('syncIndicatorText');
+      if (!el || !txt) return;
+      const isCloud = appState.settings.storageMode === 'cloud' && !!auth.currentUser;
+      const hasQueue = (appState.syncQueue || []).length > 0 || !!appState.syncTimer;
+      const hasError = !!(appState.sync && appState.sync.pendingCloudSave);
+      if (!isCloud) { el.classList.add('hidden'); return; }
+      if (hasError) {
+        txt.textContent = 'Erreur cloud';
+        el.classList.remove('hidden');
+        el.classList.remove('bg-blue-50','text-blue-700','border-blue-200');
+        el.classList.add('bg-red-50','text-red-700','border-red-200');
+        return;
+      }
+      if (hasQueue) {
+        txt.textContent = 'Synchro…';
+        el.classList.remove('hidden');
+        el.classList.remove('bg-red-50','text-red-700','border-red-200');
+        el.classList.add('bg-blue-50','text-blue-700','border-blue-200');
+        return;
+      }
+      el.classList.add('hidden');
+    }
 
     function openModal(id) {
       const modal = document.getElementById(id);
@@ -1965,6 +2039,20 @@
     modal.classList.remove('hidden');
   }
   
+  function copyToClipboard(text) {
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => { showToast('Copié'); }).catch(() => {});
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); showToast('Copié'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  }
+  
   function renderSettingsAdmin() {
     const container = document.getElementById('settingsContent');
     if (!container) return;
@@ -1975,9 +2063,15 @@
     container.innerHTML = `
       <div class="bg-white p-6 rounded-2xl shadow border">
         <h3 class="text-xl font-bold mb-4 flex items-center gap-2"><i class="fas fa-cog text-blue-600"></i> Paramètres</h3>
-        <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center justify-between mb-4">
           <div class="text-sm text-gray-600">Statut: ${cloudStatus}</div>
           <div class="text-xs text-gray-500">Dernière mise à jour: ${new Date(appState.lastUpdated || Date.now()).toLocaleString()}</div>
+        </div>
+        <div class="flex items-center gap-3 mb-6">
+          <button onclick="forceCloudSave()" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-cloud-upload-alt mr-1"></i> Forcer Sauvegarde Cloud
+          </button>
+          ${(appState.sync?.pendingCloudSave) ? '<span class="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-1 rounded">En attente de synchro cloud…</span>' : ''}
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div class="lg:col-span-1 bg-gray-50 border rounded-xl p-4">
@@ -2062,7 +2156,12 @@
         </div>
         <div>
           <div class="text-sm text-gray-500">Statut</div>
-          <div class="font-bold">${req.processed ? '<span class="text-green-700">Traité</span>' : '<span class="text-gray-700">Non traité</span>'}</div>
+          <select id="requestStatusSelect" class="mt-1 p-2 border rounded text-sm">
+            <option value="pending" ${req.status==='pending'?'selected':''}>En attente</option>
+            <option value="in_progress" ${req.status==='in_progress'?'selected':''}>En cours</option>
+            <option value="problematic" ${req.status==='problematic'?'selected':''}>Problématique</option>
+            <option value="processed" ${req.status==='processed'?'selected':''}>Traité</option>
+          </select>
         </div>
         <div>
           <div class="text-sm text-gray-500">Plateforme</div>
@@ -2076,9 +2175,29 @@
           <div class="text-sm text-gray-500">Objectif</div>
           <div>${req.metaObjective || req.tiktokObjective || '-'}</div>
         </div>
+        <div>
+          <div class="text-sm text-gray-500">Instagram</div>
+          <div>${req.instagram || '<span class="text-gray-400">N/A</span>'}</div>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500">Page Facebook</div>
+          <div>${req.pageFacebook || '<span class="text-gray-400">N/A</span>'}</div>
+        </div>
+        <div class="md:col-span-2">
+          <div class="text-sm text-gray-500">Cibles/Options</div>
+          <div class="text-xs text-gray-700">
+            ${req.metaFollowersTarget ? `<div>Followers: ${req.metaFollowersTarget}</div>` : ''}
+            ${req.metaMessagesTarget ? `<div>Messages: ${req.metaMessagesTarget}</div>` : ''}
+            ${req.tiktokMsgTarget ? `<div>TikTok Messages: ${req.tiktokMsgTarget}</div>` : ''}
+          </div>
+        </div>
         <div class="md:col-span-2">
           <div class="text-sm text-gray-500">Lien publication</div>
-          ${req.pubLink ? `<a href="${req.pubLink}" target="_blank" class="text-blue-600 hover:underline"><i class="fas fa-link mr-1"></i>${req.pubLink}</a>` : '<span class="text-gray-400">Aucun lien</span>'}
+          ${req.pubLink ? `<div class="flex items-center gap-2"><a href="${req.pubLink}" target="_blank" class="text-blue-600 hover:underline"><i class="fas fa-link mr-1"></i>${req.pubLink}</a><button class="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200" onclick="copyToClipboard('${req.pubLink}')">Copier</button></div>` : '<span class="text-gray-400">Aucun lien</span>'}
+        </div>
+        <div class="md:col-span-2">
+          <div class="text-sm text-gray-500">Site Web</div>
+          ${req.websiteUrl ? `<div class="flex items-center gap-2"><a href="${req.websiteUrl}" target="_blank" class="text-blue-600 hover:underline"><i class="fas fa-link mr-1"></i>${req.websiteUrl}</a><button class="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200" onclick="copyToClipboard('${req.websiteUrl}')">Copier</button></div>` : '<span class="text-gray-400">Aucun</span>'}
         </div>
         <div class="md:col-span-2">
           <div class="text-sm text-gray-500">Note client</div>
@@ -2098,10 +2217,11 @@
         </div>
       </div>
     `;
+    btn.textContent = 'Enregistrer';
     btn.onclick = function() {
-      req.processed = !req.processed;
-      autoSave();
-      renderRequests();
+      const sel = document.getElementById('requestStatusSelect');
+      const val = sel ? sel.value : req.status;
+      updateRequestStatus(id, val);
       openRequestModal(id);
     };
     modal.classList.remove('hidden');
@@ -2158,6 +2278,15 @@
           if (typeof r.read !== 'boolean') { r.read = false; changed = true; }
           if (typeof r.processed !== 'boolean') { r.processed = false; changed = true; }
           if (!r.date) { r.date = new Date().toISOString(); changed = true; }
+          if (!r.status) {
+            r.status = r.processed ? 'processed' : 'pending';
+            changed = true;
+          }
+          const validStatuses = ['pending','in_progress','problematic','processed'];
+          if (!validStatuses.includes(r.status)) {
+            r.status = r.processed ? 'processed' : 'pending';
+            changed = true;
+          }
         });
         if (!appState.customSection) {
             appState.customSection = {
@@ -2281,11 +2410,13 @@
         await db.collection('users').doc(uid).set({ data: appState }, { merge: true });
         console.log('☁️ Données sauvegardées sur Firebase');
         appState.sync.pendingCloudSave = false;
+        updateSyncIndicator();
       } catch (err) {
         console.error('Erreur sauvegarde cloud:', err);
         showToast('Erreur Firestore: sauvegarde non effectuée, stockage local utilisé.', 'error');
         saveToLocalStorage();
         appState.sync.pendingCloudSave = true;
+        updateSyncIndicator();
       }
     }
 
@@ -2317,7 +2448,9 @@
           appState.syncQueue = [];
           scheduleCloudRetry();
         }
+        updateSyncIndicator();
       }, appState.syncThrottleMs || 2000);
+      updateSyncIndicator();
     }
 
     // === DASHBOARD / RENDU ===
@@ -3646,7 +3779,31 @@
       }
 
       tbody.innerHTML = '';
-      const requests = (appState.clientRequests || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+      const searchEl = document.getElementById('requestsSearch');
+      const statusEl = document.getElementById('requestsStatusFilter');
+      const unreadEl = document.getElementById('requestsUnreadOnly');
+      const q = (searchEl ? searchEl.value : '').toLowerCase();
+      const statusFilter = statusEl ? statusEl.value : 'all';
+      const unreadOnly = unreadEl ? unreadEl.checked : false;
+      const requests = (appState.clientRequests || [])
+        .filter(r => {
+          if (unreadOnly && r.read) return false;
+          if (statusFilter !== 'all' && (r.status || 'pending') !== statusFilter) return false;
+          if (q) {
+            const hay = [
+              r.instagram || '',
+              r.pageFacebook || '',
+              r.offer || '',
+              r.paymentMethod || '',
+              r.pubLink || '',
+              r.metaObjective || '',
+              r.tiktokObjective || ''
+            ].join(' ').toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        })
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
 
       updateRequestsBadge();
 
@@ -3659,14 +3816,22 @@
       
       requests.forEach(req => {
         const tr = document.createElement('tr');
-        tr.className = (req.read ? 'bg-white hover:bg-gray-50' : 'bg-yellow-50 hover:bg-yellow-100 font-medium') + (req.processed ? ' opacity-80' : '');
+        tr.className = (req.read ? 'bg-white hover:bg-gray-50' : 'bg-yellow-50 hover:bg-yellow-100 font-medium') + ((req.status === 'processed') ? ' opacity-80' : '');
         tr.addEventListener('click', (ev) => {
           if (ev.target.closest('button')) return;
-          openRequestModal('${req.id}');
+          openRequestModal(req.id);
         });
         
         let details = `<span class="block text-xs text-gray-500">${req.platform}</span>`;
         if (req.metaObjective) details += `<span class="block text-xs text-gray-500">Obj: ${req.metaObjective}</span>`;
+        
+        const statusMap = {
+          pending: { text: 'En attente', cls: 'text-yellow-700 bg-yellow-50 border-yellow-200' },
+          in_progress: { text: 'En cours', cls: 'text-blue-700 bg-blue-50 border-blue-200' },
+          problematic: { text: 'Problématique', cls: 'text-red-700 bg-red-50 border-red-200' },
+          processed: { text: 'Traité', cls: 'text-green-700 bg-green-50 border-green-200' },
+        };
+        const s = statusMap[req.status || 'pending'];
         
         tr.innerHTML = `
           <td class="p-4 text-gray-600 whitespace-nowrap">
@@ -3683,6 +3848,7 @@
               ${req.platform ? req.platform.toUpperCase() : 'N/A'}
             </span>
             ${req.metaObjective ? `<div class="text-xs mt-1">${req.metaObjective}</div>` : ''}
+            ${req.pubLink ? `<div class="mt-1"><a href="${req.pubLink}" target="_blank" class="text-blue-600 hover:underline text-xs"><i class="fas fa-link"></i> Lien Pub</a></div>` : ''}
           </td>
           <td class="p-4">
             <div class="font-bold text-purple-700">${req.offer || 'N/A'}</div>
@@ -3691,9 +3857,7 @@
             <div class="flex flex-col gap-1">
                 <span class="text-sm font-semibold">${req.paymentMethod || 'N/A'}</span>
                 ${req.paymentProof ? (String(req.paymentProof).startsWith('data:') ? `<button class="text-xs text-blue-600 underline text-left" onclick="openImagePreview('${req.paymentProof}'); event.stopPropagation();"><i class="fas fa-image mr-1"></i> Voir Preuve</button>` : `<a href="${req.paymentProof}" target="_blank" class="text-xs text-blue-600 underline" onclick="event.stopPropagation();"><i class="fas fa-link mr-1"></i> Voir Preuve</a>`) : '<span class="text-xs text-gray-400">Aucune preuve</span>'}
-                <span class="text-xs ${req.processed ? 'text-green-700 bg-green-50' : 'text-gray-600 bg-gray-50'} px-2 py-1 rounded inline-block w-fit mt-1 border ${req.processed ? 'border-green-200' : 'border-gray-200'}">
-                  ${req.processed ? 'Traité' : 'Non traité'}
-                </span>
+                <span class="text-xs ${s.cls} px-2 py-1 rounded inline-block w-fit mt-1 border">${s.text}</span>
             </div>
           </td>
           <td class="p-4 rounded-r-lg">
@@ -3701,9 +3865,14 @@
               <button onclick="openRequestModal('${req.id}'); event.stopPropagation();" class="text-blue-600 hover:text-blue-800" title="Voir détails">
                 <i class="fas fa-eye"></i>
               </button>
-              <button onclick="toggleRequestProcessed('${req.id}')" class="${req.processed ? 'text-green-600 hover:text-green-800' : 'text-gray-500 hover:text-gray-700'}" title="${req.processed ? 'Marquer non traité' : 'Marquer traité'}">
-                <i class="fas ${req.processed ? 'fa-check-circle' : 'fa-circle'}"></i>
-              </button>
+              <div class="relative">
+                <select onchange="updateRequestStatus('${req.id}', this.value)" class="text-xs border rounded px-2 py-1 bg-white">
+                  <option value="pending" ${req.status==='pending'?'selected':''}>En attente</option>
+                  <option value="in_progress" ${req.status==='in_progress'?'selected':''}>En cours</option>
+                  <option value="problematic" ${req.status==='problematic'?'selected':''}>Problématique</option>
+                  <option value="processed" ${req.status==='processed'?'selected':''}>Traité</option>
+                </select>
+              </div>
               <button onclick="toggleRequestRead('${req.id}')" class="text-gray-500 hover:text-blue-600" title="${req.read ? 'Marquer comme non lu' : 'Marquer comme lu'}">
                 <i class="fas ${req.read ? 'fa-envelope-open' : 'fa-envelope'}"></i>
               </button>
@@ -3728,10 +3897,22 @@
     function toggleRequestProcessed(id) {
       const req = appState.clientRequests.find(r => r.id === id);
       if (req) {
-        req.processed = !req.processed;
+        req.status = req.status === 'processed' ? 'pending' : 'processed';
+        req.processed = (req.status === 'processed');
         renderRequests();
         autoSave();
       }
+    }
+
+    function updateRequestStatus(id, status) {
+      const req = appState.clientRequests.find(r => r.id === id);
+      if (!req) return;
+      const validStatuses = ['pending','in_progress','problematic','processed'];
+      if (!validStatuses.includes(status)) return;
+      req.status = status;
+      req.processed = (status === 'processed');
+      renderRequests();
+      autoSave();
     }
 
     function deleteRequest(id) {
@@ -3864,18 +4045,23 @@
 
     function handleWorkMethodImageUpload(id, input) {
       if (input.files && input.files[0]) {
-        // Limit size check?
-        if(input.files[0].size > 2 * 1024 * 1024) {
-             showToast('Image trop volumineuse (max 2Mo)', 'error');
-             input.value = '';
-             return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          updateWorkMethodSection(id, 'image', e.target.result);
-        }
-        reader.readAsDataURL(input.files[0]);
+        const file = input.files[0];
+        const process = async () => {
+          try {
+            let dataUrl;
+            if (file.size > 2 * 1024 * 1024) {
+              dataUrl = await compressImageFile(file, { maxBytes: 2 * 1024 * 1024, maxWidth: 1280 });
+            } else {
+              dataUrl = await readFileAsDataURL(file);
+            }
+            updateWorkMethodSection(id, 'image', dataUrl);
+          } catch (e) {
+            showToast('Erreur lors du traitement de l’image', 'error');
+          } finally {
+            input.value = '';
+          }
+        };
+        process();
       }
     }
 
@@ -3888,6 +4074,7 @@
     
     renderClientOffers();
     populateClientOrderOffers();
+    renderCustomSectionClient();
   }
 
   function hideClientSpace() {
@@ -4060,6 +4247,35 @@
     }
   }
 
+  async function compressImageFile(file, opts = {}) {
+    const maxBytes = opts.maxBytes || (2 * 1024 * 1024);
+    const maxWidth = opts.maxWidth || 1280;
+    const minQuality = opts.minQuality || 0.5;
+    const step = opts.step || 0.1;
+    const readAsDataURL = (f) => new Promise(resolve => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.readAsDataURL(f);
+    });
+    const src = await readAsDataURL(file);
+    const img = new Image();
+    img.src = src;
+    await new Promise(res => { img.onload = res; });
+    const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(img.width * ratio);
+    canvas.height = Math.floor(img.height * ratio);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    let quality = 0.9;
+    let out = canvas.toDataURL('image/jpeg', quality);
+    while (out.length * 0.75 > maxBytes && quality > minQuality) {
+      quality = Math.max(minQuality, quality - step);
+      out = canvas.toDataURL('image/jpeg', quality);
+    }
+    return out;
+  }
+
   function readFileAsDataURL(file) {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -4120,12 +4336,14 @@
     const proofInput = document.getElementById('paymentProof');
     if (proofInput && proofInput.files && proofInput.files[0]) {
       const file = proofInput.files[0];
-      if (file.size <= 2 * 1024 * 1024) {
-        try {
+      try {
+        if (file.size > 2 * 1024 * 1024) {
+          orderData.paymentProof = await compressImageFile(file);
+        } else {
           orderData.paymentProof = await readFileAsDataURL(file);
-        } catch (err) {
-          console.warn('Erreur lecture preuve', err);
         }
+      } catch (err) {
+        console.warn('Erreur lecture/compression preuve', err);
       }
     }
 
@@ -4308,16 +4526,16 @@
 
       if (filesInput && filesInput.files && filesInput.files.length > 0) {
           const files = Array.from(filesInput.files);
-          const readers = [];
-          for (let f of files) {
-              if (f.size > 2 * 1024 * 1024) continue;
-              const reader = new FileReader();
-              readers.push(new Promise(resolve => {
-                  reader.onload = e => resolve(e.target.result);
-              }));
-              reader.readAsDataURL(f);
-          }
-          Promise.all(readers).then(results => {
+          const tasks = files.map(async (f) => {
+            try {
+              if (f.size > 2 * 1024 * 1024) {
+                return await compressImageFile(f);
+              } else {
+                return await readFileAsDataURL(f);
+              }
+            } catch { return null; }
+          });
+          Promise.all(tasks).then(results => {
               results.forEach(r => { if (r) newCat.photos.push(r); });
               if (!newCat.image) {
                   newCat.image = newCat.photos[0] || 'https://via.placeholder.com/400x300?text=No+Image';
@@ -4381,12 +4599,18 @@
           const div = document.createElement('div');
           div.className = 'bg-white p-4 rounded-xl border shadow-sm';
           const cover = (Array.isArray(cat.photos) && cat.photos[0]) ? cat.photos[0] : (cat.image || 'https://via.placeholder.com/400x300?text=No+Image');
-          const photosGrid = Array.isArray(cat.photos) && cat.photos.length > 0 ? cat.photos.map((p, i) => `
-              <div class="relative group">
-                  <img src="${p}" class="w-20 h-20 object-cover rounded-lg border cursor-pointer" onclick="openImagePreview('${p}')">
-                  <button onclick="deleteCustomCategoryPhoto('${cat.id}', ${i})" class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 text-xs opacity-0 group-hover:opacity-100 transition">×</button>
+          const photosGrid = Array.isArray(cat.photos) && cat.photos.length > 0 ? `
+              <div class="admin-photos-grid grid grid-cols-6 gap-2" data-cat-id="${cat.id}">
+                ${cat.photos.map((p, i) => `
+                  <div class="relative group" draggable="true" data-photo-index="${i}">
+                    <img src="${p}" class="w-20 h-20 object-cover rounded-lg border cursor-move" title="Glisser pour réordonner" onclick="openImagePreview('${p}')">
+                    <div class="absolute bottom-1 right-1 bg-white bg-opacity-80 text-gray-700 rounded px-1 text-[10px] pointer-events-none"><i class="fas fa-grip-lines"></i></div>
+                    <div class="absolute top-1 left-1 bg-black bg-opacity-40 text-white text-[10px] px-1 rounded pointer-events-none">#${i+1}</div>
+                    <button onclick="deleteCustomCategoryPhoto('${cat.id}', ${i})" class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 text-xs opacity-0 group-hover:opacity-100 transition">×</button>
+                  </div>
+                `).join('')}
               </div>
-          `).join('') : '<p class="text-xs text-gray-400">Aucune photo</p>';
+          ` : '<p class="text-xs text-gray-400">Aucune photo</p>';
           div.innerHTML = `
               <div class="flex gap-4 items-start">
                   <img src="${cover}" class="w-24 h-24 object-cover rounded-lg bg-gray-100 border cursor-pointer" onclick="openImagePreview('${cover}')">
@@ -4403,7 +4627,7 @@
                           <label class="block text-xs font-semibold text-gray-500 mb-1">Ajouter des photos</label>
                           <input type="file" accept="image/*" multiple onchange="handleCustomCategoryPhotosUpload('${cat.id}', this)" class="w-full p-2 border rounded-lg text-sm">
                       </div>
-                      <div class="grid grid-cols-6 gap-2">${photosGrid}</div>
+                      ${photosGrid}
                   </div>
                   <div class="flex flex-col items-center gap-2">
                       <button onclick="deleteCustomCategory('${cat.id}')" class="text-red-500 hover:text-red-700 p-2">
@@ -4413,8 +4637,41 @@
               </div>
           `;
           container.appendChild(div);
+          setupPhotoDragAndDrop();
       });
   }
+
+    function setupPhotoDragAndDrop() {
+      document.querySelectorAll('.admin-photos-grid').forEach(grid => {
+        const catId = grid.dataset.catId;
+        let dragSrcIndex = null;
+        grid.addEventListener('dragstart', (e) => {
+          const item = e.target.closest('[data-photo-index]');
+          if (!item) return;
+          dragSrcIndex = Number(item.dataset.photoIndex || item.getAttribute('data-photo-index'));
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        grid.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+        grid.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const item = e.target.closest('[data-photo-index]');
+          if (!item) return;
+          const dropIndex = Number(item.dataset.photoIndex || item.getAttribute('data-photo-index'));
+          if (dragSrcIndex === null || dropIndex === null || dragSrcIndex === dropIndex) return;
+          const cat = appState.customSection.categories.find(c => c.id === catId);
+          if (!cat || !Array.isArray(cat.photos)) return;
+          const moved = cat.photos.splice(dragSrcIndex, 1)[0];
+          cat.photos.splice(dropIndex, 0, moved);
+          saveToLocalStorage();
+          if(appState.settings.storageMode === 'cloud' && auth.currentUser) saveToCloud();
+          renderCustomSectionAdmin();
+          renderCustomSectionClient();
+        });
+      });
+    }
 
   function updateCustomCategory(id, field, value) {
       const cat = appState.customSection.categories.find(c => c.id === id);
@@ -4431,16 +4688,16 @@
       if (!cat || !input.files) return;
       if (!Array.isArray(cat.photos)) cat.photos = [];
       const files = Array.from(input.files);
-      const readers = [];
-      for (let f of files) {
-          if (f.size > 2 * 1024 * 1024) continue;
-          const reader = new FileReader();
-          readers.push(new Promise(resolve => {
-              reader.onload = e => resolve(e.target.result);
-          }));
-          reader.readAsDataURL(f);
-      }
-      Promise.all(readers).then(results => {
+      const tasks = files.map(async (f) => {
+          try {
+            if (f.size > 2 * 1024 * 1024) {
+              return await compressImageFile(f);
+            } else {
+              return await readFileAsDataURL(f);
+            }
+          } catch { return null; }
+      });
+      Promise.all(tasks).then(results => {
           results.forEach(r => { if (r) cat.photos.push(r); });
           if (!cat.image && cat.photos.length > 0) cat.image = cat.photos[0];
           saveToLocalStorage();
