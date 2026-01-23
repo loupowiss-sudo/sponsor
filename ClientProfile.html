@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profil Client</title>
+<style>
+:root { --bg: #f6f7fb; --card: #ffffff; --text: #1f2937; --muted: #6b7280; --primary: #2563eb; --accent: #10b981; --danger: #ef4444; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background: var(--bg); color: var(--text); }
+.container { max-width: 1060px; margin: 0 auto; padding: 24px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--card); border: 1px solid #e5e7eb; border-radius: 20px; padding: 16px 20px; }
+.brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 18px; }
+.pill { border-radius: 999px; padding: 6px 12px; font-size: 12px; border: 1px solid #e5e7eb; background: #f9fafb; color: var(--muted); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.card { background: var(--card); border: 1px solid #e5e7eb; border-radius: 20px; padding: 16px; }
+.card h3 { margin: 0 0 8px; font-size: 18px; }
+.text-muted { color: var(--muted); font-size: 13px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 16px; padding: 12px 14px; }
+.stat .label { font-size: 12px; color: var(--muted); }
+.stat .value { font-size: 20px; font-weight: 800; margin-top: 4px; }
+.flex { display: flex; align-items: center; gap: 8px; }
+.input, .select, .button { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 12px; background: #ffffff; font-size: 14px; }
+.button { border: none; cursor: pointer; }
+.button.primary { background: var(--primary); color: #ffffff; }
+.button.accent { background: var(--accent); color: #ffffff; }
+.button.muted { background: #111827; color: #ffffff; }
+.badge { display: inline-block; padding: 4px 8px; font-size: 11px; border-radius: 999px; border: 1px solid #e5e7eb; }
+.badge.yellow { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.badge.blue { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+.badge.red { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+.badge.green { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+.list { display: grid; gap: 10px; }
+.item { display: grid; grid-template-columns: 140px 1fr 1fr; gap: 10px; align-items: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 14px; padding: 10px; }
+.item .date { font-size: 12px; color: var(--muted); }
+.gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.gallery img { width: 100%; height: 90px; object-fit: cover; border-radius: 12px; border: 1px solid #e5e7eb; cursor: pointer; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; padding: 20px; }
+.modal .box { background: #ffffff; border-radius: 16px; overflow: hidden; max-width: 800px; width: 100%; }
+.modal .box .bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #e5e7eb; }
+.modal .box .content { background: #000000; }
+.modal img { max-height: 70vh; width: auto; margin: 0 auto; display: block; object-fit: contain; }
+.footer { margin-top: 24px; text-align: center; color: var(--muted); font-size: 12px; }
+.tools { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.toggle { display: inline-flex; gap: 8px; align-items: center; }
+.theme-dark { --bg: #0b1020; --card: #0e1424; --text: #e5e7eb; --muted: #9aa3b2; --primary: #3b82f6; --accent: #22d3ee; --danger: #ef4444; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="brand">
+      <div class="pill">Profil Client</div>
+      <div id="profileTitle">Sélectionner un client</div>
+    </div>
+    <div class="flex">
+      <select id="langSelect" class="select" style="width:auto">
+        <option value="fr">FR</option>
+        <option value="ar">AR</option>
+      </select>
+      <button id="themeBtn" class="button muted" style="width:auto">Thème</button>
+      <button id="shareBtn" class="button accent" style="width:auto">Partager</button>
+      <button id="printBtn" class="button primary" style="width:auto">Exporter PDF</button>
+    </div>
+  </div>
+  <div class="row">
+    <div class="card">
+      <h3>Client</h3>
+      <div class="flex">
+        <input id="clientSearch" class="input" placeholder="Nom ou contact">
+        <button id="findClientBtn" class="button primary" style="width:auto">Ouvrir</button>
+      </div>
+      <div class="text-muted" id="clientHint">Choisissez un client via la recherche ou la liste.</div>
+      <div id="clientSelectWrap" style="margin-top:10px">
+        <select id="clientSelect" class="select"></select>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Statistiques</h3>
+      <div class="grid-3">
+        <div class="stat"><div class="label">Total dépensé</div><div id="statSpent" class="value">0 DZD</div></div>
+        <div class="stat"><div class="label">Impayé</div><div id="statUnpaid" class="value">0 DZD</div></div>
+        <div class="stat"><div class="label">Transactions</div><div id="statTxCount" class="value">0</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="card">
+      <h3>Demandes</h3>
+      <div class="row-3" style="margin-bottom:8px">
+        <input id="reqSearch" class="input" placeholder="Recherche">
+        <select id="reqStatus" class="select">
+          <option value="all">Tous</option>
+          <option value="pending">En attente</option>
+          <option value="in_progress">En cours</option>
+          <option value="problematic">Problématique</option>
+          <option value="processed">Traité</option>
+        </select>
+        <label class="toggle"><input id="reqUnread" type="checkbox">Non lus</label>
+      </div>
+      <div id="requestsList" class="list"></div>
+    </div>
+    <div class="card">
+      <h3>Galerie</h3>
+      <div id="gallery" class="gallery"></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="card">
+      <h3>Paiement</h3>
+      <div class="grid-3" style="margin-bottom:8px">
+        <div><div class="text-muted">CCP</div><div id="ccpVal">0044032948 clé 28</div><div class="flex"><button class="button" style="width:auto" onclick="copyText('0044032948 clé 28')">Copier</button></div></div>
+        <div><div class="text-muted">BaridiMob</div><div id="bmVal">00799999004403294836</div><div class="flex"><button class="button" style="width:auto" onclick="copyText('00799999004403294836')">Copier</button></div></div>
+        <div><div class="text-muted">RedotPay</div><div id="rpVal">1956595423</div><div class="flex"><button class="button" style="width:auto" onclick="copyText('1956595423')">Copier</button></div></div>
+      </div>
+      <div class="flex">
+        <input id="dzdInput" class="input" placeholder="Montant DZD">
+        <button id="calcBtn" class="button primary" style="width:auto">Calculer</button>
+      </div>
+      <div class="text-muted" id="calcOut" style="margin-top:6px">Résultat en USD affiché ici</div>
+    </div>
+    <div class="card">
+      <h3>Notes</h3>
+      <textarea id="notes" class="input" rows="6" placeholder="Notes client"></textarea>
+      <div class="flex" style="margin-top:8px">
+        <button id="saveNotesBtn" class="button accent">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer">Profil Client • Sponsoring Manager</div>
+</div>
+<div id="imgModal" class="modal">
+  <div class="box">
+    <div class="bar"><div>Aperçu</div><button class="button" style="width:auto" onclick="closeImg()">Fermer</button></div>
+    <div class="content"><img id="imgModalContent" src=""></div>
+  </div>
+  </div>
+<script>
+let state = {};
+let t = { fr: { title: 'Profil Client', open: 'Ouvrir', share: 'Partager', theme: 'Thème', export: 'Exporter PDF', stats: 'Statistiques', demands: 'Demandes', gallery: 'Galerie', payment: 'Paiement', notes: 'Notes' }, ar: { title: 'ملف العميل', open: 'فتح', share: 'مشاركة', theme: 'سمة', export: 'تصدير PDF', stats: 'إحصاءات', demands: 'الطلبات', gallery: 'المعرض', payment: 'الدفع', notes: 'ملاحظات' } };
+function loadState() {
+  try {
+    const raw = localStorage.getItem('sponsoringManagerPro');
+    if (!raw) return;
+    state = JSON.parse(raw) || {};
+  } catch (e) {}
+}
+function fmt(dzd) { return Number(dzd || 0).toLocaleString('fr-DZ') + ' DZD'; }
+function byId(id) { return document.getElementById(id); }
+function init() {
+  loadState();
+  const clients = Array.isArray(state.clients) ? state.clients : [];
+  const sel = byId('clientSelect');
+  sel.innerHTML = '';
+  clients.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = c.name || c.contact || c.id; sel.appendChild(o); });
+  const qp = new URLSearchParams(location.search);
+  const targetId = qp.get('client');
+  if (targetId) { sel.value = targetId; }
+  byId('findClientBtn').onclick = selectClient;
+  byId('clientSearch').onkeyup = function(e){ if (e.key === 'Enter') selectClient(); };
+  byId('reqSearch').oninput = renderRequests;
+  byId('reqStatus').onchange = renderRequests;
+  byId('reqUnread').onchange = renderRequests;
+  byId('calcBtn').onclick = calcUsd;
+  byId('saveNotesBtn').onclick = saveNotes;
+  byId('printBtn').onclick = function(){ window.print(); };
+  byId('shareBtn').onclick = shareLink;
+  byId('themeBtn').onclick = toggleTheme;
+  byId('langSelect').onchange = setLang;
+  setLang();
+  if (sel.value) selectClient();
+  renderGallery();
+}
+function setLang() {
+  const lang = byId('langSelect').value || 'fr';
+  document.title = t[lang].title;
+}
+function toggleTheme() {
+  if (document.body.classList.contains('theme-dark')) document.body.classList.remove('theme-dark'); else document.body.classList.add('theme-dark');
+}
+function shareLink() {
+  const url = location.href;
+  if (navigator.share) { navigator.share({ title: document.title, url }); } else { copyText(url); alert('Lien copié'); }
+}
+function selectClient() {
+  const clients = Array.isArray(state.clients) ? state.clients : [];
+  const search = (byId('clientSearch').value || '').toLowerCase();
+  let selected = null;
+  if (search) { selected = clients.find(c => (c.name || '').toLowerCase().includes(search) || (c.contact || '').toLowerCase().includes(search)); }
+  if (!selected) { const id = byId('clientSelect').value; selected = clients.find(c => c.id === id); }
+  if (!selected) { alert('Client introuvable'); return; }
+  byId('profileTitle').textContent = selected.name || selected.contact || selected.id;
+  byId('statSpent').textContent = fmt(selected.totalSpent || 0);
+  byId('statUnpaid').textContent = fmt(selected.unpaid || 0);
+  byId('statTxCount').textContent = Number(selected.transactionsCount || 0);
+  byId('notes').value = selected.notes || '';
+  renderRequests(selected);
+  history.replaceState(null, '', location.pathname + '?client=' + encodeURIComponent(selected.id));
+}
+function renderRequests(selected) {
+  const list = byId('requestsList');
+  list.innerHTML = '';
+  const reqs = Array.isArray(state.clientRequests) ? state.clientRequests : [];
+  const search = (byId('reqSearch').value || '').toLowerCase();
+  const status = byId('reqStatus').value || 'all';
+  const unread = byId('reqUnread').checked;
+  const contact = (selected ? (selected.contact || selected.name || '') : '').toLowerCase();
+  const filtered = reqs.filter(r => {
+    const matchClient = selected ? ((r.instagram || '').toLowerCase() === contact || (r.pageFacebook || '').toLowerCase() === contact || (selected.name || '').toLowerCase() === contact) : true;
+    if (!matchClient) return false;
+    if (unread && r.read) return false;
+    if (status !== 'all' && (r.status || 'pending') !== status) return false;
+    if (search) {
+      const hay = [r.offer || '', r.platform || '', r.metaObjective || '', r.tiktokObjective || '', r.pubLink || ''].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  }).sort((a,b)=> new Date(b.date) - new Date(a.date));
+  filtered.forEach(r => {
+    const div = document.createElement('div');
+    const s = r.status || 'pending';
+    const cls = s==='processed'?'badge green':s==='problematic'?'badge red':s==='in_progress'?'badge blue':'badge yellow';
+    div.className = 'item';
+    div.innerHTML = '<div><div class="date">'+new Date(r.date).toLocaleDateString()+'</div><div class="date">'+new Date(r.date).toLocaleTimeString()+'</div></div>'
+      +'<div><div>'+ (r.platform || '').toUpperCase() +' '+ (r.metaObjective||r.tiktokObjective||'') +'</div><div class="'+cls+'">'+s.replace('_',' ')+'</div></div>'
+      +'<div><div>'+ (r.offer || '-') +'</div>' + (r.pubLink ? '<a href="'+r.pubLink+'" target="_blank" style="font-size:12px; color:#2563eb">Lien</a>' : '<span class="text-muted">Aucun lien</span>') + '</div>';
+    list.appendChild(div);
+  });
+  if (filtered.length === 0) { const p = document.createElement('div'); p.className='text-muted'; p.textContent='Aucune demande'; list.appendChild(p); }
+}
+function renderGallery() {
+  const g = byId('gallery');
+  g.innerHTML = '';
+  const cs = state.customSection;
+  if (!cs || !Array.isArray(cs.categories) || cs.categories.length === 0) { const p = document.createElement('div'); p.className='text-muted'; p.textContent='Bientôt disponible'; g.appendChild(p); return; }
+  const photos = [];
+  cs.categories.forEach(cat => {
+    const arr = Array.isArray(cat.photos) ? cat.photos : (cat.image ? [cat.image] : []);
+    arr.forEach(p => { if (p) photos.push(p); });
+  });
+  photos.slice(0,9).forEach(src => {
+    const img = document.createElement('img');
+    img.src = src;
+    img.onclick = function(){ openImg(src); };
+    g.appendChild(img);
+  });
+  if (photos.length === 0) { const p = document.createElement('div'); p.className='text-muted'; p.textContent='Aucune photo'; g.appendChild(p); }
+}
+function calcUsd() {
+  const dzd = parseFloat(byId('dzdInput').value || '0');
+  const usd = dzd / 250;
+  byId('calcOut').textContent = dzd.toFixed(2) + ' DZD → ' + usd.toFixed(2) + ' $';
+}
+function saveNotes() {
+  const selId = byId('clientSelect').value;
+  const clients = Array.isArray(state.clients) ? state.clients : [];
+  const c = clients.find(x => x.id === selId);
+  if (!c) { alert('Sélectionnez un client'); return; }
+  c.notes = byId('notes').value || '';
+  try { localStorage.setItem('sponsoringManagerPro', JSON.stringify(state)); alert('Notes enregistrées'); } catch (e) { alert('Erreur sauvegarde'); }
+}
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); alert('Copié'); return; }
+  const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); alert('Copié'); } catch (e) {} document.body.removeChild(ta);
+}
+function openImg(src) { byId('imgModalContent').src = src; byId('imgModal').style.display='flex'; }
+function closeImg() { byId('imgModalContent').src=''; byId('imgModal').style.display='none'; }
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
