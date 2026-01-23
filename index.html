@@ -282,7 +282,7 @@
 
     console.log('updateAuthUI called with:', user ? user.email : 'no user');
 
-    if (user) {
+    if (user || (appState.session && appState.session.type === 'employee')) {
       // Connecté
       if (appContainer)   appContainer.style.display = 'block';
       if (loginContainer) loginContainer.style.display = 'none';
@@ -348,10 +348,44 @@
       showToast(firebaseErrorMessage(error), 'error');
     }
   }
+  
+  function handleLoginClick() {
+    const isEmp = !!document.getElementById('employeeModeToggle') && document.getElementById('employeeModeToggle').checked;
+    const emailOrUser = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    if (!emailOrUser || !password) { showToast('Identifiants requis', 'error'); return; }
+    if (isEmp) {
+      loginEmployee(emailOrUser, password);
+    } else {
+      loginWithEmailPassword(emailOrUser, password);
+    }
+  }
+  
+  function handleGithubClick() {
+    loginWithGithub();
+  }
+  
+  function loginEmployee(username, password) {
+    if (!Array.isArray(appState.employees)) appState.employees = [];
+    const emp = appState.employees.find(e => (e.username || '').toLowerCase() === username.toLowerCase() && (e.password || '') === password);
+    if (!emp) { showToast('Utilisateur ou mot de passe invalide', 'error'); return; }
+    appState.session = { type: 'employee', id: emp.id, username: emp.username, ts: Date.now() };
+    saveToLocalStorage();
+    showToast('Connexion employé réussie', 'success');
+    updateAuthUI(null);
+    ensureInitialData();
+    renderTables();
+    populateClientDropdown();
+    populateOfferSelect();
+    populatePaymentClientSelect();
+    showTab('dashboard');
+  }
 
   async function logout() {
     try {
       await auth.signOut();
+      appState.session = null;
+      saveToLocalStorage();
       showToast('Déconnexion réussie', 'success');
     } catch (error) {
       console.error('Erreur de déconnexion:', error);
@@ -484,6 +518,10 @@
                  class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
         </div>
         <div id="loginError" class="text-red-600 text-sm"></div>
+        <label class="mt-2 flex items-center gap-2 text-sm text-gray-700">
+          <input id="employeeModeToggle" type="checkbox">
+          Connexion Employé
+        </label>
         <button id="loginButton" type="button" onclick="handleLoginClick()"
                 class="w-full mt-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow hover:shadow-lg transition-all">
           Se connecter
@@ -928,6 +966,20 @@
           </form>
         </div>
 
+      </div>
+      
+      <div id="clientImagePreviewModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-3xl w-full">
+          <div class="flex justify-between items-center p-3 border-b">
+            <span class="font-bold">Aperçu</span>
+            <button onclick="closeImagePreview()" class="text-gray-500 hover:text-gray-700">
+              <i class="fas fa-times text-xl"></i>
+            </button>
+          </div>
+          <div class="bg-black">
+            <img id="clientImagePreviewContent" src="" class="max-h-[70vh] w-auto mx-auto object-contain">
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -2032,11 +2084,20 @@
     }
 
   function openImagePreview(src) {
-    const modal = document.getElementById('imagePreviewModal');
-    const img = document.getElementById('imagePreviewContent');
-    if (!modal || !img) return;
-    img.src = src;
-    modal.classList.remove('hidden');
+    const clientVisible = !!document.getElementById('clientSpaceContainer') && document.getElementById('clientSpaceContainer').style.display !== 'none';
+    if (clientVisible) {
+      const modal2 = document.getElementById('clientImagePreviewModal');
+      const img2 = document.getElementById('clientImagePreviewContent');
+      if (!modal2 || !img2) return;
+      img2.src = src;
+      modal2.classList.remove('hidden');
+    } else {
+      const modal = document.getElementById('imagePreviewModal');
+      const img = document.getElementById('imagePreviewContent');
+      if (!modal || !img) return;
+      img.src = src;
+      modal.classList.remove('hidden');
+    }
   }
   
   function copyToClipboard(text) {
@@ -2137,9 +2198,12 @@
   function closeImagePreview() {
     const modal = document.getElementById('imagePreviewModal');
     const img = document.getElementById('imagePreviewContent');
-    if (!modal || !img) return;
-    img.src = '';
-    modal.classList.add('hidden');
+    const modal2 = document.getElementById('clientImagePreviewModal');
+    const img2 = document.getElementById('clientImagePreviewContent');
+    if (img) img.src = '';
+    if (img2) img2.src = '';
+    if (modal) modal.classList.add('hidden');
+    if (modal2) modal2.classList.add('hidden');
   }
   
   function openRequestModal(id) {
@@ -4777,67 +4841,3 @@
     const loginGithubButton = document.getElementById('loginGithubButton');
 
     if (loginButton) {
-      loginButton.addEventListener('click', function (e) {
-        e.preventDefault();
-        const email = document.getElementById('loginEmail').value.trim();
-        const password = document.getElementById('loginPassword').value.trim();
-        if (!email || !password) {
-          showToast('Email et mot de passe requis', 'error');
-          return;
-        }
-        if (auth.currentUser) return;
-        console.log('Login button clicked');
-        loginWithEmailPassword(email, password);
-      });
-    }
-
-    if (loginGithubButton) {
-      loginGithubButton.addEventListener('click', function (e) {
-        e.preventDefault();
-        console.log('GitHub button clicked');
-        loginWithGithub();
-      });
-    }
-
-    console.log('🚀 Sponsoring Manager PRO - Initialisation');
-
-    updateAuthUI(auth.currentUser);
-    loadFromLocalStorage();
-    if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
-      await loadFromCloud();
-    }
-    applyRecurringExpensesForCurrentMonth();
-
-    showTab('dashboard');
-    populateClientDropdown();
-    populateOfferSelect();
-    populateExpenseCategorySelect();
-    populatePaymentClientSelect();
-    renderTables();
-    calculatePreview();
-    showToast('Bienvenue dans Sponsoring Manager PRO!', 'success');
-  });
-  auth.onAuthStateChanged(async function (user) {
-    updateAuthUI(user);
-    if (user) {
-      await loadFromCloud();
-      ensureInitialData();
-      applyRecurringExpensesForCurrentMonth();
-      renderTables();
-      populateClientDropdown();
-      populateOfferSelect();
-      populatePaymentClientSelect();
-      showTab('dashboard');
-    }
-  });
-  window.addEventListener('beforeunload', function () {
-    try { saveToLocalStorage(); } catch (e) {}
-  });
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) {
-      try { saveToLocalStorage(); } catch (e) {}
-    }
-  });
-</script>
-</body>
-</html>
