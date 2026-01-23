@@ -4464,6 +4464,11 @@
       }
       
       updateRequestsBadge();
+      try {
+        if (typeof renderRequests === 'function' && appState.currentTab === 'requests') {
+          renderRequests();
+        }
+      } catch (e) {}
 
       if (isNewClient) {
           showNewClientPopup();
