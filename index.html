@@ -8,6 +8,7 @@
   <!-- Tailwind & Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
   <!-- Firebase compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -291,26 +292,32 @@
       if (appContainer)   appContainer.style.display = 'none';
       if (loginContainer) loginContainer.style.display = 'flex';
     }
-    async function forceCloudSave() {
-      try {
-        if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
-          await saveToCloud();
-          scheduleCloudRetry();
-          showToast('Sauvegarde cloud forcée', 'success');
-          renderSettingsAdmin();
-        } else {
-          saveToLocalStorage();
-          showToast('Sauvegarde locale effectuée', 'success');
-        }
-      } catch (e) {
-        showToast('Erreur lors de la sauvegarde', 'error');
-      }
-    }
   }
 
   function showToast(message, type = 'info') {
-    console.log(`[${type}]`, message);
-    alert(message);
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.position = 'fixed';
+      container.style.top = '16px';
+      container.style.right = '16px';
+      container.style.zIndex = '9999';
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.gap = '8px';
+      document.body.appendChild(container);
+    }
+    const el = document.createElement('div');
+    el.className = 'px-4 py-2 rounded-xl shadow-lg border text-sm';
+    if (type === 'success') { el.classList.add('bg-green-50','border-green-200','text-green-700'); }
+    else if (type === 'error') { el.classList.add('bg-red-50','border-red-200','text-red-700'); }
+    else if (type === 'warning') { el.classList.add('bg-yellow-50','border-yellow-200','text-yellow-700'); }
+    else { el.classList.add('bg-gray-50','border-gray-200','text-gray-700'); }
+    el.textContent = message;
+    container.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 300ms'; }, 2500);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2800);
   }
 
   async function forceCloudSave() {
@@ -345,7 +352,14 @@
       console.error('Erreur de connexion:', error);
       const box = document.getElementById('loginError');
       if (box) box.textContent = firebaseErrorMessage(error);
-      showToast(firebaseErrorMessage(error), 'error');
+      const msg = firebaseErrorMessage(error) || '';
+      if ((msg.toLowerCase().includes('invalid-email') || msg.toLowerCase().includes('email')) && document.getElementById('loginEmail')) {
+        const username = document.getElementById('loginEmail').value.trim();
+        const pwd = document.getElementById('loginPassword').value.trim();
+        loginEmployee(username, pwd);
+      } else {
+        showToast(firebaseErrorMessage(error), 'error');
+      }
     }
   }
   
@@ -584,6 +598,9 @@
           <button onclick="showClientTab('client-order')" class="client-tab-btn px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow hover:shadow-lg transition-all" data-tab="client-order">
             <i class="fas fa-shopping-cart mr-2"></i> <span data-i18n="nav_order">Commander un Sponsor</span>
           </button>
+          <button onclick="showClientTab('client-requests')" class="client-tab-btn px-4 py-2 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all" data-tab="client-requests">
+            <i class="fas fa-inbox mr-2"></i> Mes Demandes
+          </button>
           <button onclick="showClientTab('client-custom')" class="client-tab-btn px-4 py-2 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all" data-tab="client-custom">
             <i class="fas fa-star mr-2"></i> <span id="clientCustomTabTitle" data-i18n="nav_custom">Nos Réalisations</span>
           </button>
@@ -720,6 +737,31 @@
           <h2 class="text-2xl font-bold mb-6 text-gray-800" data-i18n="order_title">Commander un Sponsor</h2>
           
           <form id="orderForm" onsubmit="handleOrderSubmit(event)" class="space-y-6">
+            <div class="border rounded-xl p-4 bg-gray-50">
+              <label class="flex items-center gap-2 font-semibold text-gray-700 mb-2">
+                <input id="customOfferToggle" type="checkbox" class="w-4 h-4"> Offre personnalisable
+              </label>
+              <div id="customOfferFields" class="grid grid-cols-1 md:grid-cols-3 gap-4 hidden">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Mode</label>
+                  <select id="customOfferMode" class="w-full p-3 border rounded-xl bg-white">
+                    <option value="dzd">Budget en DZD</option>
+                    <option value="usd">Budget en USD</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Budget</label>
+                  <input id="customOfferBudget" type="number" step="0.01" class="w-full p-3 border rounded-xl bg-white">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Durée (jours)</label>
+                  <input id="customOfferDuration" type="number" min="3" class="w-full p-3 border rounded-xl bg-white">
+                </div>
+                <div class="md:col-span-3">
+                  <div id="customOfferSummary" class="text-sm text-gray-700 bg-white border rounded-xl p-3"></div>
+                </div>
+              </div>
+            </div>
             
             <!-- 1. Platform Selection -->
             <div>
@@ -967,8 +1009,13 @@
 
           </form>
         </div>
+        
+        <!-- MES DEMANDES SECTION -->
+        <div id="client-requests" class="client-tab-content hidden">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800">Mes Demandes</h2>
+          <div id="clientRequestsList" class="space-y-3"></div>
+        </div>
 
-      </div>
       
       <div id="clientImagePreviewModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-3xl w-full">
@@ -2879,98 +2926,6 @@
       });
     }
 
-    function renderRequests() {
-      const tbody = document.getElementById('requestsTableBody');
-      const emptyState = document.getElementById('requestsEmptyState');
-      if (!tbody) return;
-      tbody.innerHTML = '';
-      
-      const requests = appState.clientRequests || [];
-      
-      if (requests.length === 0) {
-        if(emptyState) emptyState.classList.remove('hidden');
-        return;
-      }
-      
-      if(emptyState) emptyState.classList.add('hidden');
-
-      // Sort by date desc
-      const sorted = [...requests].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      sorted.forEach(req => {
-        const row = document.createElement('tr');
-        row.className = req.read ? 'hover:bg-gray-50' : 'bg-blue-50 hover:bg-blue-100 font-medium';
-        
-        let details = '';
-        if(req.platform === 'meta') {
-            details = `Meta: ${req.metaObjective || '-'} (${req.metaFollowersTarget || req.metaMessagesTarget || 'N/A'})`;
-        } else if (req.platform === 'tiktok') {
-            details = `TikTok: ${req.tiktokObjective || '-'} (${req.tiktokMsgTarget || 'N/A'})`;
-        } else {
-            details = `Site: ${req.websiteUrl || '-'}`;
-        }
-
-        const clientName = req.instagram || req.pageFacebook || 'Client';
-        const contact = req.instagram ? `Insta: ${req.instagram}` : (req.pageFacebook ? `FB: ${req.pageFacebook}` : '-');
-
-        // Payment info display
-        let paymentInfo = `<span class="px-2 py-1 rounded text-xs font-bold ${req.paymentMethod==='redotpay'?'bg-red-100 text-red-700':'bg-gray-100 text-gray-700'}">${req.paymentMethod}</span>`;
-        if(req.paymentDetails && req.paymentDetails.usdToSend) {
-            paymentInfo += `<div class="text-xs mt-1">${req.paymentDetails.dzdAmount} DZD -> ${req.paymentDetails.usdToSend.toFixed(2)} $</div>`;
-        }
-
-        row.innerHTML = `
-          <td class="p-4 text-gray-700 text-xs">
-            ${new Date(req.date).toLocaleDateString()} ${new Date(req.date).toLocaleTimeString()}
-          </td>
-          <td class="p-4 text-gray-800">
-            <div class="font-bold text-sm">${clientName}</div>
-            <div class="text-xs text-gray-500">${contact}</div>
-            ${req.clientNote ? `<div class="mt-1 text-xs bg-yellow-50 text-yellow-700 p-1 rounded border border-yellow-100"><i class="fas fa-sticky-note mr-1"></i>${req.clientNote}</div>` : ''}
-          </td>
-          <td class="p-4 text-gray-700 text-sm">
-            ${details}
-            ${req.pubLink ? `<div class="mt-1"><a href="${req.pubLink}" target="_blank" class="text-blue-600 hover:underline text-xs"><i class="fas fa-link"></i> Lien Pub</a></div>` : ''}
-          </td>
-          <td class="p-4 text-gray-700 text-sm">${req.offer || '-'}</td>
-          <td class="p-4">
-             ${paymentInfo}
-             ${req.paymentProof ? `<div class="mt-1"><a href="#" class="text-blue-600 text-xs hover:underline"><i class="fas fa-paperclip"></i> Preuve</a></div>` : ''}
-          </td>
-          <td class="p-4 text-right">
-            <button onclick="markRequestRead('${req.id}')" class="text-blue-600 hover:text-blue-800 mr-2" title="Marquer lu">
-              <i class="fas ${req.read ? 'fa-envelope-open' : 'fa-envelope'}"></i>
-            </button>
-            <button onclick="deleteRequest('${req.id}')" class="text-red-600 hover:text-red-800" title="Supprimer">
-              <i class="fas fa-trash-alt"></i>
-            </button>
-          </td>
-        `;
-        tbody.appendChild(row);
-      });
-    }
-
-    function markRequestRead(id) {
-        const req = appState.clientRequests.find(r => r.id === id);
-        if(req) {
-            req.read = !req.read;
-            saveToLocalStorage();
-            if(appState.settings.storageMode === 'cloud' && auth.currentUser) saveToCloud();
-            renderRequests();
-            updateRequestsBadge();
-        }
-    }
-
-    function deleteRequest(id) {
-        if(confirm('Supprimer cette demande ?')) {
-            appState.clientRequests = appState.clientRequests.filter(r => r.id !== id);
-            saveToLocalStorage();
-            if(appState.settings.storageMode === 'cloud' && auth.currentUser) saveToCloud();
-            renderRequests();
-            updateRequestsBadge();
-        }
-    }
-
     function renderTables() {
       recalculateClientStats();
       renderClientsTable();
@@ -3987,6 +3942,9 @@
       if (!validStatuses.includes(status)) return;
       req.status = status;
       req.processed = (status === 'processed');
+    if (status === 'processed') {
+      createTransactionFromRequest(req);
+    }
       renderRequests();
       autoSave();
     }
@@ -3999,6 +3957,38 @@
         showToast('Demande supprimée', 'success');
       }
     }
+  
+  function createTransactionFromRequest(req) {
+    const clientName = req.instagram || req.pageFacebook || 'Client';
+    let client = (appState.clients || []).find(c => (c.name||'') === clientName);
+    if (!client) {
+      client = { id: generateId('client'), name: clientName, contact: req.instagram || req.pageFacebook || '', notes: '', totalSpent: 0, unpaid: 0, transactionsCount: 0 };
+      appState.clients.push(client);
+    }
+    const offerName = req.offer || (req.customOffer ? 'Offre personnalisable' : 'Offre');
+    const amountUsd = req.customOffer ? Number(req.customBudgetUsd || 0) : Number(req.paymentDetails?.usdToSend || 0);
+    const rate = req.customOffer ? Number(req.customRateUsed || 340) : Number(document.getElementById('buyRate')?.value || 340);
+    const priceDzd = req.customOffer ? Number(req.customBudgetDzd || 0) : (amountUsd * rate);
+    const totalDzd = amountUsd * rate;
+    const duration = req.customOffer ? `${req.customDurationDays || 0} jours` : '';
+    const txn = {
+      id: generateId('txn'),
+      date: new Date().toISOString().slice(0,10),
+      createdAt: Date.now(),
+      clientId: client.id,
+      clientName: client.name,
+      offerId: null,
+      offerName,
+      amount: Number(amountUsd || 0),
+      priceDzd: Number(priceDzd || 0),
+      totalDzd: Number(totalDzd || 0),
+      profit: 0,
+      duration
+    };
+    appState.transactions.push(txn);
+    renderTransactionsTable();
+    updateDashboard();
+  }
 
     // === WORK METHOD SECTIONS MANAGEMENT ===
 
@@ -4151,6 +4141,8 @@
     renderClientOffers();
     populateClientOrderOffers();
     renderCustomSectionClient();
+    ensureClientToken();
+    renderClientRequests();
   }
 
   function hideClientSpace() {
@@ -4249,6 +4241,9 @@
     }
     if (tabId === 'client-custom') {
        renderCustomSectionClient();
+    }
+    if (tabId === 'client-requests') {
+       renderClientRequests();
     }
   }
 
@@ -4381,7 +4376,8 @@
         platform: platform || 'N/A',
         paymentMethod: paymentMethod || 'N/A',
         paymentProof: null,
-        status: 'pending'
+        status: 'pending',
+        clientToken: getClientToken()
     };
 
     // 3. Add Platform Specifics
@@ -4431,6 +4427,30 @@
               dzdAmount: dzdAmount,
               usdToSend: dzdAmount / 250
           };
+    }
+
+    const customToggle = document.getElementById('customOfferToggle');
+    const customFields = document.getElementById('customOfferFields');
+    if (customToggle && customToggle.checked) {
+      const mode = document.getElementById('customOfferMode').value;
+      const budget = parseFloat(document.getElementById('customOfferBudget').value || 0);
+      const durationDays = parseInt(document.getElementById('customOfferDuration').value || '0', 10);
+      if (durationDays < 3) { showToast('Durée minimale: 3 jours', 'error'); resetSubmitButton(btn, originalText); return; }
+      const rate = (mode === 'usd' ? computeCustomRate(budget) : computeCustomRate(budget / 340));
+      if (mode === 'usd' && budget < 3) { showToast('Budget minimum: 3 USD', 'error'); resetSubmitButton(btn, originalText); return; }
+      if (mode === 'dzd' && (budget / rate) < 3) { showToast('Budget minimum: 3 USD', 'error'); resetSubmitButton(btn, originalText); return; }
+      orderData.customOffer = true;
+      orderData.customOfferMode = mode;
+      orderData.customDurationDays = durationDays;
+      orderData.customRateUsed = rate;
+      if (mode === 'usd') {
+        orderData.customBudgetUsd = budget;
+        orderData.customBudgetDzd = Math.round(budget * rate);
+      } else {
+        orderData.customBudgetDzd = budget;
+        orderData.customBudgetUsd = +(budget / rate).toFixed(2);
+      }
+      orderData.offer = orderData.offer || 'Offre personnalisable';
     }
 
     // 6. Add Client if New
@@ -4490,6 +4510,53 @@
       // Reset payment sections
       document.querySelectorAll('#redotpayCalculator, #ccpInfo, #baridimobInfo').forEach(el => el.classList.add('hidden'));
     }, 1500);
+  }
+  
+  function computeCustomRate(usdAmount) {
+    if (!usdAmount || usdAmount <= 100) return 340;
+    return 320;
+  }
+  function ensureClientToken() {
+    if (!localStorage.getItem('clientToken')) {
+      localStorage.setItem('clientToken', 'CT-' + Math.random().toString(36).slice(2) + Date.now());
+    }
+  }
+  function getClientToken() {
+    ensureClientToken();
+    return localStorage.getItem('clientToken');
+  }
+  function renderClientRequests() {
+    const list = document.getElementById('clientRequestsList');
+    if (!list) return;
+    const token = getClientToken();
+    const items = (appState.clientRequests || []).filter(r => r.clientToken === token).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    list.innerHTML = '';
+    if (items.length === 0) {
+      list.innerHTML = '<div class="text-gray-500">Aucune demande pour le moment.</div>';
+      return;
+    }
+    const statusText = {
+      pending: 'En attente',
+      in_progress: 'En cours',
+      problematic: 'Problématique',
+      processed: 'Traité'
+    };
+    items.forEach(req => {
+      const div = document.createElement('div');
+      div.className = 'border rounded-xl p-4 bg-gray-50 flex items-center justify-between';
+      const s = statusText[req.status || 'pending'];
+      div.innerHTML = `
+        <div>
+          <div class="font-bold text-gray-800">${req.offer || 'Offre'}</div>
+          <div class="text-xs text-gray-500">${new Date(req.date).toLocaleString()}</div>
+          ${req.pubLink ? `<div class="text-xs mt-1"><a class="text-blue-600 hover:underline" target="_blank" href="${req.pubLink}">Lien Pub</a></div>` : ''}
+        </div>
+        <div class="text-sm">
+          <span class="px-2 py-1 rounded border ${req.status==='processed'?'bg-green-50 text-green-700 border-green-200':req.status==='in_progress'?'bg-blue-50 text-blue-700 border-blue-200':req.status==='problematic'?'bg-red-50 text-red-700 border-red-200':'bg-yellow-50 text-yellow-700 border-yellow-200'}">${s}</span>
+        </div>
+      `;
+      list.appendChild(div);
+    });
   }
 
   function showNewClientPopup() {
@@ -4675,6 +4742,32 @@
       if(!container || !appState.customSection) return;
 
       container.innerHTML = '';
+      const wmBox = document.createElement('div');
+      wmBox.className = 'bg-white p-4 rounded-xl border shadow-sm mb-4';
+      wmBox.innerHTML = `
+        <h4 class="font-bold mb-3">Éditeur Méthode de Travail</h4>
+        <textarea id="workMethodEditorInCustom" rows="5" class="w-full p-3 border rounded-lg">${appState.settings.workMethodText || ''}</textarea>
+        <div class="mt-2 flex gap-2">
+          <button id="saveWmBtn" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Sauvegarder</button>
+          <button id="previewWmBtn" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">Voir dans Espace Client</button>
+        </div>
+      `;
+      container.appendChild(wmBox);
+      const saveBtn = wmBox.querySelector('#saveWmBtn');
+      const prevBtn = wmBox.querySelector('#previewWmBtn');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+          const val = document.getElementById('workMethodEditorInCustom').value;
+          appState.settings.workMethodText = val;
+          autoSave();
+          showToast('Méthode de travail mise à jour', 'success');
+        });
+      }
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          showClientTab('client-method');
+        });
+      }
       appState.customSection.categories.forEach((cat, idx) => {
           if (!Array.isArray(cat.photos)) cat.photos = cat.image ? [cat.image] : [];
           const div = document.createElement('div');
@@ -4900,6 +4993,26 @@
         emailInput.placeholder = isEmp ? 'Nom d’utilisateur employé' : '';
       });
     }
+    const toggle = document.getElementById('customOfferToggle');
+    const fields = document.getElementById('customOfferFields');
+    const modeEl = document.getElementById('customOfferMode');
+    const budgetEl = document.getElementById('customOfferBudget');
+    const durationEl = document.getElementById('customOfferDuration');
+    const summary = document.getElementById('customOfferSummary');
+    function updateSummary() {
+      if (!fields || fields.classList.contains('hidden')) { if (summary) summary.textContent = ''; return; }
+      const mode = modeEl.value;
+      const budget = parseFloat(budgetEl.value || 0);
+      const usd = mode === 'usd' ? budget : (budget / computeCustomRate(budget / 340));
+      const rate = computeCustomRate(usd);
+      const dzd = mode === 'usd' ? (budget * rate) : budget;
+      const dur = parseInt(durationEl.value || '0', 10);
+      if (summary) summary.textContent = `Taux: ${rate} DZD/USD • Budget: ${usd.toFixed(2)} $ (${Math.round(dzd)} DZD) • Durée: ${dur} jours`;
+    }
+    if (toggle) toggle.addEventListener('change', () => { if (fields) { fields.classList.toggle('hidden', !toggle.checked); } updateSummary(); });
+    if (modeEl) modeEl.addEventListener('change', updateSummary);
+    if (budgetEl) budgetEl.addEventListener('input', updateSummary);
+    if (durationEl) durationEl.addEventListener('input', updateSummary);
   });
   auth.onAuthStateChanged(async function (user) {
     updateAuthUI(user);
