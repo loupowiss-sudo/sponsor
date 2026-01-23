@@ -383,9 +383,11 @@
 
   async function logout() {
     try {
-      await auth.signOut();
-      appState.session = null;
-      saveToLocalStorage();
+      try { await auth.signOut(); } catch (e) {}
+      if (typeof appState !== 'undefined') {
+        appState.session = null;
+        try { saveToLocalStorage(); } catch (e) {}
+      }
       showToast('Déconnexion réussie', 'success');
     } catch (error) {
       console.error('Erreur de déconnexion:', error);
@@ -1984,6 +1986,7 @@
       recurringExpenses: [],
       clientRequests: [],
     };
+    window.appState = appState;
 
     // === UTILITAIRES ===
     function generateId(prefix = 'id') {
@@ -3049,6 +3052,15 @@
     window.openModal = openModal;
     window.addExpenseCategory = addExpenseCategory;
     window.deleteExpenseCategory = deleteExpenseCategory;
+    window.handleLoginClick = handleLoginClick;
+    window.handleGithubClick = handleGithubClick;
+    window.copyToClipboard = copyToClipboard;
+    window.openImagePreview = openImagePreview;
+    window.closeImagePreview = closeImagePreview;
+    window.showClientSpace = showClientSpace;
+    window.hideClientSpace = hideClientSpace;
+    window.showClientTab = showClientTab;
+    window.forceCloudSave = forceCloudSave;
     // Actions tables
     window.addClient = addClient;
     window.addOffer = addOffer;
@@ -4841,3 +4853,70 @@
     const loginGithubButton = document.getElementById('loginGithubButton');
 
     if (loginButton) {
+      loginButton.addEventListener('click', function (e) {
+        e.preventDefault();
+        handleLoginClick();
+      });
+    }
+
+    if (loginGithubButton) {
+      loginGithubButton.addEventListener('click', function (e) {
+        e.preventDefault();
+        console.log('GitHub button clicked');
+        loginWithGithub();
+      });
+    }
+
+    console.log('🚀 Sponsoring Manager PRO - Initialisation');
+
+    updateAuthUI(auth.currentUser);
+    loadFromLocalStorage();
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+      await loadFromCloud();
+    }
+    applyRecurringExpensesForCurrentMonth();
+
+    showTab('dashboard');
+    populateClientDropdown();
+    populateOfferSelect();
+    populateExpenseCategorySelect();
+    populatePaymentClientSelect();
+    renderTables();
+    calculatePreview();
+    showToast('Bienvenue dans Sponsoring Manager PRO!', 'success');
+    
+    const empToggle = document.getElementById('employeeModeToggle');
+    const emailLabel = document.querySelector('label[for="loginEmail"]');
+    const emailInput = document.getElementById('loginEmail');
+    if (empToggle && emailLabel && emailInput) {
+      empToggle.addEventListener('change', function () {
+        const isEmp = empToggle.checked;
+        emailLabel.textContent = isEmp ? 'Nom d’utilisateur' : 'Email';
+        emailInput.placeholder = isEmp ? 'Nom d’utilisateur employé' : '';
+      });
+    }
+  });
+  auth.onAuthStateChanged(async function (user) {
+    updateAuthUI(user);
+    if (user) {
+      await loadFromCloud();
+      ensureInitialData();
+      applyRecurringExpensesForCurrentMonth();
+      renderTables();
+      populateClientDropdown();
+      populateOfferSelect();
+      populatePaymentClientSelect();
+      showTab('dashboard');
+    }
+  });
+  window.addEventListener('beforeunload', function () {
+    try { saveToLocalStorage(); } catch (e) {}
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      try { saveToLocalStorage(); } catch (e) {}
+    }
+  });
+</script>
+</body>
+</html>
