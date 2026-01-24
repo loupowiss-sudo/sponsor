@@ -322,6 +322,26 @@
   }
 
   window.addEventListener('error', function(){ try { ensureVisibleUI(); } catch(e){} });
+  function ensureAuthVisibility(){
+    const app = document.getElementById('appContainer');
+    const login = document.getElementById('loginContainer');
+    const client = document.getElementById('clientSpaceContainer');
+    const sess = (typeof window !== 'undefined' && window.appState && window.appState.session) ? window.appState.session : null;
+    if (isAdminSession()) {
+      if (app) app.style.display = 'block';
+      if (login) login.style.display = 'none';
+      if (client) client.style.display = 'none';
+      return;
+    }
+    if (sess && sess.type === 'client') {
+      showClientSpace();
+      return;
+    }
+    if (login) login.style.display = 'flex';
+    if (app) app.style.display = 'none';
+    if (client) client.style.display = 'none';
+  }
+  window.addEventListener('unhandledrejection', function(){ try { ensureAuthVisibility(); ensureVisibleUI(); } catch(e){} });
 
   function showToast(message, type = 'info') {
     let container = document.getElementById('toastContainer');
@@ -370,6 +390,7 @@
       await auth.signInWithEmailAndPassword(email, password);
       showToast('Connexion réussie', 'success');
       updateAuthUI(auth.currentUser);
+      ensureAuthVisibility();
       await loadFromCloud();
       ensureInitialData();
       renderTables();
@@ -377,6 +398,7 @@
       populateOfferSelect();
       populatePaymentClientSelect();
       showTab('dashboard');
+      ensureAuthVisibility();
     } catch (error) {
       console.error('Erreur de connexion:', error);
       const box = document.getElementById('loginError');
@@ -5258,6 +5280,7 @@
       if (loginContainer) loginContainer.style.display = 'flex';
     }
     ensureVisibleUI();
+    ensureAuthVisibility();
     populateClientDropdown();
     populateOfferSelect();
     populateExpenseCategorySelect();
@@ -5308,6 +5331,7 @@
       populateOfferSelect();
       populatePaymentClientSelect();
       showTab('dashboard');
+      ensureAuthVisibility();
     }
   });
   window.addEventListener('beforeunload', function () {
