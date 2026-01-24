@@ -779,25 +779,7 @@
         <div id="client-offres" class="client-tab-content hidden">
           <h2 class="text-2xl font-bold mb-4 text-gray-800" data-i18n="offers_title">Nos Offres Disponibles</h2>
           <p class="text-gray-500 mb-6" data-i18n="offers_subtitle">Sélectionnez une offre pour voir les détails.</p>
-          <!-- Placeholder for dynamic offers if needed, for now static example -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="border rounded-2xl p-4 hover:shadow-lg transition-all cursor-pointer bg-gray-50">
-              <div class="flex justify-between items-center mb-2">
-                <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">Populaire</span>
-                <span class="text-xl font-bold text-gray-800">Pack Starter</span>
-              </div>
-              <p class="text-gray-600 text-sm mb-4">Idéal pour commencer votre visibilité.</p>
-              <button class="w-full py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50" data-i18n="btn_details">Voir détails</button>
-            </div>
-            <div class="border rounded-2xl p-4 hover:shadow-lg transition-all cursor-pointer bg-gray-50">
-               <div class="flex justify-between items-center mb-2">
-                <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold">Pro</span>
-                <span class="text-xl font-bold text-gray-800">Pack Growth</span>
-              </div>
-              <p class="text-gray-600 text-sm mb-4">Pour une croissance accélérée.</p>
-              <button class="w-full py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50" data-i18n="btn_details">Voir détails</button>
-            </div>
-          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
 
         <!-- METHODE SECTION -->
@@ -4437,8 +4419,7 @@
             container.appendChild(div);
         });
     } else {
-        // Fallback to static if no data (though static was removed in this replace, so we handle empty state)
-        container.innerHTML = '<p class="text-gray-500 col-span-2 text-center py-8">Aucune offre disponible pour le moment.</p>';
+        container.innerHTML = '<p class="text-gray-500 col-span-2 text-center py-8">Aucune offre trouvée • Ajoutez vos offres dans le tableau de bord (onglet Offres).</p>';
     }
   }
 
@@ -5236,6 +5217,16 @@
       if (appContainer) appContainer.style.display = 'none';
       if (loginContainer) loginContainer.style.display = 'flex';
     }
+    (function ensureVisibleUI(){
+      const login = document.getElementById('loginContainer');
+      const app = document.getElementById('appContainer');
+      const client = document.getElementById('clientSpaceContainer');
+      function isNone(el){ return !el || el.style.display === '' || el.style.display === 'none'; }
+      if (isNone(login) && isNone(app) && !isNone(client)) return;
+      if (isNone(login) && isNone(app) && isNone(client) && login) {
+        login.style.display = 'flex';
+      }
+    })();
     populateClientDropdown();
     populateOfferSelect();
     populateExpenseCategorySelect();
