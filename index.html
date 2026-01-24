@@ -519,8 +519,22 @@
   <!-- LOGIN CONTAINER -->
   <div id="loginContainer" class="min-h-screen flex items-center justify-center">
     <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-md w-full border">
-      <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">
-        Connexion Sponsoring Manager PRO
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center gap-3 mb-2">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center shadow">
+            <i class="fas fa-bullhorn text-white text-2xl"></i>
+          </div>
+          <div class="text-2xl font-black tracking-wide text-gray-800">Sponsor hichem</div>
+        </div>
+        <p class="text-gray-600 text-sm">Bienvenue sur votre plateforme de sponsoring.</p>
+      </div>
+      <button onclick="showClientSpace()" type="button"
+              class="w-full mb-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
+        <i class="fas fa-user-tag"></i>
+        Espace Client (Accès Libre)
+      </button>
+      <h2 class="text-lg font-bold mb-3 text-center text-gray-800">
+        Connexion Admin/Employé
       </h2>
       <div class="space-y-4">
         <div>
@@ -539,14 +553,9 @@
           Connexion Employé
         </label>
         <button id="loginButton" type="button" onclick="handleLoginClick()"
-                class="w-full mt-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow hover:shadow-lg transition-all">
+                class="w-full mt-2 py-3 bg-gray-900 text-white font-bold rounded-xl shadow hover:shadow-lg transition-all">
           Se connecter
         </button>
-       <button id="loginGithubButton" type="button" onclick="handleGithubClick()"
-        class="w-full mt-2 py-3 bg-gradient-to-r from-gray-800 to-black text-white font-bold rounded-xl shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
-  <i class="fab fa-github"></i>
-  Connexion GitHub
-</button>
         <div class="relative flex py-5 items-center">
           <div class="flex-grow border-t border-gray-300"></div>
           <span class="flex-shrink-0 mx-4 text-gray-400">Ou</span>
@@ -4948,7 +4957,6 @@
     setLanguage(userLang);
 
     const loginButton = document.getElementById('loginButton');
-    const loginGithubButton = document.getElementById('loginGithubButton');
 
     if (loginButton) {
       loginButton.addEventListener('click', function (e) {
@@ -4957,13 +4965,7 @@
       });
     }
 
-    if (loginGithubButton) {
-      loginGithubButton.addEventListener('click', function (e) {
-        e.preventDefault();
-        console.log('GitHub button clicked');
-        loginWithGithub();
-      });
-    }
+    // Connexion GitHub retirée
 
     console.log('🚀 Sponsoring Manager PRO - Initialisation');
 
@@ -4974,7 +4976,14 @@
     }
     applyRecurringExpensesForCurrentMonth();
 
-    showTab('dashboard');
+    if (auth.currentUser || (appState.session && appState.session.type === 'employee')) {
+      showTab('dashboard');
+    } else {
+      const appContainer = document.getElementById('appContainer');
+      const loginContainer = document.getElementById('loginContainer');
+      if (appContainer) appContainer.style.display = 'none';
+      if (loginContainer) loginContainer.style.display = 'flex';
+    }
     populateClientDropdown();
     populateOfferSelect();
     populateExpenseCategorySelect();
