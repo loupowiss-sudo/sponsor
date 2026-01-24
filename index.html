@@ -196,7 +196,20 @@
   firebase.initializeApp(firebaseConfig);
 
   const auth = firebase.auth();
-  const db   = firebase.firestore();
+  let db = null;
+  function getDb() {
+    if (!db) {
+      db = firebase.firestore();
+      try {
+        db.settings({
+          experimentalForceLongPolling: true,
+          useFetchStreams: false,
+          ignoreUndefinedProperties: true,
+        });
+      } catch (e) {}
+    }
+    return db;
+  }
   try {
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
   } catch (e) {
@@ -273,12 +286,13 @@
 
     console.log('updateAuthUI called with:', user ? user.email : 'no user');
 
-    if (user || (appState.session && appState.session.type === 'employee')) {
+    const sess = (typeof window !== 'undefined' && window.appState && window.appState.session) ? window.appState.session : null;
+    if (user || (sess && sess.type === 'employee')) {
       // Connecté
       if (appContainer)   appContainer.style.display = 'block';
       if (loginContainer) loginContainer.style.display = 'none';
       if (clientSpace)    clientSpace.style.display = 'none';
-    } else if (appState.session && appState.session.type === 'client') {
+    } else if (sess && sess.type === 'client') {
       if (appContainer)   appContainer.style.display = 'none';
       if (loginContainer) loginContainer.style.display = 'none';
       if (clientSpace)    clientSpace.style.display = 'block';
@@ -295,12 +309,19 @@
     const login = document.getElementById('loginContainer');
     const app = document.getElementById('appContainer');
     const client = document.getElementById('clientSpaceContainer');
-    function isNone(el){ return !el || el.style.display === '' || el.style.display === 'none'; }
+    function isNone(el){
+      if (!el) return true;
+      const cs = window.getComputedStyle ? getComputedStyle(el) : null;
+      const disp = cs ? cs.display : el.style.display;
+      return disp === '' || disp === 'none';
+    }
     // If none are visible, default to login
     if (isNone(login) && isNone(app) && isNone(client) && login) {
       login.style.display = 'flex';
     }
   }
+
+  window.addEventListener('error', function(){ try { ensureVisibleUI(); } catch(e){} });
 
   function showToast(message, type = 'info') {
     let container = document.getElementById('toastContainer');
@@ -568,6 +589,7 @@
       color: white;
       box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
     }
+    .hidden { display: none !important; }
     .card-hover { transition: all 0.3s ease; border: 1px solid transparent; }
     .card-hover:hover { border-color: #3b82f6; box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.2); }
     .modal-show { animation: modalFadeIn 0.3s ease; }
@@ -2619,7 +2641,7 @@
         const user = auth.currentUser;
         if (!user) { console.warn('Pas d’utilisateur connecté'); loadFromLocalStorage(); showToast('Non connecté: chargement des données locales.', 'info'); return; }
         const uid = user.uid;
-        const doc = await db.collection('users').doc(uid).get();
+        const doc = await getDb().collection('users').doc(uid).get();
         if (doc.exists) {
           const raw = doc.data();
           const data = raw?.data ?? raw;
@@ -2660,7 +2682,7 @@
         if (!user) { console.warn('Pas d’utilisateur connecté'); saveToLocalStorage(); return; }
         const uid = user.uid;
         appState.lastUpdated = Date.now();
-        await db.collection('users').doc(uid).set({ data: appState }, { merge: true });
+        await getDb().collection('users').doc(uid).set({ data: appState }, { merge: true });
         console.log('☁️ Données sauvegardées sur Firebase');
         appState.sync.pendingCloudSave = false;
         updateSyncIndicator();
