@@ -340,8 +340,23 @@
     if (login) login.style.display = 'flex';
     if (app) app.style.display = 'none';
     if (client) client.style.display = 'none';
+    ensureVisibleUI();
   }
   window.addEventListener('unhandledrejection', function(){ try { ensureAuthVisibility(); ensureVisibleUI(); } catch(e){} });
+  function visibilityWatchdog(durationMs){
+    const start = Date.now();
+    const timer = setInterval(() => {
+      ensureAuthVisibility();
+      ensureVisibleUI();
+      const app = document.getElementById('appContainer');
+      const login = document.getElementById('loginContainer');
+      const client = document.getElementById('clientSpaceContainer');
+      const anyVisible = [app, login, client].some(el => el && getComputedStyle(el).display !== 'none');
+      if (anyVisible || (Date.now() - start) > (durationMs || 3000)) {
+        clearInterval(timer);
+      }
+    }, 150);
+  }
 
   function showToast(message, type = 'info') {
     let container = document.getElementById('toastContainer');
@@ -391,6 +406,7 @@
       showToast('Connexion réussie', 'success');
       updateAuthUI(auth.currentUser);
       ensureAuthVisibility();
+      visibilityWatchdog(3000);
       await loadFromCloud();
       ensureInitialData();
       renderTables();
@@ -399,6 +415,7 @@
       populatePaymentClientSelect();
       showTab('dashboard');
       ensureAuthVisibility();
+      visibilityWatchdog(3000);
     } catch (error) {
       console.error('Erreur de connexion:', error);
       const box = document.getElementById('loginError');
@@ -5281,6 +5298,7 @@
     }
     ensureVisibleUI();
     ensureAuthVisibility();
+    visibilityWatchdog(3000);
     populateClientDropdown();
     populateOfferSelect();
     populateExpenseCategorySelect();
@@ -5332,6 +5350,7 @@
       populatePaymentClientSelect();
       showTab('dashboard');
       ensureAuthVisibility();
+      visibilityWatchdog(3000);
     }
   });
   window.addEventListener('beforeunload', function () {
