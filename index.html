@@ -280,6 +280,7 @@
   function updateAuthUI(user) {
     const appContainer   = document.getElementById('appContainer');
     const loginContainer = document.getElementById('loginContainer');
+    const clientSpace    = document.getElementById('clientSpaceContainer');
 
     console.log('updateAuthUI called with:', user ? user.email : 'no user');
 
@@ -287,10 +288,16 @@
       // Connecté
       if (appContainer)   appContainer.style.display = 'block';
       if (loginContainer) loginContainer.style.display = 'none';
+      if (clientSpace)    clientSpace.style.display = 'none';
+    } else if (appState.session && appState.session.type === 'client') {
+      if (appContainer)   appContainer.style.display = 'none';
+      if (loginContainer) loginContainer.style.display = 'none';
+      if (clientSpace)    clientSpace.style.display = 'block';
     } else {
       // Déconnecté
       if (appContainer)   appContainer.style.display = 'none';
       if (loginContainer) loginContainer.style.display = 'flex';
+      if (clientSpace)    clientSpace.style.display = 'none';
     }
   }
 
@@ -375,39 +382,38 @@
     }
   }
   
-  async function hashPassword(password) {
-    try {
-      const enc = new TextEncoder().encode(password);
-      const buf = await crypto.subtle.digest('SHA-256', enc);
-      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch (e) {
-      return '';
-    }
-  }
-  
   async function signupClient() {
     const nameEl = document.getElementById('signupClientName');
+    const userEl = document.getElementById('signupClientUsername');
+    const phoneEl = document.getElementById('signupClientPhone');
     const emailEl = document.getElementById('signupClientEmail');
-    const pwdEl = document.getElementById('signupClientPassword');
     const name = nameEl ? nameEl.value.trim() : '';
+    const username = userEl ? userEl.value.trim() : '';
+    const phone = phoneEl ? phoneEl.value.trim() : '';
     const email = emailEl ? emailEl.value.trim() : '';
-    const password = pwdEl ? pwdEl.value.trim() : '';
-    if (!name || !email || !password) { showToast('Nom, email et mot de passe requis', 'error'); return; }
+    if (!name) { showToast('Nom requis', 'error'); return; }
+    if (!username && !phone && !email) { showToast('Entrez téléphone, utilisateur ou email', 'error'); return; }
     ensureInitialData();
-    const exists = (appState.clients || []).find(c => ((c.email || c.contact || '').toLowerCase() === email.toLowerCase()));
+    const exists = (appState.clients || []).find(c => {
+      const e = (c.email || '').toLowerCase();
+      const u = (c.username || '').toLowerCase();
+      const p = (c.phone || '').toLowerCase();
+      return (email && e === email.toLowerCase()) || (username && u === username.toLowerCase()) || (phone && p === phone.toLowerCase());
+    });
     if (exists) { showToast('Un client avec cet email existe déjà', 'error'); return; }
-    const passwordHash = await hashPassword(password);
     const newClient = {
       id: generateId('client'),
       name,
       email,
-      contact: email,
+      contact: email || phone || username,
+      username,
+      phone,
+      social: { instagram: [], facebook: [] },
       notes: 'Compte client créé',
       totalSpent: 0,
       transactionsCount: 0,
       unpaid: 0,
-      createdAt: Date.now(),
-      passwordHash
+      createdAt: Date.now()
     };
     appState.clients.push(newClient);
     try { saveToLocalStorage(); } catch (e) {}
@@ -415,9 +421,38 @@
       try { await saveToCloud(); } catch (e) {}
     }
     showToast('Compte client créé', 'success');
+    appState.session = { type: 'client', id: newClient.id, name: newClient.name, username: newClient.username || '', phone: newClient.phone || '' };
+    try { saveToLocalStorage(); } catch (e) {}
+    updateAuthUI(null);
+    showClientSpace();
     if (nameEl) nameEl.value = '';
     if (emailEl) emailEl.value = '';
-    if (pwdEl) pwdEl.value = '';
+    if (userEl) userEl.value = '';
+    if (phoneEl) phoneEl.value = '';
+  }
+  
+  function loginClientQuick() {
+    const idEl = document.getElementById('clientQuickId');
+    const ident = idEl ? idEl.value.trim().toLowerCase() : '';
+    if (!ident) { showToast('Entrez téléphone ou utilisateur', 'error'); return; }
+    ensureInitialData();
+    const c = (appState.clients || []).find(x => {
+      return (x.phone || '').toLowerCase() === ident || (x.username || '').toLowerCase() === ident || (x.email || '').toLowerCase() === ident;
+    });
+    if (!c) { showToast('Client introuvable', 'error'); return; }
+    appState.session = { type: 'client', id: c.id, name: c.name, username: c.username || '', phone: c.phone || '' };
+    try { saveToLocalStorage(); } catch (e) {}
+    updateAuthUI(null);
+    showClientSpace();
+  }
+  
+  function logoutClient() {
+    if (typeof appState !== 'undefined') {
+      appState.session = null;
+      try { saveToLocalStorage(); } catch (e) {}
+    }
+    updateAuthUI(null);
+    showToast('Déconnecté', 'success');
   }
   
   function handleGithubClick() {
@@ -593,11 +628,20 @@
         <div class="bg-gray-50 border rounded-2xl p-4 space-y-3">
           <div class="text-center font-bold text-gray-800">Créer un compte Client</div>
           <input id="signupClientName" type="text" placeholder="Nom complet" class="w-full p-3 border rounded-xl">
-          <input id="signupClientEmail" type="email" placeholder="Email" class="w-full p-3 border rounded-xl">
-          <input id="signupClientPassword" type="password" placeholder="Mot de passe" class="w-full p-3 border rounded-xl">
+          <input id="signupClientUsername" type="text" placeholder="Nom d’utilisateur (optionnel)" class="w-full p-3 border rounded-xl">
+          <input id="signupClientPhone" type="text" placeholder="Téléphone (optionnel)" class="w-full p-3 border rounded-xl">
+          <input id="signupClientEmail" type="email" placeholder="Email (optionnel)" class="w-full p-3 border rounded-xl">
           <button type="button" onclick="signupClient()"
                   class="w-full py-3 bg-green-600 text-white font-bold rounded-xl shadow hover:bg-green-700 transition-all">
             Créer mon compte
+          </button>
+        </div>
+        <div class="bg-gray-50 border rounded-2xl p-4 space-y-3 mt-3">
+          <div class="text-center font-bold text-gray-800">Connexion Client</div>
+          <input id="clientQuickId" type="text" placeholder="Téléphone ou Nom d’utilisateur ou Email" class="w-full p-3 border rounded-xl">
+          <button type="button" onclick="loginClientQuick()"
+                  class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl shadow hover:bg-blue-700 transition-all">
+            Se connecter
           </button>
         </div>
         <button onclick="showClientSpace()" type="button"
@@ -664,6 +708,54 @@
           <p class="text-gray-600 leading-relaxed" data-i18n="info_desc">
             Bienvenue sur notre plateforme de sponsoring. Ici, vous pouvez consulter nos offres, comprendre notre fonctionnement et passer commande directement sans avoir besoin de créer un compte.
           </p>
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-4 bg-white rounded-xl border">
+              <div class="font-bold mb-3">Mon compte</div>
+              <div class="space-y-2">
+                <div class="grid grid-cols-3 gap-2 items-center">
+                  <div class="text-sm text-gray-600">Nom</div>
+                  <input id="clientAccName" type="text" class="col-span-2 p-2 border rounded-lg">
+                </div>
+                <div class="grid grid-cols-3 gap-2 items-center">
+                  <div class="text-sm text-gray-600">Utilisateur</div>
+                  <input id="clientAccUser" type="text" class="col-span-2 p-2 border rounded-lg">
+                </div>
+                <div class="grid grid-cols-3 gap-2 items-center">
+                  <div class="text-sm text-gray-600">Téléphone</div>
+                  <input id="clientAccPhone" type="text" class="col-span-2 p-2 border rounded-lg">
+                </div>
+                <div class="grid grid-cols-3 gap-2 items-center">
+                  <div class="text-sm text-gray-600">Email</div>
+                  <input id="clientAccEmail" type="email" class="col-span-2 p-2 border rounded-lg">
+                </div>
+                <div class="flex justify-end">
+                  <button onclick="saveClientIdentifiers()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Enregistrer</button>
+                  <button onclick="logoutClient()" class="ml-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg">Se déconnecter</button>
+                </div>
+              </div>
+            </div>
+            <div class="p-4 bg-white rounded-xl border">
+              <div class="font-bold mb-3">Réseaux sociaux</div>
+              <div class="space-y-3">
+                <div>
+                  <div class="text-sm text-gray-600 mb-1">Comptes Instagram</div>
+                  <div class="flex gap-2">
+                    <input id="clientAddInstagram" type="text" placeholder="@mon_compte" class="flex-1 p-2 border rounded-lg">
+                    <button onclick="addClientInstagram()" class="px-4 py-2 bg-green-600 text-white rounded-lg">Ajouter</button>
+                  </div>
+                  <div id="clientInstagramList" class="mt-2 flex flex-wrap gap-2"></div>
+                </div>
+                <div>
+                  <div class="text-sm text-gray-600 mb-1">Pages Facebook</div>
+                  <div class="flex gap-2">
+                    <input id="clientAddFacebook" type="text" placeholder="Ma Page" class="flex-1 p-2 border rounded-lg">
+                    <button onclick="addClientFacebook()" class="px-4 py-2 bg-green-600 text-white rounded-lg">Ajouter</button>
+                  </div>
+                  <div id="clientFacebookList" class="mt-2 flex flex-wrap gap-2"></div>
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
               <i class="fas fa-bolt text-blue-500 text-2xl mb-2"></i>
@@ -3065,6 +3157,13 @@
     window.showClientTab = showClientTab;
     window.forceCloudSave = forceCloudSave;
     window.signupClient = signupClient;
+    window.loginClientQuick = loginClientQuick;
+    window.logoutClient = logoutClient;
+    window.saveClientIdentifiers = saveClientIdentifiers;
+    window.addClientInstagram = addClientInstagram;
+    window.addClientFacebook = addClientFacebook;
+    window.removeClientInstagram = removeClientInstagram;
+    window.removeClientFacebook = removeClientFacebook;
     // Actions tables
     window.addClient = addClient;
     window.addOffer = addOffer;
@@ -4192,6 +4291,7 @@
     renderCustomSectionClient();
     ensureClientToken();
     renderClientRequests();
+    renderClientAccountInfo();
   }
 
   function hideClientSpace() {
@@ -4199,6 +4299,118 @@
     document.getElementById('loginContainer').style.display = 'flex'; // Restore login flex
   }
   
+  function currentClient() {
+    if (!(appState.session && appState.session.type === 'client')) return null;
+    const id = appState.session.id;
+    return (appState.clients || []).find(c => c.id === id) || null;
+  }
+  
+  function renderClientAccountInfo() {
+    const c = currentClient();
+    const nameEl = document.getElementById('clientAccName');
+    const userEl = document.getElementById('clientAccUser');
+    const phoneEl = document.getElementById('clientAccPhone');
+    const emailEl = document.getElementById('clientAccEmail');
+    if (!c) {
+      if (nameEl) nameEl.value = '';
+      if (userEl) userEl.value = '';
+      if (phoneEl) phoneEl.value = '';
+      if (emailEl) emailEl.value = '';
+      document.getElementById('clientInstagramList')?.replaceChildren();
+      document.getElementById('clientFacebookList')?.replaceChildren();
+      return;
+    }
+    if (nameEl) nameEl.value = c.name || '';
+    if (userEl) userEl.value = c.username || '';
+    if (phoneEl) phoneEl.value = c.phone || '';
+    if (emailEl) emailEl.value = c.email || '';
+    const igWrap = document.getElementById('clientInstagramList');
+    const fbWrap = document.getElementById('clientFacebookList');
+    if (igWrap) {
+      igWrap.innerHTML = '';
+      const arr = (c.social && Array.isArray(c.social.instagram)) ? c.social.instagram : [];
+      arr.forEach((acc, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-sm flex items-center gap-2';
+        chip.innerHTML = '<span>'+acc+'</span><button class="text-pink-700" onclick="removeClientInstagram('+idx+')"><i class="fas fa-times"></i></button>';
+        igWrap.appendChild(chip);
+      });
+    }
+    if (fbWrap) {
+      fbWrap.innerHTML = '';
+      const arr = (c.social && Array.isArray(c.social.facebook)) ? c.social.facebook : [];
+      arr.forEach((acc, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center gap-2';
+        chip.innerHTML = '<span>'+acc+'</span><button class="text-blue-700" onclick="removeClientFacebook('+idx+')"><i class="fas fa-times"></i></button>';
+        fbWrap.appendChild(chip);
+      });
+    }
+  }
+  
+  function saveClientIdentifiers() {
+    const c = currentClient();
+    if (!c) { showToast('Aucun client', 'error'); return; }
+    const name = document.getElementById('clientAccName')?.value.trim() || '';
+    const user = document.getElementById('clientAccUser')?.value.trim() || '';
+    const phone = document.getElementById('clientAccPhone')?.value.trim() || '';
+    const email = document.getElementById('clientAccEmail')?.value.trim() || '';
+    c.name = name || c.name;
+    c.username = user;
+    c.phone = phone;
+    c.email = email;
+    c.contact = email || phone || user || c.contact;
+    try { saveToLocalStorage(); } catch (e) {}
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) { try { saveToCloud(); } catch (e) {} }
+    showToast('Profil mis à jour', 'success');
+    renderClientAccountInfo();
+  }
+  
+  function addClientInstagram() {
+    const c = currentClient();
+    if (!c) { showToast('Aucun client', 'error'); return; }
+    const val = document.getElementById('clientAddInstagram')?.value.trim();
+    if (!val) return;
+    if (!c.social) c.social = { instagram: [], facebook: [] };
+    if (!Array.isArray(c.social.instagram)) c.social.instagram = [];
+    if (!c.social.instagram.includes(val)) c.social.instagram.push(val);
+    document.getElementById('clientAddInstagram').value = '';
+    try { saveToLocalStorage(); } catch (e) {}
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) { try { saveToCloud(); } catch (e) {} }
+    renderClientAccountInfo();
+  }
+  
+  function addClientFacebook() {
+    const c = currentClient();
+    if (!c) { showToast('Aucun client', 'error'); return; }
+    const val = document.getElementById('clientAddFacebook')?.value.trim();
+    if (!val) return;
+    if (!c.social) c.social = { instagram: [], facebook: [] };
+    if (!Array.isArray(c.social.facebook)) c.social.facebook = [];
+    if (!c.social.facebook.includes(val)) c.social.facebook.push(val);
+    document.getElementById('clientAddFacebook').value = '';
+    try { saveToLocalStorage(); } catch (e) {}
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) { try { saveToCloud(); } catch (e) {} }
+    renderClientAccountInfo();
+  }
+  
+  function removeClientInstagram(idx) {
+    const c = currentClient();
+    if (!c || !c.social || !Array.isArray(c.social.instagram)) return;
+    c.social.instagram.splice(idx, 1);
+    try { saveToLocalStorage(); } catch (e) {}
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) { try { saveToCloud(); } catch (e) {} }
+    renderClientAccountInfo();
+  }
+  
+  function removeClientFacebook(idx) {
+    const c = currentClient();
+    if (!c || !c.social || !Array.isArray(c.social.facebook)) return;
+    c.social.facebook.splice(idx, 1);
+    try { saveToLocalStorage(); } catch (e) {}
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) { try { saveToCloud(); } catch (e) {} }
+    renderClientAccountInfo();
+  }
   function renderClientOffers() {
     const container = document.querySelector('#client-offres .grid');
     if(!container) return;
