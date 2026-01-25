@@ -193,11 +193,27 @@
     appId: "1:499965988228:web:ecdbd5b005c23b6d5c61d1"
   };
 
-  firebase.initializeApp(firebaseConfig);
-
-  const auth = firebase.auth();
+  let auth = null;
+  try {
+    if (window.firebase && typeof firebase.initializeApp === 'function') {
+      firebase.initializeApp(firebaseConfig);
+      auth = firebase.auth();
+      try {
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      } catch (e) {
+      }
+    }
+  } catch (e) {
+    auth = {
+      currentUser: null,
+      signInWithEmailAndPassword: async function () { throw e; },
+      onAuthStateChanged: function () {},
+      setPersistence: function () {}
+    };
+  }
   let db = null;
   function getDb() {
+    if (!window.firebase || !firebase.firestore) return null;
     if (!db) {
       db = firebase.firestore();
       try {
@@ -209,11 +225,6 @@
       } catch (e) {}
     }
     return db;
-  }
-  try {
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-  } catch (e) {
-    console.warn('Unable to set auth persistence', e);
   }
   </script>
 
@@ -357,6 +368,18 @@
       }
     }, 150);
   }
+  function forceAdminView(){
+    const app = document.getElementById('appContainer');
+    const login = document.getElementById('loginContainer');
+    const client = document.getElementById('clientSpaceContainer');
+    if (app) app.style.display = 'block';
+    if (login) login.style.display = 'none';
+    if (client) client.style.display = 'none';
+    const dash = document.getElementById('dashboard');
+    if (dash) dash.classList.remove('hidden');
+    const allTabs = document.querySelectorAll('.tab-content');
+    allTabs.forEach(el => { if (el.id !== 'dashboard') el.classList.add('hidden'); });
+  }
 
   function showToast(message, type = 'info') {
     let container = document.getElementById('toastContainer');
@@ -416,6 +439,7 @@
       showTab('dashboard');
       ensureAuthVisibility();
       visibilityWatchdog(3000);
+      forceAdminView();
     } catch (error) {
       console.error('Erreur de connexion:', error);
       const box = document.getElementById('loginError');
@@ -5299,6 +5323,9 @@
     ensureVisibleUI();
     ensureAuthVisibility();
     visibilityWatchdog(3000);
+    if (isAdminSession()) {
+      forceAdminView();
+    }
     populateClientDropdown();
     populateOfferSelect();
     populateExpenseCategorySelect();
@@ -5351,6 +5378,7 @@
       showTab('dashboard');
       ensureAuthVisibility();
       visibilityWatchdog(3000);
+      forceAdminView();
     }
   });
   window.addEventListener('beforeunload', function () {
