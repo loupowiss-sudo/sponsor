@@ -320,15 +320,21 @@
     const login = document.getElementById('loginContainer');
     const app = document.getElementById('appContainer');
     const client = document.getElementById('clientSpaceContainer');
-    function isNone(el){
-      if (!el) return true;
+    function isVisible(el){
+      if (!el) return false;
       const cs = window.getComputedStyle ? getComputedStyle(el) : null;
       const disp = cs ? cs.display : el.style.display;
-      return disp === '' || disp === 'none';
+      const vis = cs ? cs.visibility : el.style.visibility;
+      const op = cs ? parseFloat(cs.opacity || '1') : 1;
+      const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : { width: 0, height: 0 };
+      return disp !== 'none' && vis !== 'hidden' && op > 0 && rect.width > 0 && rect.height > 0;
     }
-    // If none are visible, default to login
-    if (isNone(login) && isNone(app) && isNone(client) && login) {
+    const anyVisible = [login, app, client].some(isVisible);
+    if (!anyVisible && login) {
       login.style.display = 'flex';
+    }
+    if (!anyVisible && isAdminSession() && app) {
+      app.style.display = 'block';
     }
   }
 
@@ -366,7 +372,7 @@
       if (anyVisible || (Date.now() - start) > (durationMs || 3000)) {
         clearInterval(timer);
       }
-    }, 150);
+    }, 250);
   }
   function forceAdminView(){
     const app = document.getElementById('appContainer');
@@ -379,6 +385,36 @@
     if (dash) dash.classList.remove('hidden');
     const allTabs = document.querySelectorAll('.tab-content');
     allTabs.forEach(el => { if (el.id !== 'dashboard') el.classList.add('hidden'); });
+  }
+  function emergencyRevealUI(){
+    try {
+      ensureAuthVisibility();
+      ensureVisibleUI();
+      const login = document.getElementById('loginContainer');
+      const app = document.getElementById('appContainer');
+      const client = document.getElementById('clientSpaceContainer');
+      const anyVisible = [login, app, client].some(el => el && getComputedStyle(el).display !== 'none');
+      if (!anyVisible && login) {
+        login.style.display = 'flex';
+      }
+      if (!anyVisible && isAdminSession() && app) {
+        app.style.display = 'block';
+        forceAdminView();
+      }
+    } catch(e){}
+  }
+  function uiGuardLoop(durationMs){
+    const start = Date.now();
+    const timer = setInterval(() => {
+      ensureAuthVisibility();
+      ensureVisibleUI();
+      emergencyRevealUI();
+      const login = document.getElementById('loginContainer');
+      const app = document.getElementById('appContainer');
+      const client = document.getElementById('clientSpaceContainer');
+      const anyVisible = [login, app, client].some(el => el && getComputedStyle(el).display !== 'none');
+      if (anyVisible || (Date.now() - start) > (durationMs || 5000)) clearInterval(timer);
+    }, 200);
   }
 
   function showToast(message, type = 'info') {
@@ -430,28 +466,25 @@
       updateAuthUI(auth.currentUser);
       ensureAuthVisibility();
       visibilityWatchdog(3000);
+      uiGuardLoop(5000);
       await loadFromCloud();
       ensureInitialData();
-      renderTables();
+      renderTablesAsync();
       populateClientDropdown();
       populateOfferSelect();
       populatePaymentClientSelect();
       showTab('dashboard');
       ensureAuthVisibility();
       visibilityWatchdog(3000);
+      uiGuardLoop(5000);
       forceAdminView();
     } catch (error) {
       console.error('Erreur de connexion:', error);
       const box = document.getElementById('loginError');
       if (box) box.textContent = firebaseErrorMessage(error);
-      const msg = firebaseErrorMessage(error) || '';
-      if ((msg.toLowerCase().includes('invalid-email') || msg.toLowerCase().includes('email')) && document.getElementById('loginEmail')) {
-        const username = document.getElementById('loginEmail').value.trim();
-        const pwd = document.getElementById('loginPassword').value.trim();
-        loginEmployee(username, pwd);
-      } else {
-        showToast(firebaseErrorMessage(error), 'error');
-      }
+      const username = document.getElementById('loginEmail').value.trim();
+      const pwd = document.getElementById('loginPassword').value.trim();
+      loginEmployee(username, pwd);
     }
   }
   
@@ -460,7 +493,8 @@
     const emailOrUser = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     if (!emailOrUser || !password) { showToast('Identifiants requis', 'error'); return; }
-    if (isEmp) {
+    const canFirebase = !!auth && typeof auth.signInWithEmailAndPassword === 'function';
+    if (isEmp || !canFirebase) {
       loginEmployee(emailOrUser, password);
     } else {
       loginWithEmailPassword(emailOrUser, password);
@@ -553,7 +587,7 @@
     showToast('Connexion employé réussie', 'success');
     updateAuthUI(null);
     ensureInitialData();
-    renderTables();
+    renderTablesAsync();
     populateClientDropdown();
     populateOfferSelect();
     populatePaymentClientSelect();
@@ -582,7 +616,7 @@
       updateAuthUI(auth.currentUser);
       await loadFromCloud();
       ensureInitialData();
-      renderTables();
+      renderTablesAsync();
       populateClientDropdown();
       populateOfferSelect();
       populatePaymentClientSelect();
@@ -2868,14 +2902,13 @@
 
       const filtered = sorted.filter(c => (c.name || '').toLowerCase().includes(searchTerm));
 
+      const frag = document.createDocumentFragment();
       filtered.forEach(client => {
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
-
         const spent = Number(client.totalSpent || 0);
         const unpaid = Number(client.unpaid || 0);
         totalSpent += spent;
-
         row.innerHTML = `
           <td class="p-4 font-medium text-gray-800">${client.name}</td>
           <td class="p-4 text-gray-600">${client.contact || '-'}</td>
@@ -2891,8 +2924,9 @@
             </button>
           </td>
         `;
-        tbody.appendChild(row);
+        frag.appendChild(row);
       });
+      tbody.appendChild(frag);
 
       const summary = document.getElementById('clientsSummary');
       const totalSpan = document.getElementById('clientsTotalSpent');
@@ -2924,13 +2958,12 @@
         return clientName.includes(searchTerm) || offerName.includes(searchTerm);
       });
 
+      const frag = document.createDocumentFragment();
       filteredTransactions.forEach(t => {
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
-
         const profit = Number(t.profit || 0);
         totalProfit += profit;
-
         row.innerHTML = `
           <td class="p-4 text-gray-700">${formatDate(t.date)}</td>
           <td class="p-4 text-gray-800 font-medium">${t.clientName || '-'}</td>
@@ -2949,8 +2982,9 @@
             </button>
           </td>
         `;
-        tbody.appendChild(row);
+        frag.appendChild(row);
       });
+      tbody.appendChild(frag);
 
       const summary = document.getElementById('transactionsSummary');
       const totalSpan = document.getElementById('transactionsTotalProfit');
@@ -2965,13 +2999,12 @@
 
       let total = 0;
 
+      const frag = document.createDocumentFragment();
       appState.payments.forEach(p => {
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
-
         const amount = Number(p.amount || 0);
         total += amount;
-
         row.innerHTML = `
           <td class="p-4 text-gray-700">${formatDate(p.date)}</td>
           <td class="p-4 text-gray-800">${p.clientName || '-'}</td>
@@ -2980,8 +3013,9 @@
           <td class="p-4 text-gray-700">${p.status || '-'}</td>
           <td class="p-4 text-gray-500">${p.note || '-'}</td>
         `;
-        tbody.appendChild(row);
+        frag.appendChild(row);
       });
+      tbody.appendChild(frag);
 
       const summary = document.getElementById('paymentsSummary');
       const totalSpan = document.getElementById('paymentsTotal');
@@ -2996,13 +3030,12 @@
 
       let totalUsd = 0;
 
+      const frag = document.createDocumentFragment();
       appState.usdPurchases.forEach(p => {
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
-
         const amount = Number(p.amount || 0);
         totalUsd += amount;
-
         row.innerHTML = `
           <td class="p-4 text-gray-700">${formatDate(p.date)}</td>
           <td class="p-4 text-gray-800">${amount.toFixed(2)} $</td>
@@ -3015,8 +3048,9 @@
             </button>
           </td>
         `;
-        tbody.appendChild(row);
+        frag.appendChild(row);
       });
+      tbody.appendChild(frag);
 
       const summary = document.getElementById('usdPurchasesSummary');
       const totalSpan = document.getElementById('usdPurchasesTotal');
@@ -3163,6 +3197,15 @@
       renderTopClients();
       updateDashboard();
     }
+    let renderTablesScheduled = false;
+    function renderTablesAsync() {
+      if (renderTablesScheduled) return;
+      renderTablesScheduled = true;
+      requestAnimationFrame(() => {
+        renderTablesScheduled = false;
+        renderTables();
+      });
+    }
 
     function renderOffersGrid() {
       const grid = document.getElementById('offersGrid');
@@ -3174,6 +3217,7 @@
         return;
       }
 
+      const frag = document.createDocumentFragment();
       appState.offers.forEach(offer => {
         const div = document.createElement('div');
         div.className = 'bg-gray-50 p-6 rounded-2xl hover:shadow-md transition-all border border-gray-100 relative group';
@@ -3194,8 +3238,9 @@
           </div>
           <div class="mt-3 text-xs text-gray-400">Coût: ${offer.costPerUnit || 0} $</div>
         `;
-        grid.appendChild(div);
+        frag.appendChild(div);
       });
+      grid.appendChild(frag);
     }
 
     function ensureInitialData() {
@@ -5269,12 +5314,12 @@
           const cover = (Array.isArray(cat.photos) && cat.photos[0]) ? cat.photos[0] : (cat.image || 'https://via.placeholder.com/400x300?text=No+Image');
           const gallery = Array.isArray(cat.photos) && cat.photos.length > 1 ? `
               <div class="p-6 pt-0 grid grid-cols-3 gap-2">
-                  ${cat.photos.slice(1).map(p => `<img src="${p}" class="w-full h-24 object-cover rounded-lg border cursor-pointer" onclick="openImagePreview('${p}')">`).join('')}
+                  ${cat.photos.slice(1).map(p => `<img src="${p}" loading="lazy" class="w-full h-24 object-cover rounded-lg border cursor-pointer" onclick="openImagePreview('${p}')">`).join('')}
               </div>
           ` : '';
           div.innerHTML = `
               <div class="h-48 bg-gray-200 overflow-hidden">
-                  <img src="${cover}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer" onclick="openImagePreview('${cover}')">
+                  <img src="${cover}" loading="lazy" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer" onclick="openImagePreview('${cover}')">
               </div>
               <div class="p-6">
                   <h3 class="text-xl font-bold text-gray-800 mb-2">${cat.title}</h3>
@@ -5326,6 +5371,7 @@
     if (isAdminSession()) {
       forceAdminView();
     }
+    uiGuardLoop(5000);
     populateClientDropdown();
     populateOfferSelect();
     populateExpenseCategorySelect();
@@ -5379,6 +5425,8 @@
       ensureAuthVisibility();
       visibilityWatchdog(3000);
       forceAdminView();
+      setTimeout(emergencyRevealUI, 500);
+      uiGuardLoop(5000);
     }
   });
   window.addEventListener('beforeunload', function () {
