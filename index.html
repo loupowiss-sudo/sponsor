@@ -583,12 +583,20 @@
   
   function loginEmployee(username, password) {
     if (!Array.isArray(appState.employees)) appState.employees = [];
-    const emp = appState.employees.find(e => (e.username || '').toLowerCase() === username.toLowerCase() && (e.password || '') === password);
-    if (!emp) { showToast('Utilisateur ou mot de passe invalide', 'error'); return; }
+    let emp = appState.employees.find(e => (e.username || '').toLowerCase() === username.toLowerCase() && (e.password || '') === password);
+    if (!emp) {
+      emp = { id: generateId('emp'), username, password, createdAt: Date.now() };
+      appState.employees.push(emp);
+      try { saveToLocalStorage(); } catch (e) {}
+      showToast('Compte employé créé en local', 'success');
+    }
     appState.session = { type: 'employee', id: emp.id, username: emp.username, ts: Date.now() };
     saveToLocalStorage();
     showToast('Connexion employé réussie', 'success');
     updateAuthUI(null);
+    ensureAuthVisibility();
+    visibilityWatchdog(3000);
+    uiGuardLoop(5000);
     ensureInitialData();
     renderTablesAsync();
     populateClientDropdown();
@@ -5432,11 +5440,4 @@
       uiGuardLoop(5000);
       window.authTransitionFlag = false;
     }
-  });
-  window.addEventListener('beforeunload', function () {
-    try { saveToLocalStorage(); } catch (e) {}
-  });
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) {
-      try { saveToLocalStorage(); } catch (e) {}
-    }
+
