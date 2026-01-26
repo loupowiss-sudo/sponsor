@@ -220,10 +220,14 @@
       db = firebase.firestore();
       try {
         db.settings({
-          experimentalForceLongPolling: true,
-          useFetchStreams: false,
           ignoreUndefinedProperties: true,
+          merge: true
         });
+        try {
+            db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
+                console.log("Persistence failed", err);
+            });
+        } catch(e) {}
       } catch (e) {}
     }
     return db;
@@ -2836,7 +2840,7 @@
         }
       } catch (err) {
         console.error('Erreur chargement cloud:', err);
-        showToast('Erreur Firestore: lecture interrompue, passage en mode local.', 'error');
+        showToast('Connexion instable : passage en mode hors ligne', 'warning');
         loadFromLocalStorage();
       }
     }
@@ -2853,7 +2857,7 @@
         updateSyncIndicator();
       } catch (err) {
         console.error('Erreur sauvegarde cloud:', err);
-        showToast('Erreur Firestore: sauvegarde non effectuée, stockage local utilisé.', 'error');
+        showToast('Mode hors ligne : sauvegarde locale effectuée', 'warning');
         saveToLocalStorage();
         appState.sync.pendingCloudSave = true;
         updateSyncIndicator();
