@@ -298,7 +298,7 @@
     console.log('updateAuthUI called with:', user ? user.email : 'no user');
 
     const sess = (typeof window !== 'undefined' && window.appState && window.appState.session) ? window.appState.session : null;
-    if (user || (sess && sess.type === 'employee')) {
+    if (user || (sess && sess.type === 'employee') || window.authTransitionFlag) {
       // Connecté
       if (appContainer)   appContainer.style.display = 'block';
       if (loginContainer) loginContainer.style.display = 'none';
@@ -461,6 +461,7 @@
 
   async function loginWithEmailPassword(email, password) {
     try {
+      window.authTransitionFlag = true;
       await auth.signInWithEmailAndPassword(email, password);
       showToast('Connexion réussie', 'success');
       updateAuthUI(auth.currentUser);
@@ -485,6 +486,8 @@
       const username = document.getElementById('loginEmail').value.trim();
       const pwd = document.getElementById('loginPassword').value.trim();
       loginEmployee(username, pwd);
+    } finally {
+      setTimeout(() => { window.authTransitionFlag = false; }, 1500);
     }
   }
   
@@ -5417,7 +5420,7 @@
       await loadFromCloud();
       ensureInitialData();
       applyRecurringExpensesForCurrentMonth();
-      renderTables();
+      renderTablesAsync();
       populateClientDropdown();
       populateOfferSelect();
       populatePaymentClientSelect();
@@ -5427,6 +5430,7 @@
       forceAdminView();
       setTimeout(emergencyRevealUI, 500);
       uiGuardLoop(5000);
+      window.authTransitionFlag = false;
     }
   });
   window.addEventListener('beforeunload', function () {
@@ -5436,7 +5440,3 @@
     if (document.hidden) {
       try { saveToLocalStorage(); } catch (e) {}
     }
-  });
-</script>
-</body>
-</html>
