@@ -505,10 +505,19 @@
       window.authTransitionFlag = true;
       await auth.signInWithEmailAndPassword(email, password);
       showToast('Connexion réussie', 'success');
+      
+      // Force UI switch immediately
       updateAuthUI(auth.currentUser);
+      forceAdminView();
+      const loginContainer = document.getElementById('loginContainer');
+      const appContainer = document.getElementById('appContainer');
+      if (loginContainer) loginContainer.style.display = 'none';
+      if (appContainer) appContainer.style.display = 'block';
+      
       ensureAuthVisibility();
       visibilityWatchdog(3000);
       uiGuardLoop(5000);
+      
       if (typeof window.loadFromCloud === 'function') {
         await window.loadFromCloud();
       } else if (typeof loadFromCloud === 'function') {
@@ -522,19 +531,25 @@
       populateOfferSelect();
       populatePaymentClientSelect();
       showTab('dashboard');
+      
+      // Re-enforce UI state
+      forceAdminView();
       ensureAuthVisibility();
       visibilityWatchdog(3000);
       uiGuardLoop(5000);
-      forceAdminView();
+      setTimeout(emergencyRevealUI, 500);
+      
     } catch (error) {
       console.error('Erreur de connexion:', error);
       const box = document.getElementById('loginError');
       if (box) box.textContent = firebaseErrorMessage(error);
       const username = document.getElementById('loginEmail').value.trim();
       const pwd = document.getElementById('loginPassword').value.trim();
+      // Fallback to local employee login if Firebase fails
       loginEmployee(username, pwd);
     } finally {
-      setTimeout(() => { window.authTransitionFlag = false; }, 1500);
+      // Keep transition flag longer to prevent UI flicker
+      setTimeout(() => { window.authTransitionFlag = false; }, 5000);
     }
   }
   
@@ -675,10 +690,14 @@
 
   async function loginWithGithub() {
     try {
+      window.authTransitionFlag = true;
       const provider = new firebase.auth.GithubAuthProvider();
       await auth.signInWithPopup(provider);
       showToast('Connexion GitHub réussie', 'success');
+      
       updateAuthUI(auth.currentUser);
+      forceAdminView();
+      
       if (typeof window.loadFromCloud === 'function') {
         await window.loadFromCloud();
       } else if (typeof loadFromCloud === 'function') {
@@ -692,11 +711,20 @@
       populateOfferSelect();
       populatePaymentClientSelect();
       showTab('dashboard');
+      
+      forceAdminView();
+      ensureAuthVisibility();
+      visibilityWatchdog(3000);
+      uiGuardLoop(5000);
+      setTimeout(emergencyRevealUI, 500);
+      
     } catch (error) {
       console.error('Erreur GitHub:', error);
       const box = document.getElementById('loginError');
       if (box) box.textContent = firebaseErrorMessage(error);
       showToast(firebaseErrorMessage(error), 'error');
+    } finally {
+      setTimeout(() => { window.authTransitionFlag = false; }, 5000);
     }
   }
 
@@ -5496,11 +5524,17 @@
   auth.onAuthStateChanged(async function (user) {
     updateAuthUI(user);
     if (user) {
-      if (typeof window.loadFromCloud === 'function') {
-        await window.loadFromCloud();
-      } else if (typeof loadFromCloud === 'function') {
-        await loadFromCloud();
-      } else {
+      forceAdminView();
+      try {
+        if (typeof window.loadFromCloud === 'function') {
+          await window.loadFromCloud();
+        } else if (typeof loadFromCloud === 'function') {
+          await loadFromCloud();
+        } else {
+          loadFromLocalStorage();
+        }
+      } catch (e) {
+        console.error("Erreur init data auth state:", e);
         loadFromLocalStorage();
       }
       ensureInitialData();
@@ -5510,11 +5544,13 @@
       populateOfferSelect();
       populatePaymentClientSelect();
       showTab('dashboard');
+      
+      forceAdminView();
       ensureAuthVisibility();
       visibilityWatchdog(3000);
-      forceAdminView();
       setTimeout(emergencyRevealUI, 500);
       uiGuardLoop(5000);
+      
       window.authTransitionFlag = false;
     }
   });
