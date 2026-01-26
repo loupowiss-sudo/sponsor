@@ -193,11 +193,12 @@
     appId: "1:499965988228:web:ecdbd5b005c23b6d5c61d1"
   };
 
-  let auth = null;
+  var auth = null;
   try {
     if (window.firebase && typeof firebase.initializeApp === 'function') {
       firebase.initializeApp(firebaseConfig);
       auth = firebase.auth();
+      window.auth = auth;
       try {
         auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
       } catch (e) {
@@ -210,6 +211,7 @@
       onAuthStateChanged: function () {},
       setPersistence: function () {}
     };
+    window.auth = auth;
   }
   let db = null;
   function getDb() {
@@ -231,6 +233,41 @@
   <!-- Fallbacks globaux pour éviter les ReferenceError en production -->
   <script>
     (function () {
+      if (!window.appState) {
+        window.appState = {
+          clients: [],
+          transactions: [],
+          offers: [],
+          payments: [],
+          usdPurchases: [],
+          currentTab: 'dashboard',
+          lastUpdated: 0,
+          sync: { pendingCloudSave: false, retryDelayMs: 5000 },
+          syncQueue: [],
+          syncTimer: null,
+          syncThrottleMs: 2000,
+          settings: {
+            storageMode: 'local',
+            cloudProvider: 'firebase',
+            autoSaveEnabled: true,
+            seedDefaults: true,
+            expenseCategories: ['Salaire', 'Téléphone', 'Internet'],
+            topClientsWeights: { spent: 0.7, transactions: 0.3, unpaid: -0.2 },
+            workMethodSections: []
+          },
+          expenses: [],
+          recurringExpenses: [],
+          clientRequests: [],
+          session: null
+        };
+      }
+      if (typeof window.isAdminSession !== 'function') {
+        window.isAdminSession = function () {
+          const hasFirebase = !!(window.auth && window.auth.currentUser);
+          const isEmployee = !!(window.appState && window.appState.session && window.appState.session.type === 'employee');
+          return hasFirebase || isEmployee;
+        };
+      }
       if (typeof window.showTab !== 'function') {
         window.showTab = function (tabId) {
           document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -344,7 +381,7 @@
     const login = document.getElementById('loginContainer');
     const client = document.getElementById('clientSpaceContainer');
     const sess = (typeof window !== 'undefined' && window.appState && window.appState.session) ? window.appState.session : null;
-    if (isAdminSession()) {
+    if (window.isAdminSession && window.isAdminSession()) {
       if (app) app.style.display = 'block';
       if (login) login.style.display = 'none';
       if (client) client.style.display = 'none';
@@ -582,15 +619,15 @@
   }
   
   function loginEmployee(username, password) {
-    if (!Array.isArray(appState.employees)) appState.employees = [];
-    let emp = appState.employees.find(e => (e.username || '').toLowerCase() === username.toLowerCase() && (e.password || '') === password);
+    if (!Array.isArray(window.appState.employees)) window.appState.employees = [];
+    let emp = window.appState.employees.find(e => (e.username || '').toLowerCase() === username.toLowerCase() && (e.password || '') === password);
     if (!emp) {
       emp = { id: generateId('emp'), username, password, createdAt: Date.now() };
-      appState.employees.push(emp);
+      window.appState.employees.push(emp);
       try { saveToLocalStorage(); } catch (e) {}
       showToast('Compte employé créé en local', 'success');
     }
-    appState.session = { type: 'employee', id: emp.id, username: emp.username, ts: Date.now() };
+    window.appState.session = { type: 'employee', id: emp.id, username: emp.username, ts: Date.now() };
     saveToLocalStorage();
     showToast('Connexion employé réussie', 'success');
     updateAuthUI(null);
@@ -5403,41 +5440,3 @@
     }
     const toggle = document.getElementById('customOfferToggle');
     const fields = document.getElementById('customOfferFields');
-    const modeEl = document.getElementById('customOfferMode');
-    const budgetEl = document.getElementById('customOfferBudget');
-    const durationEl = document.getElementById('customOfferDuration');
-    const summary = document.getElementById('customOfferSummary');
-    function updateSummary() {
-      if (!fields || fields.classList.contains('hidden')) { if (summary) summary.textContent = ''; return; }
-      const mode = modeEl.value;
-      const budget = parseFloat(budgetEl.value || 0);
-      const usd = mode === 'usd' ? budget : (budget / computeCustomRate(budget / 340));
-      const rate = computeCustomRate(usd);
-      const dzd = mode === 'usd' ? (budget * rate) : budget;
-      const dur = parseInt(durationEl.value || '0', 10);
-      if (summary) summary.textContent = `Taux: ${rate} DZD/USD • Budget: ${usd.toFixed(2)} $ (${Math.round(dzd)} DZD) • Durée: ${dur} jours`;
-    }
-    if (toggle) toggle.addEventListener('change', () => { if (fields) { fields.classList.toggle('hidden', !toggle.checked); } updateSummary(); });
-    if (modeEl) modeEl.addEventListener('change', updateSummary);
-    if (budgetEl) budgetEl.addEventListener('input', updateSummary);
-    if (durationEl) durationEl.addEventListener('input', updateSummary);
-  });
-  auth.onAuthStateChanged(async function (user) {
-    updateAuthUI(user);
-    if (user) {
-      await loadFromCloud();
-      ensureInitialData();
-      applyRecurringExpensesForCurrentMonth();
-      renderTablesAsync();
-      populateClientDropdown();
-      populateOfferSelect();
-      populatePaymentClientSelect();
-      showTab('dashboard');
-      ensureAuthVisibility();
-      visibilityWatchdog(3000);
-      forceAdminView();
-      setTimeout(emergencyRevealUI, 500);
-      uiGuardLoop(5000);
-      window.authTransitionFlag = false;
-    }
-
