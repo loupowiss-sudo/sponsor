@@ -505,7 +505,13 @@
       ensureAuthVisibility();
       visibilityWatchdog(3000);
       uiGuardLoop(5000);
-      await loadFromCloud();
+      if (typeof window.loadFromCloud === 'function') {
+        await window.loadFromCloud();
+      } else if (typeof loadFromCloud === 'function') {
+        await loadFromCloud();
+      } else {
+        loadFromLocalStorage();
+      }
       ensureInitialData();
       renderTablesAsync();
       populateClientDropdown();
@@ -622,7 +628,10 @@
     if (!Array.isArray(window.appState.employees)) window.appState.employees = [];
     let emp = window.appState.employees.find(e => (e.username || '').toLowerCase() === username.toLowerCase() && (e.password || '') === password);
     if (!emp) {
-      emp = { id: generateId('emp'), username, password, createdAt: Date.now() };
+      const gen = (typeof window.generateId === 'function') 
+        ? window.generateId 
+        : (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+      emp = { id: gen('emp'), username, password, createdAt: Date.now() };
       window.appState.employees.push(emp);
       try { saveToLocalStorage(); } catch (e) {}
       showToast('Compte employé créé en local', 'success');
@@ -640,6 +649,10 @@
     populateOfferSelect();
     populatePaymentClientSelect();
     showTab('dashboard');
+    forceAdminView();
+    setTimeout(emergencyRevealUI, 500);
+    ensureVisibleUI();
+    uiGuardLoop(5000);
   }
 
   async function logout() {
@@ -662,7 +675,13 @@
       await auth.signInWithPopup(provider);
       showToast('Connexion GitHub réussie', 'success');
       updateAuthUI(auth.currentUser);
-      await loadFromCloud();
+      if (typeof window.loadFromCloud === 'function') {
+        await window.loadFromCloud();
+      } else if (typeof loadFromCloud === 'function') {
+        await loadFromCloud();
+      } else {
+        loadFromLocalStorage();
+      }
       ensureInitialData();
       renderTablesAsync();
       populateClientDropdown();
@@ -2329,6 +2348,7 @@
     function generateId(prefix = 'id') {
       return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
     }
+    window.generateId = generateId;
 
     function formatCurrency(value) {
       return `${Number(value || 0).toLocaleString('fr-DZ')} DZD`;
@@ -3342,6 +3362,12 @@
     window.addClientFacebook = addClientFacebook;
     window.removeClientInstagram = removeClientInstagram;
     window.removeClientFacebook = removeClientFacebook;
+    window.loadFromCloud = loadFromCloud;
+    window.saveToCloud = saveToCloud;
+    window.loadFromLocalStorage = loadFromLocalStorage;
+    window.saveToLocalStorage = saveToLocalStorage;
+    window.normalizeAppState = normalizeAppState;
+    window.ensureInitialData = ensureInitialData;
     // Actions tables
     window.addClient = addClient;
     window.addOffer = addOffer;
@@ -5401,7 +5427,11 @@
     updateAuthUI(auth.currentUser);
     loadFromLocalStorage();
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
-      await loadFromCloud();
+      if (typeof window.loadFromCloud === 'function') {
+        await window.loadFromCloud();
+      } else if (typeof loadFromCloud === 'function') {
+        await loadFromCloud();
+      }
     }
     applyRecurringExpensesForCurrentMonth();
 
@@ -5440,3 +5470,58 @@
     }
     const toggle = document.getElementById('customOfferToggle');
     const fields = document.getElementById('customOfferFields');
+    const modeEl = document.getElementById('customOfferMode');
+    const budgetEl = document.getElementById('customOfferBudget');
+    const durationEl = document.getElementById('customOfferDuration');
+    const summary = document.getElementById('customOfferSummary');
+    function updateSummary() {
+      if (!fields || fields.classList.contains('hidden')) { if (summary) summary.textContent = ''; return; }
+      const mode = modeEl.value;
+      const budget = parseFloat(budgetEl.value || 0);
+      const usd = mode === 'usd' ? budget : (budget / computeCustomRate(budget / 340));
+      const rate = computeCustomRate(usd);
+      const dzd = mode === 'usd' ? (budget * rate) : budget;
+      const dur = parseInt(durationEl.value || '0', 10);
+      if (summary) summary.textContent = `Taux: ${rate} DZD/USD • Budget: ${usd.toFixed(2)} $ (${Math.round(dzd)} DZD) • Durée: ${dur} jours`;
+    }
+    if (toggle) toggle.addEventListener('change', () => { if (fields) { fields.classList.toggle('hidden', !toggle.checked); } updateSummary(); });
+    if (modeEl) modeEl.addEventListener('change', updateSummary);
+    if (budgetEl) budgetEl.addEventListener('input', updateSummary);
+    if (durationEl) durationEl.addEventListener('input', updateSummary);
+  });
+  auth.onAuthStateChanged(async function (user) {
+    updateAuthUI(user);
+    if (user) {
+      if (typeof window.loadFromCloud === 'function') {
+        await window.loadFromCloud();
+      } else if (typeof loadFromCloud === 'function') {
+        await loadFromCloud();
+      } else {
+        loadFromLocalStorage();
+      }
+      ensureInitialData();
+      applyRecurringExpensesForCurrentMonth();
+      renderTablesAsync();
+      populateClientDropdown();
+      populateOfferSelect();
+      populatePaymentClientSelect();
+      showTab('dashboard');
+      ensureAuthVisibility();
+      visibilityWatchdog(3000);
+      forceAdminView();
+      setTimeout(emergencyRevealUI, 500);
+      uiGuardLoop(5000);
+      window.authTransitionFlag = false;
+    }
+  });
+  window.addEventListener('beforeunload', function () {
+    try { saveToLocalStorage(); } catch (e) {}
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      try { saveToLocalStorage(); } catch (e) {}
+    }
+  });
+</script>
+</body>
+</html>
