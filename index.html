@@ -234,6 +234,15 @@
   }
   </script>
 
+  <!-- Fonction isAdminSession exposée globalement -->
+  <script>
+    window.isAdminSession = function () {
+      const hasFirebase = !!(window.auth && window.auth.currentUser);
+      const isEmployee = !!(window.appState && window.appState.session && window.appState.session.type === 'employee');
+      return hasFirebase || isEmployee;
+    };
+  </script>
+
   <!-- Fallbacks globaux pour éviter les ReferenceError en production -->
   <script>
     (function () {
@@ -263,13 +272,6 @@
           recurringExpenses: [],
           clientRequests: [],
           session: null
-        };
-      }
-      if (typeof window.isAdminSession !== 'function') {
-        window.isAdminSession = function () {
-          const hasFirebase = !!(window.auth && window.auth.currentUser);
-          const isEmployee = !!(window.appState && window.appState.session && window.appState.session.type === 'employee');
-          return hasFirebase || isEmployee;
         };
       }
       if (typeof window.showTab !== 'function') {
@@ -385,6 +387,15 @@
     const login = document.getElementById('loginContainer');
     const client = document.getElementById('clientSpaceContainer');
     const sess = (typeof window !== 'undefined' && window.appState && window.appState.session) ? window.appState.session : null;
+    
+    // Correction critique : Si une transition d'auth est en cours, forcer l'affichage du Dashboard
+    if (window.authTransitionFlag) {
+      if (app) app.style.display = 'block';
+      if (login) login.style.display = 'none';
+      if (client) client.style.display = 'none';
+      return;
+    }
+
     if (window.isAdminSession && window.isAdminSession()) {
       if (app) app.style.display = 'block';
       if (login) login.style.display = 'none';
@@ -874,7 +885,7 @@
 
   <!-- CLIENT SPACE CONTAINER -->
   <div id="clientSpaceContainer" class="min-h-screen p-4 md:p-6" style="display:none;">
-    <div class="max-w-4xl mx-auto space-y-6">
+    <div class="max-w-7xl mx-auto space-y-6">
       <!-- Header Client -->
       <header class="bg-white rounded-3xl shadow-2xl p-6 border flex flex-col md:flex-row justify-between items-center gap-4 fade-in">
         <div class="flex items-center gap-3">
