@@ -500,7 +500,8 @@
 
   async function forceCloudSave() {
     try {
-      if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+      await syncClientAccount(newClient);
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
         await saveToCloud();
         scheduleCloudRetry();
         showToast('Sauvegarde cloud forcée', 'success');
@@ -615,6 +616,7 @@
     };
     appState.clients.push(newClient);
     try { saveToLocalStorage(); } catch (e) {}
+    await syncClientAccount(newClient);
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
       try { await saveToCloud(); } catch (e) {}
     }
@@ -629,21 +631,39 @@
     if (phoneEl) phoneEl.value = '';
   }
   
-  function loginClientQuick() {
+    async function loginClientQuick() {
     const idEl = document.getElementById('clientQuickId');
     const ident = idEl ? idEl.value.trim().toLowerCase() : '';
-    if (!ident) { showToast('Entrez téléphone ou utilisateur', 'error'); return; }
+    if (!ident) { showToast('Entrez tÃ©lÃ©phone ou utilisateur', 'error'); return; }
+    
     ensureInitialData();
-    const c = (appState.clients || []).find(x => {
+    let c = (appState.clients || []).find(x => {
       return (x.phone || '').toLowerCase() === ident || (x.username || '').toLowerCase() === ident || (x.email || '').toLowerCase() === ident;
     });
+    
+    // === TRY CLOUD FETCH ===
+    if (!c && typeof db !== 'undefined') {
+        try {
+             let q = await db.collection('clients').where('email', '==', ident).limit(1).get();
+             if (q.empty) q = await db.collection('clients').where('username', '==', ident).limit(1).get();
+             if (q.empty) q = await db.collection('clients').where('phone', '==', ident).limit(1).get();
+             
+             if (!q.empty) {
+                 c = q.docs[0].data();
+                 if(!appState.clients) appState.clients = [];
+                 appState.clients.push(c);
+                 saveToLocalStorage();
+             }
+        } catch(e) { console.warn('Client fetch error:', e); }
+    }
+
     if (!c) { showToast('Client introuvable', 'error'); return; }
     appState.session = { type: 'client', id: c.id, name: c.name, username: c.username || '', phone: c.phone || '' };
     try { saveToLocalStorage(); } catch (e) {}
     updateAuthUI(null);
     showClientSpace();
   }
-  
+
   function logoutClient() {
     if (typeof appState !== 'undefined') {
       appState.session = null;
@@ -2821,7 +2841,8 @@
       }
       if (changed) {
         try { saveToLocalStorage(); } catch (e) {}
-        if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+        await syncClientAccount(newClient);
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
           saveToCloud();
         }
       }
@@ -2930,7 +2951,8 @@
       if (appState.syncTimer) return;
       appState.syncTimer = setTimeout(async () => {
         appState.syncTimer = null;
-        if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+        await syncClientAccount(newClient);
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
           await saveToCloud();
           appState.syncQueue = [];
           scheduleCloudRetry();
@@ -4230,7 +4252,8 @@
     function manualSave() {
       try {
         appState.lastUpdated = Date.now();
-        if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+        await syncClientAccount(newClient);
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
           saveToCloud();
           showToast('Sauvegarde cloud effectuée', 'success');
         } else {
@@ -4254,7 +4277,8 @@
       appState.settings.seedDefaults = false;
       appState.lastUpdated = Date.now();
       saveToLocalStorage();
-      if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+      await syncClientAccount(newClient);
+    if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
         await saveToCloud();
       }
       populateClientDropdown();
@@ -4684,6 +4708,7 @@
     c.email = email;
     c.contact = email || phone || user || c.contact;
     try { saveToLocalStorage(); } catch (e) {}
+    await syncClientAccount(newClient);
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) { try { saveToCloud(); } catch (e) {} }
     showToast('Profil mis à jour', 'success');
     renderClientAccountInfo();
@@ -4699,6 +4724,7 @@
     if (!c.social.instagram.includes(val)) c.social.instagram.push(val);
     document.getElementById('clientAddInstagram').value = '';
     try { saveToLocalStorage(); } catch (e) {}
+    await syncClientAccount(newClient);
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) { try { saveToCloud(); } catch (e) {} }
     renderClientAccountInfo();
   }
@@ -4713,6 +4739,7 @@
     if (!c.social.facebook.includes(val)) c.social.facebook.push(val);
     document.getElementById('clientAddFacebook').value = '';
     try { saveToLocalStorage(); } catch (e) {}
+    await syncClientAccount(newClient);
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) { try { saveToCloud(); } catch (e) {} }
     renderClientAccountInfo();
   }
@@ -4722,6 +4749,7 @@
     if (!c || !c.social || !Array.isArray(c.social.instagram)) return;
     c.social.instagram.splice(idx, 1);
     try { saveToLocalStorage(); } catch (e) {}
+    await syncClientAccount(newClient);
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) { try { saveToCloud(); } catch (e) {} }
     renderClientAccountInfo();
   }
@@ -4731,6 +4759,7 @@
     if (!c || !c.social || !Array.isArray(c.social.facebook)) return;
     c.social.facebook.splice(idx, 1);
     try { saveToLocalStorage(); } catch (e) {}
+    await syncClientAccount(newClient);
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) { try { saveToCloud(); } catch (e) {} }
     renderClientAccountInfo();
   }
@@ -5055,10 +5084,19 @@
         appState.clients.push(newClient);
     }
 
-    // 7. Save
-    setTimeout(() => {
+        // 7. Save
+    setTimeout(async () => {
       if(!appState.clientRequests) appState.clientRequests = [];
+      
+      // Fix: Attach Client ID if logged in
+      if (appState.session && appState.session.type === 'client') {
+          orderData.clientId = appState.session.id;
+      }
+      
       appState.clientRequests.push(orderData);
+
+      // Fix: Sync to Cloud Collection
+      await syncClientRequest(orderData);
       
       if(appState.settings.storageMode === 'cloud' && auth.currentUser) {
          saveToCloud(); 
@@ -5099,6 +5137,54 @@
     if (!usdAmount || usdAmount <= 100) return 340;
     return 320;
   }
+    // === CLOUD SAVING FIX ===
+  function saveToCloud() {
+    if (typeof saveAppData === 'function' && window.auth && window.auth.currentUser) {
+      saveAppData(window.appState);
+    }
+  }
+
+  // === GLOBAL SYNC FOR CLIENTS ===
+  async function syncClientRequest(orderData) {
+    try {
+      const docId = orderData.id || 'REQ-' + Date.now();
+      await db.collection('requests').doc(docId).set(orderData);
+      console.log('Demande synchronisÃ©e avec le cloud (Collection Requests)');
+    } catch(e) { console.warn('Erreur synchro demande:', e); }
+  }
+
+  async function syncClientAccount(clientData) {
+    try {
+      if (!clientData.id) return;
+      await db.collection('clients').doc(clientData.id).set(clientData);
+      console.log('Compte client synchronisÃ© (Collection Clients)');
+    } catch(e) { console.warn('Erreur synchro client:', e); }
+  }
+
+    // === CLOUD SAVING FIX ===
+  function saveToCloud() {
+    if (typeof saveAppData === 'function' && window.auth && window.auth.currentUser) {
+      saveAppData(window.appState);
+    }
+  }
+
+  // === GLOBAL SYNC FOR CLIENTS ===
+  async function syncClientRequest(orderData) {
+    try {
+      const docId = orderData.id || 'REQ-' + Date.now();
+      await db.collection('requests').doc(docId).set(orderData);
+      console.log('Demande synchronisÃ©e avec le cloud (Collection Requests)');
+    } catch(e) { console.warn('Erreur synchro demande:', e); }
+  }
+
+  async function syncClientAccount(clientData) {
+    try {
+      if (!clientData.id) return;
+      await db.collection('clients').doc(clientData.id).set(clientData);
+      console.log('Compte client synchronisÃ© (Collection Clients)');
+    } catch(e) { console.warn('Erreur synchro client:', e); }
+  }
+
   function ensureClientToken() {
     if (!localStorage.getItem('clientToken')) {
       localStorage.setItem('clientToken', 'CT-' + Math.random().toString(36).slice(2) + Date.now());
@@ -5108,34 +5194,41 @@
     ensureClientToken();
     return localStorage.getItem('clientToken');
   }
-    function renderClientRequests() {
+      async   async function renderClientRequests() {
     const list = document.getElementById('clientRequestsList');
     if (!list) return;
     
-    // 1. Récupérer le token local
+    // 1. Token Local
     const token = getClientToken();
     
-    // 2. Récupérer l'ID client si connecté
+    // 2. Session Info
     const sessionId = (appState.session && appState.session.type === 'client') ? appState.session.id : null;
     let clientContact = null;
     if (sessionId) {
         const client = (appState.clients || []).find(c => c.id === sessionId);
-        if (client) clientContact = client.contact; // instagram/fb/email/phone
+        if (client) clientContact = client.contact;
+
+        // --- SYNC FROM CLOUD ---
+        if (typeof db !== 'undefined') {
+            try {
+                // Fetch by ID
+                const snaps = await db.collection('requests').where('clientId', '==', sessionId).get();
+                snaps.forEach(doc => {
+                    const d = doc.data();
+                    if(!appState.clientRequests) appState.clientRequests = [];
+                    if(!appState.clientRequests.some(r => r.id === d.id)) appState.clientRequests.push(d);
+                });
+            } catch(e) { console.warn('Sync requests error:', e); }
+        }
     }
 
     const items = (appState.clientRequests || []).filter(r => {
-        // A. Match par Token (navigateur actuel)
         if (r.clientToken && r.clientToken === token) return true;
-        
-        // B. Match par ID Client (si enregistré)
         if (sessionId && r.clientId === sessionId) return true;
-        
-        // C. Match par Contact (si le client est connecté, on cherche ses demandes par nom/insta)
         if (clientContact) {
             if (r.instagram && r.instagram.toLowerCase() === clientContact.toLowerCase()) return true;
             if (r.pageFacebook && r.pageFacebook.toLowerCase() === clientContact.toLowerCase()) return true;
         }
-        
         return false;
     }).sort((a,b)=>new Date(b.date)-new Date(a.date));
 
@@ -5147,8 +5240,8 @@
     const statusText = {
       pending: 'En attente',
       in_progress: 'En cours',
-      problematic: 'Problématique',
-      processed: 'Traité'
+      problematic: 'ProblÃ©matique',
+      processed: 'TraitÃ©'
     };
     items.forEach(req => {
       const div = document.createElement('div');
@@ -5577,6 +5670,7 @@
 
     updateAuthUI(auth.currentUser);
     loadFromLocalStorage();
+    await syncClientAccount(newClient);
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
       if (typeof window.loadFromCloud === 'function') {
         await window.loadFromCloud();
@@ -5779,3 +5873,7 @@
 </script>
 </body>
 </html>
+
+
+
+
