@@ -2781,41 +2781,51 @@
           changed = true;
         }
       };
+      
+      // Sécurisation des tableaux principaux
+      if (!Array.isArray(appState.clients)) { appState.clients = []; changed = true; }
+      if (!Array.isArray(appState.offers)) { appState.offers = []; changed = true; }
+      if (!Array.isArray(appState.transactions)) { appState.transactions = []; changed = true; }
+      if (!Array.isArray(appState.payments)) { appState.payments = []; changed = true; }
+      if (!Array.isArray(appState.usdPurchases)) { appState.usdPurchases = []; changed = true; }
+      if (!Array.isArray(appState.expenses)) { appState.expenses = []; changed = true; }
+      if (!Array.isArray(appState.recurringExpenses)) { appState.recurringExpenses = []; changed = true; }
+      if (!Array.isArray(appState.clientRequests)) { appState.clientRequests = []; changed = true; }
+
       try {
-        (appState.offers || []).forEach(o => {
+        appState.offers.forEach(o => {
           ensureId(o, 'offer');
           if (typeof o.price !== 'number') { o.price = Number(o.price || 0); changed = true; }
           if (typeof o.costPerUnit !== 'number') { o.costPerUnit = Number(o.costPerUnit || 0); changed = true; }
           if (!('description' in o)) { o.description = ''; changed = true; }
           if (!('duration' in o)) { o.duration = 'N/A'; changed = true; }
         });
-        (appState.clients || []).forEach(c => {
+        appState.clients.forEach(c => {
           ensureId(c, 'client');
           if (!('contact' in c)) { c.contact = ''; changed = true; }
           if (!('notes' in c)) { c.notes = ''; changed = true; }
         });
-        (appState.transactions || []).forEach(t => {
+        appState.transactions.forEach(t => {
           ensureId(t, 'txn');
           if (!('date' in t)) { t.date = new Date().toISOString().slice(0, 10); changed = true; }
           if (!('createdAt' in t)) { t.createdAt = Date.now(); changed = true; }
         });
-        (appState.payments || []).forEach(p => {
+        appState.payments.forEach(p => {
           ensureId(p, 'pay');
           if (!('date' in p)) { p.date = new Date().toISOString().slice(0, 10); changed = true; }
         });
-        (appState.usdPurchases || []).forEach(u => {
+        appState.usdPurchases.forEach(u => {
           ensureId(u, 'usd');
           if (!('date' in u)) { u.date = new Date().toISOString().slice(0, 10); changed = true; }
         });
-        (appState.expenses || []).forEach(e => {
+        appState.expenses.forEach(e => {
           ensureId(e, 'exp');
           if (!('date' in e)) { e.date = new Date().toISOString().slice(0, 10); changed = true; }
           if (typeof e.amount !== 'number') { e.amount = Number(e.amount || 0); changed = true; }
           if (!('category' in e)) { e.category = 'Autre'; changed = true; }
         });
-        if (!Array.isArray(appState.recurringExpenses)) { appState.recurringExpenses = []; changed = true; }
-        if (!Array.isArray(appState.clientRequests)) { appState.clientRequests = []; changed = true; }
-        (appState.clientRequests || []).forEach(r => {
+        
+        appState.clientRequests.forEach(r => {
           if (typeof r.read !== 'boolean') { r.read = false; changed = true; }
           if (typeof r.processed !== 'boolean') { r.processed = false; changed = true; }
           if (!r.date) { r.date = new Date().toISOString(); changed = true; }
@@ -2948,7 +2958,8 @@
     }
 
         async function syncGranularToCloud() {
-        if (typeof db === 'undefined') return;
+        const db = getDb();
+        if (!db) return;
         const collections = {
             'clients': appState.clients,
             'offers': appState.offers,
@@ -2972,7 +2983,8 @@
     }
 
     async function loadGranularFromCloud() {
-        if (typeof db === 'undefined') return;
+        const db = getDb();
+        if (!db) return;
         const loadCol = async (col) => {
             try {
                 const snap = await db.collection(col).get();
@@ -3135,6 +3147,12 @@
       const searchTerm = (searchInput ? searchInput.value : '').toLowerCase();
       if (!tbody) return;
       tbody.innerHTML = '';
+
+      // Sécurité : si appState.clients est invalide
+      if (!Array.isArray(appState.clients)) {
+          console.error("renderClientsTable: appState.clients is not an array", appState.clients);
+          appState.clients = [];
+      }
 
       let totalSpent = 0;
 
@@ -3673,6 +3691,8 @@
         showToast('Nom du client requis', 'error');
         return;
       }
+
+      if (!Array.isArray(appState.clients)) appState.clients = [];
 
       appState.clients.push({
         id: generateId('client'),
@@ -4331,14 +4351,24 @@
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = evt => {
+        reader.onload = async evt => {
           try {
             const data = JSON.parse(evt.target.result);
             Object.assign(appState, data);
+            
+            // Normalisation des données importées
+            normalizeAppState();
+            
             renderTables();
             appState.lastUpdated = Date.now();
-            autoSave();
-            showToast('Import réussi', 'success');
+            
+            if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+                await saveToCloud();
+                showToast('Import réussi et sauvegardé sur Cloud', 'success');
+            } else {
+                saveToLocalStorage();
+                showToast('Import réussi (Local)', 'success');
+            }
           } catch (err) {
             console.error(err);
             showToast('Erreur lors de l\'import', 'error');
