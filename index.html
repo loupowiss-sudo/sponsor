@@ -263,7 +263,7 @@
           syncTimer: null,
           syncThrottleMs: 2000,
           settings: {
-            storageMode: 'local',
+            storageMode: 'cloud',
             cloudProvider: 'firebase',
             autoSaveEnabled: true,
             seedDefaults: true,
@@ -340,6 +340,8 @@
     window.generateId = generateId;
 
     function ensureInitialData() {
+      if(!appState.settings) appState.settings = {};
+      if(!appState.settings.storageMode) appState.settings.storageMode = 'cloud';
       if (appState.settings.seedDefaults && (!Array.isArray(appState.offers) || appState.offers.length === 0)) {
         appState.offers = [
           { id: generateId('offer'), name: 'USD Standard', description: 'Achat standard de dollars', price: 30000, costPerUnit: 100, duration: 'N/A' },
@@ -607,67 +609,57 @@
     }
   }
   
-    async function signupClient() {
+  async function signupClient() {
     const nameEl = document.getElementById('signupClientName');
     const userEl = document.getElementById('signupClientUsername');
     const phoneEl = document.getElementById('signupClientPhone');
     const emailEl = document.getElementById('signupClientEmail');
+    const passEl = document.getElementById('signupClientPassword');
     const name = nameEl ? nameEl.value.trim() : '';
     const username = userEl ? userEl.value.trim() : '';
     const phone = phoneEl ? phoneEl.value.trim() : '';
     const email = emailEl ? emailEl.value.trim() : '';
-    
+    const password = passEl ? passEl.value.trim() : '';
+
     if (!name) { showToast('Nom requis', 'error'); return; }
-    if (!username && !phone && !email) { showToast('Entrez tÃ©lÃ©phone, utilisateur ou email', 'error'); return; }
-    
+    if (!username) { showToast('Nom d''utilisateur requis', 'error'); return; }
+    if (!phone) { showToast('TÃ©lÃ©phone requis', 'error'); return; }
+    if (!password) { showToast('Mot de passe requis', 'error'); return; }
+
     ensureInitialData();
     const exists = (appState.clients || []).find(c => {
-      const e = (c.email || '').toLowerCase();
-      const u = (c.username || '').toLowerCase();
-      const p = (c.phone || '').toLowerCase();
-      return (email && e === email.toLowerCase()) || (username && u === username.toLowerCase()) || (phone && p === phone.toLowerCase());
+      return (email && c.email && c.email.toLowerCase() === email.toLowerCase()) || (username && c.username && c.username.toLowerCase() === username.toLowerCase());
     });
-    
-    if (exists) { showToast('Un client avec cet email existe dÃ©jÃ ', 'error'); return; }
-    
+    if (exists) { showToast('Ce compte existe dÃ©jÃ ', 'error'); return; }
+
     const newClient = {
       id: generateId('client'),
-      name,
-      email,
+      name, email, username, phone, password,
       contact: email || phone || username,
-      username,
-      phone,
       social: { instagram: [], facebook: [] },
+      createdAt: Date.now(),
       notes: 'Compte client crÃ©Ã©',
-      totalSpent: 0,
-      transactionsCount: 0,
-      unpaid: 0,
-      createdAt: Date.now()
+      totalSpent: 0, transactionsCount: 0, unpaid: 0
     };
-    
+
+    if(!appState.clients) appState.clients = [];
     appState.clients.push(newClient);
-    
-    // === IMMEDIATE LOGIN ===
-    appState.session = { type: 'client', id: newClient.id, name: newClient.name, username: newClient.username || '', phone: newClient.phone || '' };
+    appState.session = { type: 'client', id: newClient.id, name: newClient.name, username: newClient.username, phone: newClient.phone };
     try { saveToLocalStorage(); } catch (e) {}
-    
-    // Force UI Update immediately
     updateAuthUI(null);
     showClientSpace();
-    showToast('Compte crÃ©Ã© et connectÃ©', 'success');
+    showToast('Compte crÃ©Ã©', 'success');
 
-    // Sync in background
     try {
         if(typeof syncClientAccount === 'function') await syncClientAccount(newClient);
-        if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
-           await saveToCloud();
-        }
-    } catch(e) { console.warn('Background sync error', e); }
+        if(window.auth && window.auth.currentUser) await saveToCloud();
+    } catch(e) { console.warn('Sync error', e); }
 
-    if (nameEl) nameEl.value = '';
-    if (emailEl) emailEl.value = '';
-    if (userEl) userEl.value = '';
-    if (phoneEl) phoneEl.value = '';
+    if(nameEl) nameEl.value='';
+    if(userEl) userEl.value='';
+    if(phoneEl) phoneEl.value='';
+    if(emailEl) emailEl.value='';
+    if(passEl) passEl.value='';
   }
 
   async function loginClientQuick() {
@@ -922,9 +914,10 @@
         <div class="bg-gray-50 border rounded-2xl p-4 space-y-3">
           <div class="text-center font-bold text-gray-800">Créer un compte Client</div>
           <input id="signupClientName" type="text" placeholder="Nom complet" class="w-full p-3 border rounded-xl">
-          <input id="signupClientUsername" type="text" placeholder="Nom dâ€™utilisateur (optionnel)" class="w-full p-3 border rounded-xl">
-          <input id="signupClientPhone" type="text" placeholder="Téléphone (optionnel)" class="w-full p-3 border rounded-xl">
+          <input id="signupClientUsername" type="text" placeholder="Nom d'utilisateur" class="w-full p-3 border rounded-xl">
+          <input id="signupClientPhone" type="text" placeholder="TÃ©lÃ©phone" class="w-full p-3 border rounded-xl">
           <input id="signupClientEmail" type="email" placeholder="Email (optionnel)" class="w-full p-3 border rounded-xl">
+          <input id="signupClientPassword" type="password" placeholder="Mot de passe" class="w-full p-3 border rounded-xl">
           <button type="button" onclick="signupClient()"
                   class="w-full py-3 bg-green-600 text-white font-bold rounded-xl shadow hover:bg-green-700 transition-all">
             Créer mon compte
@@ -2920,7 +2913,11 @@
           const raw = doc.data();
           const data = raw?.data ?? raw;
           Object.assign(appState, data);
-          console.log('â˜ï¸ Données utilisateur chargées depuis Firebase');
+          console.log('☁️ Données utilisateur chargées depuis Firebase');
+          
+          // Charger les données granulaires pour compléter/mettre à jour
+          await loadGranularFromCloud();
+          
           normalizeAppState();
           try {
             const localStr = localStorage.getItem('hichemSponsor');
@@ -2950,6 +2947,66 @@
       }
     }
 
+        async function syncGranularToCloud() {
+        if (typeof db === 'undefined') return;
+        const collections = {
+            'clients': appState.clients,
+            'offers': appState.offers,
+            'transactions': appState.transactions,
+            'payments': appState.payments,
+            'usdPurchases': appState.usdPurchases,
+            'expenses': appState.expenses,
+            'clientRequests': appState.clientRequests,
+            'recurringExpenses': appState.recurringExpenses
+        };
+        const promises = [];
+        for (const [colName, items] of Object.entries(collections)) {
+            if (Array.isArray(items)) {
+                items.forEach(item => {
+                    if (item.id) promises.push(db.collection(colName).doc(item.id).set(item));
+                });
+            }
+        }
+        await Promise.all(promises);
+        console.log('Synced granular data to Firebase');
+    }
+
+    async function loadGranularFromCloud() {
+        if (typeof db === 'undefined') return;
+        const loadCol = async (col) => {
+            try {
+                const snap = await db.collection(col).get();
+                return snap.docs.map(d => d.data());
+            } catch (e) { console.warn('Error loading ' + col, e); return []; }
+        };
+        const [clients, offers, transactions, payments, usdPurchases, expenses, clientRequests, recurringExpenses] = await Promise.all([
+            loadCol('clients'), loadCol('offers'), loadCol('transactions'),
+            loadCol('payments'), loadCol('usdPurchases'), loadCol('expenses'),
+            loadCol('clientRequests'), loadCol('recurringExpenses')
+        ]);
+        
+        const merge = (local, cloud) => {
+            if (!Array.isArray(local)) local = [];
+            const localIds = new Set(local.map(i => i.id));
+            cloud.forEach(cItem => {
+                if (!localIds.has(cItem.id)) {
+                    local.push(cItem);
+                }
+            });
+            return local;
+        };
+
+        appState.clients = merge(appState.clients, clients);
+        appState.offers = merge(appState.offers, offers);
+        appState.transactions = merge(appState.transactions, transactions);
+        appState.payments = merge(appState.payments, payments);
+        appState.usdPurchases = merge(appState.usdPurchases, usdPurchases);
+        appState.expenses = merge(appState.expenses, expenses);
+        appState.clientRequests = merge(appState.clientRequests, clientRequests);
+        appState.recurringExpenses = merge(appState.recurringExpenses, recurringExpenses);
+        console.log('Merged granular data from Firebase');
+    }
+
     async function saveToCloud() {
       try {
         const user = auth.currentUser;
@@ -2957,6 +3014,7 @@
         const uid = user.uid;
         appState.lastUpdated = Date.now();
         await getDb().collection('users').doc(uid).set({ data: appState }, { merge: true });
+        await syncGranularToCloud();
         console.log('â˜ï¸ Données sauvegardées sur Firebase');
         appState.sync.pendingCloudSave = false;
         updateSyncIndicator();
@@ -2992,8 +3050,7 @@
       if (appState.syncTimer) return;
       appState.syncTimer = setTimeout(async () => {
         appState.syncTimer = null;
-        await syncClientAccount(newClient);
-    if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+        if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
           await saveToCloud();
           appState.syncQueue = [];
           scheduleCloudRetry();
@@ -5219,18 +5276,11 @@
     if (!usdAmount || usdAmount <= 100) return 340;
     return 320;
   }
-    // === CLOUD SAVING FIX ===
-  function saveToCloud() {
-    if (typeof saveAppData === 'function' && window.auth && window.auth.currentUser) {
-      saveAppData(window.appState);
-    }
-  }
-
   // === GLOBAL SYNC FOR CLIENTS ===
   async function syncClientRequest(orderData) {
     try {
       const docId = orderData.id || 'REQ-' + Date.now();
-      await db.collection('requests').doc(docId).set(orderData);
+      if(typeof db !== 'undefined') await db.collection('requests').doc(docId).set(orderData);
       console.log('Demande synchronisÃ©e avec le cloud (Collection Requests)');
     } catch(e) { console.warn('Erreur synchro demande:', e); }
   }
@@ -5238,23 +5288,15 @@
   async function syncClientAccount(clientData) {
     try {
       if (!clientData.id) return;
-      await db.collection('clients').doc(clientData.id).set(clientData);
+      if(typeof db !== 'undefined') await db.collection('clients').doc(clientData.id).set(clientData);
       console.log('Compte client synchronisÃ© (Collection Clients)');
     } catch(e) { console.warn('Erreur synchro client:', e); }
   }
-
-    // === CLOUD SAVING FIX ===
-  function saveToCloud() {
-    if (typeof saveAppData === 'function' && window.auth && window.auth.currentUser) {
-      saveAppData(window.appState);
-    }
-  }
-
   // === GLOBAL SYNC FOR CLIENTS ===
   async function syncClientRequest(orderData) {
     try {
       const docId = orderData.id || 'REQ-' + Date.now();
-      await db.collection('requests').doc(docId).set(orderData);
+      if(typeof db !== 'undefined') await db.collection('requests').doc(docId).set(orderData);
       console.log('Demande synchronisÃ©e avec le cloud (Collection Requests)');
     } catch(e) { console.warn('Erreur synchro demande:', e); }
   }
@@ -5262,11 +5304,10 @@
   async function syncClientAccount(clientData) {
     try {
       if (!clientData.id) return;
-      await db.collection('clients').doc(clientData.id).set(clientData);
+      if(typeof db !== 'undefined') await db.collection('clients').doc(clientData.id).set(clientData);
       console.log('Compte client synchronisÃ© (Collection Clients)');
     } catch(e) { console.warn('Erreur synchro client:', e); }
   }
-
   function ensureClientToken() {
     if (!localStorage.getItem('clientToken')) {
       localStorage.setItem('clientToken', 'CT-' + Math.random().toString(36).slice(2) + Date.now());
@@ -5956,6 +5997,7 @@
 </script>
 </body>
 </html>
+
 
 
 
