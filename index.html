@@ -581,7 +581,7 @@
     }
   }
   
-  async function signupClient() {
+    async function signupClient() {
     const nameEl = document.getElementById('signupClientName');
     const userEl = document.getElementById('signupClientUsername');
     const phoneEl = document.getElementById('signupClientPhone');
@@ -590,8 +590,10 @@
     const username = userEl ? userEl.value.trim() : '';
     const phone = phoneEl ? phoneEl.value.trim() : '';
     const email = emailEl ? emailEl.value.trim() : '';
+    
     if (!name) { showToast('Nom requis', 'error'); return; }
-    if (!username && !phone && !email) { showToast('Entrez téléphone, utilisateur ou email', 'error'); return; }
+    if (!username && !phone && !email) { showToast('Entrez tÃ©lÃ©phone, utilisateur ou email', 'error'); return; }
+    
     ensureInitialData();
     const exists = (appState.clients || []).find(c => {
       const e = (c.email || '').toLowerCase();
@@ -599,7 +601,9 @@
       const p = (c.phone || '').toLowerCase();
       return (email && e === email.toLowerCase()) || (username && u === username.toLowerCase()) || (phone && p === phone.toLowerCase());
     });
-    if (exists) { showToast('Un client avec cet email existe déjà', 'error'); return; }
+    
+    if (exists) { showToast('Un client avec cet email existe dÃ©jÃ ', 'error'); return; }
+    
     const newClient = {
       id: generateId('client'),
       name,
@@ -608,30 +612,39 @@
       username,
       phone,
       social: { instagram: [], facebook: [] },
-      notes: 'Compte client créé',
+      notes: 'Compte client crÃ©Ã©',
       totalSpent: 0,
       transactionsCount: 0,
       unpaid: 0,
       createdAt: Date.now()
     };
+    
     appState.clients.push(newClient);
-    try { saveToLocalStorage(); } catch (e) {}
-    await syncClientAccount(newClient);
-    if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
-      try { await saveToCloud(); } catch (e) {}
-    }
-    showToast('Compte client créé', 'success');
+    
+    // === IMMEDIATE LOGIN ===
     appState.session = { type: 'client', id: newClient.id, name: newClient.name, username: newClient.username || '', phone: newClient.phone || '' };
     try { saveToLocalStorage(); } catch (e) {}
+    
+    // Force UI Update immediately
     updateAuthUI(null);
     showClientSpace();
+    showToast('Compte crÃ©Ã© et connectÃ©', 'success');
+
+    // Sync in background
+    try {
+        if(typeof syncClientAccount === 'function') await syncClientAccount(newClient);
+        if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
+           await saveToCloud();
+        }
+    } catch(e) { console.warn('Background sync error', e); }
+
     if (nameEl) nameEl.value = '';
     if (emailEl) emailEl.value = '';
     if (userEl) userEl.value = '';
     if (phoneEl) phoneEl.value = '';
   }
-  
-    async function loginClientQuick() {
+
+  async function loginClientQuick() {
     const idEl = document.getElementById('clientQuickId');
     const ident = idEl ? idEl.value.trim().toLowerCase() : '';
     if (!ident) { showToast('Entrez tÃ©lÃ©phone ou utilisateur', 'error'); return; }
@@ -3387,8 +3400,40 @@
         }
     }
 
-    function renderTables() {
+    
+  // === ADMIN SYNC FUNCTION ===
+  async function syncAdminRequests() {
+    if (typeof db === 'undefined') return;
+    try {
+        const snap = await db.collection('requests').get();
+        const remoteReqs = [];
+        snap.forEach(doc => remoteReqs.push(doc.data()));
+        
+        // Merge with local
+        if (!appState.clientRequests) appState.clientRequests = [];
+        const existingIds = new Set(appState.clientRequests.map(r => r.id));
+        
+        remoteReqs.forEach(r => {
+            if (!existingIds.has(r.id)) {
+                appState.clientRequests.push(r);
+            }
+        });
+        
+        // Re-render
+        if (typeof renderRequests === 'function') renderRequests();
+        if (typeof updateRequestsBadge === 'function') updateRequestsBadge();
+    } catch (e) { console.warn('Admin sync error:', e); }
+  }
+
+  function renderTables() {
       if (appState.session && appState.session.type === 'client') return;
+      
+      // === ADMIN SYNC ===
+      if (typeof syncAdminRequests === 'function' && (!appState.lastAdminSync || Date.now() - appState.lastAdminSync > 60000)) {
+          appState.lastAdminSync = Date.now();
+          syncAdminRequests();
+      }
+
       recalculateClientStats();
       renderClientsTable();
       renderTransactionsTable();
@@ -3399,8 +3444,11 @@
       renderRecentTransactions();
       renderTopClients();
       updateDashboard();
+      if(typeof renderRequests === 'function') renderRequests(); // Added this
       applyEmployeeRestrictions();
     }
+
+
     let renderTablesScheduled = false;
     function renderTablesAsync() {
       if (renderTablesScheduled) return;
@@ -5873,6 +5921,7 @@
 </script>
 </body>
 </html>
+
 
 
 
