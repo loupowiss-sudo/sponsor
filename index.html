@@ -333,6 +333,31 @@
   </script>
 
   <script>
+    // === CORE UTILS & INIT (Moved up for availability) ===
+    function generateId(prefix = 'id') {
+      return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+    }
+    window.generateId = generateId;
+
+    function ensureInitialData() {
+      if (appState.settings.seedDefaults && (!Array.isArray(appState.offers) || appState.offers.length === 0)) {
+        appState.offers = [
+          { id: generateId('offer'), name: 'USD Standard', description: 'Achat standard de dollars', price: 30000, costPerUnit: 100, duration: 'N/A' },
+          { id: generateId('offer'), name: 'Pack 500$', description: 'Pack pour 500 dollars', price: 150000, costPerUnit: 500, duration: 'N/A' },
+          { id: generateId('offer'), name: 'Service Premium', description: 'Service premium pour clients VIP', price: 50000, costPerUnit: 150, duration: '30 jours' },
+        ];
+      }
+      if (!Array.isArray(appState.clients)) appState.clients = [];
+      if (!Array.isArray(appState.transactions)) appState.transactions = [];
+      if (!Array.isArray(appState.payments)) appState.payments = [];
+      if (!Array.isArray(appState.usdPurchases)) appState.usdPurchases = [];
+      if (!Array.isArray(appState.employees)) appState.employees = [];
+      if (!appState.settings.workMethodSections) appState.settings.workMethodSections = [];
+    }
+    window.ensureInitialData = ensureInitialData;
+  </script>
+
+  <script>
   // === AUTHENTIFICATION EMAIL / MOT DE PASSE ===
 
   // Met à jour l'UI selon l'état de connexion
@@ -545,6 +570,7 @@
       populateClientDropdown();
       populateOfferSelect();
       populatePaymentClientSelect();
+      if(typeof window.setupAdminRealtimeListeners === 'function') window.setupAdminRealtimeListeners();
       showTab('dashboard');
       
       // Re-enforce UI state
@@ -714,6 +740,7 @@
     populateClientDropdown();
     populateOfferSelect();
     populatePaymentClientSelect();
+    if(typeof window.setupAdminRealtimeListeners === 'function') window.setupAdminRealtimeListeners();
     showTab('dashboard');
     forceAdminView();
     setTimeout(emergencyRevealUI, 500);
@@ -757,6 +784,7 @@
       populateClientDropdown();
       populateOfferSelect();
       populatePaymentClientSelect();
+      if(typeof window.setupAdminRealtimeListeners === 'function') window.setupAdminRealtimeListeners();
       showTab('dashboard');
       
       forceAdminView();
@@ -3397,6 +3425,67 @@
     } catch (e) { console.warn('Admin sync error:', e); }
   }
 
+  let adminRequestsUnsubscribe = null;
+
+  function setupAdminRealtimeListeners() {
+    if (typeof db === 'undefined') return;
+    if (appState.session && appState.session.type === 'client') return;
+    
+    // Unsubscribe previous if exists
+    if (adminRequestsUnsubscribe) {
+        adminRequestsUnsubscribe();
+        adminRequestsUnsubscribe = null;
+    }
+
+    try {
+        console.log('Setting up Admin Real-time Requests Listener...');
+        adminRequestsUnsubscribe = db.collection('requests')
+            .onSnapshot((snapshot) => {
+                let changes = false;
+                if (!appState.clientRequests) appState.clientRequests = [];
+                
+                snapshot.docChanges().forEach((change) => {
+                    const data = change.doc.data();
+                    if (change.type === "added") {
+                        // Check if exists
+                        const idx = appState.clientRequests.findIndex(r => r.id === data.id);
+                        if (idx === -1) {
+                            appState.clientRequests.push(data);
+                            changes = true;
+                            // Show notification for new request if recent (< 5 mins)
+                            if (Date.now() - (new Date(data.date).getTime()) < 300000) { 
+                                showToast('Nouvelle demande reÃ§ue', 'info');
+                            }
+                        }
+                    }
+                    if (change.type === "modified") {
+                         const idx = appState.clientRequests.findIndex(r => r.id === data.id);
+                         if (idx !== -1) {
+                             appState.clientRequests[idx] = data;
+                             changes = true;
+                         }
+                    }
+                    if (change.type === "removed") {
+                        const idx = appState.clientRequests.findIndex(r => r.id === data.id);
+                        if (idx !== -1) {
+                            appState.clientRequests.splice(idx, 1);
+                            changes = true;
+                        }
+                    }
+                });
+
+                if (changes || snapshot.docChanges().length === 0) {
+                     if (typeof renderRequests === 'function') renderRequests();
+                     if (typeof updateRequestsBadge === 'function') updateRequestsBadge();
+                }
+            }, (error) => {
+                console.warn('Admin Real-time Listener Error:', error);
+            });
+            
+    } catch (e) { console.warn('Setup Listener Error:', e); }
+  }
+  window.setupAdminRealtimeListeners = setupAdminRealtimeListeners;
+
   function renderTables() {
       if (appState.session && appState.session.type === 'client') return;
       if (typeof syncAdminRequests === 'function' && (!appState.lastAdminSync || Date.now() - appState.lastAdminSync > 60000)) {
@@ -3459,21 +3548,7 @@
       grid.appendChild(frag);
     }
 
-    function ensureInitialData() {
-      if (appState.settings.seedDefaults && (!Array.isArray(appState.offers) || appState.offers.length === 0)) {
-        appState.offers = [
-          { id: generateId('offer'), name: 'USD Standard', description: 'Achat standard de dollars', price: 30000, costPerUnit: 100, duration: 'N/A' },
-          { id: generateId('offer'), name: 'Pack 500$', description: 'Pack pour 500 dollars', price: 150000, costPerUnit: 500, duration: 'N/A' },
-          { id: generateId('offer'), name: 'Service Premium', description: 'Service premium pour clients VIP', price: 50000, costPerUnit: 150, duration: '30 jours' },
-        ];
-      }
-      if (!Array.isArray(appState.clients)) appState.clients = [];
-      if (!Array.isArray(appState.transactions)) appState.transactions = [];
-      if (!Array.isArray(appState.payments)) appState.payments = [];
-      if (!Array.isArray(appState.usdPurchases)) appState.usdPurchases = [];
-      if (!Array.isArray(appState.employees)) appState.employees = [];
-      if (!appState.settings.workMethodSections) appState.settings.workMethodSections = [];
-    }
+// ensureInitialData moved up
 
     // Exposer les fonctions en global pour les attributs onclick
     window.showTab = showTab;
@@ -5763,6 +5838,7 @@
       populateClientDropdown();
       populateOfferSelect();
       populatePaymentClientSelect();
+      if(typeof window.setupAdminRealtimeListeners === 'function') window.setupAdminRealtimeListeners();
       showTab('dashboard');
       
       forceAdminView();
@@ -5880,6 +5956,12 @@
 </script>
 </body>
 </html>
+
+
+
+
+
+
 
 
 
