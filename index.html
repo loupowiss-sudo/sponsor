@@ -4418,12 +4418,12 @@
       showToast('Fonction statistiques à implémenter', 'info');
     }
 
-    function manualSave() {
+    async function manualSave() {
       try {
         appState.lastUpdated = Date.now();
-        await syncClientAccount(newClient);
+        // await syncClientAccount(newClient);
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
-          saveToCloud();
+          await saveToCloud();
           showToast('Sauvegarde cloud effectuée', 'success');
         } else {
           saveToLocalStorage();
@@ -4446,7 +4446,7 @@
       appState.settings.seedDefaults = false;
       appState.lastUpdated = Date.now();
       saveToLocalStorage();
-      await syncClientAccount(newClient);
+      // await syncClientAccount(newClient);
     if (appState.settings.storageMode === 'cloud' && auth.currentUser) {
         await saveToCloud();
       }
@@ -5347,7 +5347,7 @@
     ensureClientToken();
     return localStorage.getItem('clientToken');
   }
-      async   async function renderClientRequests() {
+  async function renderClientRequests() {
     const list = document.getElementById('clientRequestsList');
     if (!list) return;
     
