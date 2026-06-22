@@ -6,7 +6,15 @@ window.updateEmployeePermission = function(empId, tabId, hasAccess) {
   if (!emp.permissions) emp.permissions = {};
   emp.permissions[tabId] = !!hasAccess;
   emp.updatedAt = Date.now();
+  
+  // Update the session permissions if this is the currently logged in employee
+  if (appState.session && appState.session.type === 'employee' && appState.session.employeeId === empId) {
+    appState.session.permissions = emp.permissions;
+  }
+  
   if (typeof autoSave === 'function') autoSave();
+  if (typeof updateNavButtonsVisibility === 'function') updateNavButtonsVisibility();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
   showToast('Permissions mises à jour', 'success');
 };
 
@@ -967,6 +975,7 @@ window.addEmployee = function() {
   let name = (document.getElementById('employeeName')?.value || '').trim();
   const login = (document.getElementById('employeeLogin')?.value || '').trim();
   const password = (document.getElementById('employeePassword')?.value || '').trim();
+  const salary = Number(document.getElementById('employeeSalary')?.value || 0);
   
   // Default values
   const active = document.getElementById('employeeActive') ? !!document.getElementById('employeeActive').checked : true;
@@ -983,6 +992,7 @@ window.addEmployee = function() {
     name,
     login,
     password,
+    salary,
     active,
     createdAt: Date.now(),
     updatedAt: Date.now()
@@ -991,11 +1001,237 @@ window.addEmployee = function() {
   if (document.getElementById('employeeName')) document.getElementById('employeeName').value = '';
   if (document.getElementById('employeeLogin')) document.getElementById('employeeLogin').value = '';
   if (document.getElementById('employeePassword')) document.getElementById('employeePassword').value = '';
+  if (document.getElementById('employeeSalary')) document.getElementById('employeeSalary').value = '';
   if (document.getElementById('employeeActive')) document.getElementById('employeeActive').checked = true;
 
   if (typeof autoSave === 'function') autoSave();
   if (typeof renderCurrentTab === 'function') renderCurrentTab();
   showToast('Employé ajouté', 'success');
+};
+
+window.updateEmployeeSalary = function(id) {
+  const employee = appState.employees.find(e => e.id === id);
+  if (!employee) return;
+  const newSalary = Number(document.getElementById(`editSalary-${id}`)?.value || 0);
+  employee.salary = newSalary;
+  employee.updatedAt = Date.now();
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+  showToast('Salaire mis à jour', 'success');
+};
+
+window.markAbsent = function(employeeId) {
+  const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  if (!appState.absences) appState.absences = [];
+  const existing = appState.absences.find(a => a.employeeId === employeeId && a.date === todayStr);
+  if (existing) return;
+  appState.absences.push({
+    id: generateId('absence'),
+    employeeId,
+    date: todayStr,
+    time: Date.now(),
+    createdAt: Date.now()
+  });
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+  showToast('Absence enregistrée', 'success');
+};
+
+window.removeAbsence = function(employeeId) {
+  const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  if (!appState.absences) appState.absences = [];
+  appState.absences = appState.absences.filter(a => !(a.employeeId === employeeId && a.date === todayStr));
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+  showToast('Absence annulée', 'success');
+};
+
+window.openAbsenceHistoryModal = function() {
+  const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+  const currentMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  
+  const modal = document.createElement('div');
+  modal.id = 'absenceHistoryModal';
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+  
+  // Function to render the history
+  const renderHistory = () => {
+    const selectedMonth = document.getElementById('historyMonthFilter')?.value || currentMonth;
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const monthStart = `${year}-${String(month).padStart(2,'0')}-01`;
+    const monthEnd = `${year}-${String(month).padStart(2,'0')}-${new Date(year, month, 0).getDate().toString().padStart(2,'0')}`;
+    
+    const monthAbsences = (appState.absences || []).filter(a => {
+      return a.date >= monthStart && a.date <= monthEnd;
+    });
+    
+    // Group by employee
+    const grouped = {};
+    monthAbsences.forEach(a => {
+      if (!grouped[a.employeeId]) grouped[a.employeeId] = [];
+      grouped[a.employeeId].push(a);
+    });
+    
+    const content = document.getElementById('absenceHistoryContent');
+    if (content) {
+      content.innerHTML = Object.keys(grouped).length === 0 ? `
+        <p class="text-center py-8 text-gray-500 dark:text-gray-400 italic">
+          Aucune absence pour ce mois
+        </p>
+      ` : Object.keys(grouped).map(empId => {
+        const emp = appState.employees.find(e => e.id === empId);
+        const absences = grouped[empId];
+        return `
+          <div class="p-4 border rounded-2xl bg-gray-50 dark:bg-gray-700 mb-4">
+            <h4 class="font-bold text-gray-800 dark:text-white mb-2">
+              ${emp ? emp.name : 'Employé inconnu'}
+              <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
+                (${absences.length} absence${absences.length > 1 ? 's' : ''})
+              </span>
+            </h4>
+            <div class="flex flex-wrap gap-2">
+              ${absences.map(a => `
+                <div class="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-sm flex items-center gap-2">
+                  ${a.date}
+                  <button onclick="deleteAbsence('${a.id}')" class="text-red-500 hover:text-red-700">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  };
+  
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl w-full max-w-2xl shadow-2xl fade-in border dark:border-gray-700">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold flex items-center gap-2 dark:text-white">
+          <i class="fas fa-history text-indigo-600"></i> Historique des absences
+        </h3>
+        <button onclick="document.getElementById('absenceHistoryModal').remove()" class="text-gray-400 hover:text-gray-600 text-2xl">
+          ×
+        </button>
+      </div>
+      
+      <div class="mb-6">
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Filtrer par mois</label>
+        <input type="month" id="historyMonthFilter" value="${currentMonth}" class="w-full p-4 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white">
+      </div>
+      
+      <div id="absenceHistoryContent" class="max-h-96 overflow-y-auto">
+        <!-- History will be rendered here -->
+      </div>
+      
+      <div class="mt-6 flex justify-end">
+        <button onclick="document.getElementById('absenceHistoryModal').remove()" class="px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">
+          Fermer
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Set up event listener for month filter change
+  const filter = document.getElementById('historyMonthFilter');
+  if (filter) {
+    filter.addEventListener('change', renderHistory);
+  }
+  
+  // Render initial history
+  renderHistory();
+};
+
+window.deleteAbsence = function(absenceId) {
+  if (!appState.absences) appState.absences = [];
+  appState.absences = appState.absences.filter(a => a.id !== absenceId);
+  if (typeof autoSave === 'function') autoSave();
+  // Re-render the history modal if it's open
+  const modal = document.getElementById('absenceHistoryModal');
+  if (modal) {
+    document.getElementById('absenceHistoryModal').remove();
+    openAbsenceHistoryModal();
+  } else {
+    renderCurrentTab();
+  }
+  showToast('Absence supprimée', 'success');
+};
+
+// Payment functions
+window.openAddPaymentModal = function(employeeId) {
+  const employee = appState.employees.find(e => e.id === employeeId);
+  if (!employee) return;
+  
+  // Create a temporary modal for adding payment
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl w-full max-w-md shadow-2xl fade-in border dark:border-gray-700">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold flex items-center gap-2 dark:text-white">
+          <i class="fas fa-money-check-alt text-indigo-600"></i> Ajouter paiement pour ${employee.name || employee.login}
+        </h3>
+        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 text-2xl">
+          ×
+        </button>
+      </div>
+      <div class="space-y-4 mb-6">
+        <input id="newPaymentDesc" type="text" placeholder="Description (ex: Salaire juillet 2025)" class="w-full p-4 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white">
+        <input id="newPaymentAmount" type="number" placeholder="Montant (DA)" class="w-full p-4 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white">
+        <input id="newPaymentDate" type="date" value="${new Date().toISOString().split('T')[0]}" class="w-full p-4 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white">
+      </div>
+      <div class="flex gap-3">
+        <button onclick="this.closest('.fixed').remove()" class="flex-1 px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">Annuler</button>
+        <button onclick="addEmployeePayment('${employeeId}')" class="flex-1 px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg transition-all">Ajouter</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+};
+
+window.addEmployeePayment = function(employeeId) {
+  const desc = document.getElementById('newPaymentDesc').value;
+  const amount = Number(document.getElementById('newPaymentAmount').value);
+  const date = document.getElementById('newPaymentDate').value;
+  
+  if (!amount || !date) {
+    showToast('Veuillez remplir tous les champs', 'error');
+    return;
+  }
+  
+  if (!appState.employeePayments) appState.employeePayments = [];
+  
+  appState.employeePayments.push({
+    id: 'payment-' + Date.now(),
+    employeeId,
+    description: desc,
+    amount,
+    date,
+    paid: false,
+    createdAt: Date.now()
+  });
+  
+  document.querySelector('.fixed').remove();
+  
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+  showToast('Paiement ajouté', 'success');
+};
+
+window.togglePaymentStatus = function(paymentId) {
+  if (!appState.employeePayments) appState.employeePayments = [];
+  const payment = appState.employeePayments.find(p => p.id === paymentId);
+  if (payment) {
+    payment.paid = !payment.paid;
+    if (typeof autoSave === 'function') autoSave();
+    if (typeof renderCurrentTab === 'function') renderCurrentTab();
+    showToast(payment.paid ? 'Paiement marqué payé' : 'Paiement marqué non payé', 'success');
+  }
 };
 
 window.toggleEmployeeActive = function(id) {
@@ -1310,4 +1546,632 @@ document.addEventListener('click', function(e) {
     }
   }
 });
+
+// ==========================================
+// OCR NOTEBOOK SCANNER
+// ==========================================
+
+let pendingOcrSponsors = [];
+
+window.openOcrCamera = function() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('Camera non disponible', 'error');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => {
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.autoplay = true;
+      const canvas = document.createElement('canvas');
+      canvas.style.position = 'fixed';
+      canvas.style.top = '50%';
+      canvas.style.left = '50%';
+      canvas.style.transform = 'translate(-50%, -50%)';
+      canvas.style.zIndex = '9999';
+      canvas.style.borderRadius = '20px';
+      canvas.style.boxShadow = '0 20px 60px rgba(0,0,0,0.5)';
+      document.body.appendChild(canvas);
+      const ctx = canvas.getContext('2d');
+      video.onloadedmetadata = () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        setTimeout(() => {
+          stream.getTracks().forEach(track => track.stop());
+          document.body.removeChild(canvas);
+          canvas.toBlob(blob => {
+            const file = new File([blob], 'carnet.jpg', { type: 'image/jpeg' });
+            handleOcrFileSelect({ files: [file], target: { value: '' } });
+          });
+        }, 1500);
+      };
+    })
+    .catch(err => {
+      console.error('Camera error:', err);
+      showToast('Erreur camera', 'error');
+    });
+};
+
+window.handleOcrFileSelect = function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('Image trop grande (max 10MB)', 'error');
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('ocrPreviewImage').src = e.target.result;
+    document.getElementById('ocrUploadSection').classList.add('hidden');
+    document.getElementById('ocrPreviewSection').classList.remove('hidden');
+    document.getElementById('ocrResultsSection').classList.add('hidden');
+    processOcrImage(e.target.result);
+  };
+  reader.readAsDataURL(file);
+};
+
+async function processOcrImage(imageSrc) {
+  const progressSection = document.getElementById('ocrProgress');
+  const progressBar = document.getElementById('ocrProgressBar');
+  const progressText = document.getElementById('ocrProgressText');
+  
+  progressSection.classList.remove('hidden');
+  progressText.textContent = 'Analyse OCR en cours...';
+  progressBar.style.width = '10%';
+  
+  try {
+    const result = await Tesseract.recognize(imageSrc, 'fra+ara', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          const percent = Math.round(m.progress * 100);
+          progressBar.style.width = percent + '%';
+          progressText.textContent = `Analyse en cours... ${percent}%`;
+        }
+      },
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789àâäéèêëîïôöùûüçÿœæÀÂÄÉÈÊËÎÏÔÖÙÛÜÇŸŒÆ\' -,.✓✔☑✗VvWwXx',
+      preserve_interword_spaces: '1',
+      tessedit_pageseg_mode: '3', // Auto page segmentation
+      tessedit_ocr_engine_mode: '2' // LSTM engine only (better for modern text)
+    });
+    
+    progressBar.style.width = '100%';
+    progressText.textContent = 'Analyse terminée !';
+    
+    const text = result.data.text;
+    console.log('OCR Result:', text);
+    
+    // Afficher le texte brut OCR
+    document.getElementById('ocrRawText').textContent = text || '(vide)';
+    
+    pendingOcrSponsors = parseNotebookText(text);
+    
+    setTimeout(() => {
+      progressSection.classList.add('hidden');
+      document.getElementById('ocrResultsSection').classList.remove('hidden');
+      displayOcrResults(pendingOcrSponsors);
+    }, 500);
+    
+  } catch (err) {
+    console.error('OCR Error:', err);
+    progressSection.classList.add('hidden');
+    showToast('Erreur lors de l\'analyse de l\'image', 'error');
+  }
+}
+
+function parseNotebookText(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  const sponsors = [];
+  const existingClients = appState.clients || [];
+  const offers = appState.offers || [];
+  
+  // Pattern plus flexible pour les montants : 3-6 chiffres, avec ou sans séparateurs, avec ou sans DA/DZD
+  const amountPattern = /(\d[\d\s,.]{2,8})\s*(?:da|dzd|dz|€|\$)?/i;
+  
+  for (const line of lines) {
+    console.log('Traitement ligne:', line);
+    
+    // Compte les checks (✓, ✔, ☑, et 'W' que Tesseract détecte souvent)
+    let checkCount = 0;
+    const checkChars = ['✓', '✔', '☑', '✗', 'W', 'w', 'V', 'v', 'X', 'x'];
+    for (const char of line) {
+      if (checkChars.includes(char)) {
+        checkCount++;
+      }
+    }
+    
+    // Pas de restriction sur les checks pour l'instant (pour test)
+    
+    // Nettoyer la ligne en enlevant les checks et caractères spéciaux
+    let cleanLine = line;
+    for (const char of checkChars) {
+      cleanLine = cleanLine.split(char).join('');
+    }
+    cleanLine = cleanLine.trim();
+    
+    const amountMatch = cleanLine.match(amountPattern);
+    if (!amountMatch) {
+      console.log('Pas de montant trouvé');
+      continue;
+    }
+    
+    // Extraire le montant : enlever espaces, virgules, points
+    let amountStr = amountMatch[1].replace(/[\s,.]/g, '');
+    const amount = parseInt(amountStr);
+    if (isNaN(amount) || amount < 100) {
+      console.log('Montant invalide:', amountStr);
+      continue;
+    }
+    
+    let name = cleanLine.replace(amountPattern, '').trim();
+    name = name.replace(/[^\p{L}\s\p{N}'-]/gu, '').trim();
+    name = name.replace(/\s+/g, ' ').trim(); // Remplace multiples espaces par un seul
+    
+    if (!name || name.length < 2) {
+      console.log('Nom invalide ou trop court:', name);
+      continue;
+    }
+    
+    // Payé si 2 checks ou plus
+    const paid = checkCount >= 2;
+    
+    // Recherche client améliorée
+    let matchedClient = existingClients.find(c => {
+      if (!c.name) return false;
+      const cName = c.name.toLowerCase().trim();
+      const nName = name.toLowerCase().trim();
+      return cName.includes(nName) || nName.includes(cName);
+    });
+    
+    let matchedOffer = offers.find(o => {
+      if (!o.priceDzd && !o.price) return false;
+      const price = o.priceDzd || o.price;
+      return Math.abs(price - amount) < 100;
+    });
+    
+    if (!matchedOffer && amount > 0) {
+      const similarOffer = offers.find(o => {
+        if (!o.priceDzd && !o.price) return false;
+        const price = o.priceDzd || o.price;
+        return Math.abs(price - amount) < 500;
+      });
+      if (similarOffer) matchedOffer = { ...similarOffer, custom: true };
+    }
+    
+    sponsors.push({
+      name,
+      amount,
+      paid,
+      checkCount,
+      clientId: matchedClient ? matchedClient.id : null,
+      clientFound: !!matchedClient,
+      offerId: matchedOffer ? matchedOffer.id : null,
+      offer: matchedOffer,
+      offerNeeded: !matchedOffer,
+      needsNewClient: !matchedClient,
+      needsNewOffer: !matchedOffer
+    });
+  }
+  
+  console.log('Sponsors trouvés:', sponsors);
+  return sponsors;
+}
+
+function displayOcrResults(sponsors) {
+  const container = document.getElementById('ocrDetectedSponsors');
+  
+  if (sponsors.length === 0) {
+    container.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-search text-4xl mb-3"></i><p>Aucun sponsor détecté</p><p class="text-sm mt-2">Clique sur "Ajouter un sponsor manuellement" pour commencer</p></div>';
+    return;
+  }
+  
+  container.innerHTML = sponsors.map((s, i) => {
+    const statusIcon = s.paid ? 'fa-check-circle text-green-500' : 'fa-clock text-yellow-500';
+    const statusText = s.paid ? 'Payé' : 'Non payé';
+    const clientBadge = s.clientFound ? '<span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">Client existant</span>' : '<span class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">Nouveau client</span>';
+    const offerBadge = s.offerNeeded ? '<span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full">Offre personnalisée</span>' : '';
+    const checksDisplay = s.checkCount ? `<span class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">✓ x${s.checkCount}</span>` : '';
+    
+    return `
+      <div class="p-4 border rounded-2xl ${s.needsNewClient || s.offerNeeded ? 'border-orange-300 bg-orange-50' : 'border-gray-200 bg-gray-50'}">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <i class="fas ${statusIcon}"></i>
+              <span class="font-bold text-gray-800">${s.name}</span>
+              <span class="font-bold text-indigo-600">${s.amount.toLocaleString()} DA</span>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-2">
+              ${clientBadge}
+              ${offerBadge}
+              ${checksDisplay}
+            </div>
+            ${s.needsNewClient ? '<p class="text-xs text-red-600 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Client non trouvé - À créer</p>' : ''}
+            ${s.offerNeeded ? '<p class="text-xs text-orange-600 mt-1"><i class="fas fa-tag mr-1"></i>Offre non reconnue - À configurer</p>' : ''}
+          </div>
+          <div class="flex flex-col items-end gap-2">
+            <span class="text-xs ${s.paid ? 'text-green-600' : 'text-yellow-600'} font-medium">${statusText}</span>
+            <button onclick="deleteSponsorFromList(${i})" class="text-red-500 hover:text-red-700 text-sm">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.deleteSponsorFromList = function(index) {
+  pendingOcrSponsors.splice(index, 1);
+  displayOcrResults(pendingOcrSponsors);
+  showToast('Sponsor supprimé', 'info');
+};
+
+window.resetOcrScanner = function() {
+  document.getElementById('ocrUploadSection').classList.remove('hidden');
+  document.getElementById('ocrPreviewSection').classList.add('hidden');
+  document.getElementById('ocrResultsSection').classList.add('hidden');
+  document.getElementById('ocrFileInput').value = '';
+  document.getElementById('ocrPreviewImage').src = '';
+  pendingOcrSponsors = [];
+};
+
+window.confirmOcrSponsors = async function() {
+  const needsNewClient = pendingOcrSponsors.some(s => s.needsNewClient);
+  const needsNewOffer = pendingOcrSponsors.some(s => s.offerNeeded);
+  
+  if (needsNewClient) {
+    const firstNew = pendingOcrSponsors.find(s => s.needsNewClient);
+    document.getElementById('ocrClientName').value = firstNew.name;
+    document.getElementById('ocrNewClientName').value = firstNew.name;
+    closeModal('ocrScannerModal');
+    openModal('newClientFromOcrModal');
+    return;
+  }
+  
+  if (needsNewOffer) {
+    const firstNewOffer = pendingOcrSponsors.find(s => s.offerNeeded);
+    document.getElementById('ocrOfferIndex').value = pendingOcrSponsors.indexOf(firstNewOffer);
+    document.getElementById('ocrCustomOfferName').value = '';
+    document.getElementById('ocrCustomOfferPrice').value = firstNewOffer.amount;
+    document.getElementById('ocrCustomOfferDuration').value = '';
+    closeModal('ocrScannerModal');
+    openModal('customOfferFromOcrModal');
+    return;
+  }
+  
+  await createOcrSponsorsDirect();
+};
+
+async function createOcrSponsorsDirect() {
+  const today = new Date().toISOString().split('T')[0];
+  const todosToCreate = [];
+  const txToCreate = [];
+  
+  for (const sponsor of pendingOcrSponsors) {
+    if (!sponsor.clientId || !sponsor.offerId) continue;
+    
+    todosToCreate.push({
+      id: generateId('todo'),
+      clientId: sponsor.clientId,
+      offerId: sponsor.offerId,
+      adAccountId: null,
+      date: today,
+      status: sponsor.paid ? 'completed' : 'pending',
+      paid: sponsor.paid,
+      priceDzd: sponsor.amount,
+      notes: 'Créé via scanner carnet',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+    
+    txToCreate.push({
+      id: generateId('tx'),
+      clientId: sponsor.clientId,
+      offerId: sponsor.offerId,
+      adAccountId: null,
+      amount: 1,
+      priceDzd: sponsor.amount,
+      duration: sponsor.offer?.duration || '',
+      date: today,
+      paid: sponsor.paid,
+      offerName: sponsor.offer?.name || 'Offre custom',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+  }
+  
+  if (!appState.todoTransactions) appState.todoTransactions = [];
+  if (!appState.transactions) appState.transactions = [];
+  
+  appState.todoTransactions.push(...todosToCreate);
+  appState.transactions.push(...txToCreate);
+  
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+  
+  showToast(`${pendingOcrSponsors.length} sponsor(s) créé(s) !`, 'success');
+  resetOcrScanner();
+  closeModal('ocrScannerModal');
+}
+
+window.saveClientFromOcr = function() {
+  const clientName = document.getElementById('ocrNewClientName').value.trim();
+  const page = document.getElementById('ocrNewClientPage').value.trim();
+  const whatsapp = document.getElementById('ocrNewClientWhatsapp').value.trim();
+  const city = document.getElementById('ocrNewClientCity').value.trim();
+  const platform = document.getElementById('ocrNewClientPlatform').value;
+  
+  if (!clientName) {
+    showToast('Nom du client requis', 'error');
+    return;
+  }
+  
+  const newClient = {
+    id: generateId('client'),
+    name: clientName,
+    page: page,
+    whatsapp: whatsapp,
+    city: city,
+    platform: platform,
+    paid: 0,
+    unpaid: 0,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  
+  if (!appState.clients) appState.clients = [];
+  appState.clients.push(newClient);
+  
+  const clientIndex = pendingOcrSponsors.findIndex(s => s.name.toLowerCase() === clientName.toLowerCase());
+  if (clientIndex !== -1) {
+    pendingOcrSponsors[clientIndex].clientId = newClient.id;
+    pendingOcrSponsors[clientIndex].clientFound = true;
+    pendingOcrSponsors[clientIndex].needsNewClient = false;
+  }
+  
+  closeModal('newClientFromOcrModal');
+  openModal('ocrScannerModal');
+  displayOcrResults(pendingOcrSponsors);
+  
+  if (typeof autoSave === 'function') autoSave();
+  showToast('Client créé !', 'success');
+  
+  const stillNeedsClient = pendingOcrSponsors.some(s => s.needsNewClient);
+  const stillNeedsOffer = pendingOcrSponsors.some(s => s.offerNeeded);
+  
+  if (!stillNeedsClient && !stillNeedsOffer) {
+    confirmOcrSponsors();
+  } else if (stillNeedsClient) {
+    const nextNew = pendingOcrSponsors.find(s => s.needsNewClient);
+    document.getElementById('ocrClientName').value = nextNew.name;
+    document.getElementById('ocrNewClientName').value = nextNew.name;
+    closeModal('ocrScannerModal');
+    openModal('newClientFromOcrModal');
+  }
+};
+
+window.saveCustomOfferFromOcr = function() {
+  const name = document.getElementById('ocrCustomOfferName').value.trim();
+  const price = parseInt(document.getElementById('ocrCustomOfferPrice').value) || 0;
+  const duration = document.getElementById('ocrCustomOfferDuration').value.trim();
+  const desc = document.getElementById('ocrCustomOfferDesc').value.trim();
+  
+  if (!name || price <= 0) {
+    showToast('Nom et prix de l\'offre requis', 'error');
+    return;
+  }
+  
+  const newOffer = {
+    id: generateId('offer'),
+    name: name,
+    description: desc,
+    priceDzd: price,
+    costPerUnit: 0,
+    duration: duration,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  
+  if (!appState.offers) appState.offers = [];
+  appState.offers.push(newOffer);
+  
+  const offerIdx = parseInt(document.getElementById('ocrOfferIndex').value);
+  if (!isNaN(offerIdx) && pendingOcrSponsors[offerIdx]) {
+    pendingOcrSponsors[offerIdx].offerId = newOffer.id;
+    pendingOcrSponsors[offerIdx].offer = newOffer;
+    pendingOcrSponsors[offerIdx].offerNeeded = false;
+  }
+  
+  for (const sponsor of pendingOcrSponsors) {
+    if (sponsor.offerNeeded && sponsor.amount === price) {
+      sponsor.offerId = newOffer.id;
+      sponsor.offer = newOffer;
+      sponsor.offerNeeded = false;
+      break;
+    }
+  }
+  
+  closeModal('customOfferFromOcrModal');
+  openModal('ocrScannerModal');
+  displayOcrResults(pendingOcrSponsors);
+  
+  if (typeof autoSave === 'function') autoSave();
+  showToast('Offre créée !', 'success');
+  
+  const stillNeedsOffer = pendingOcrSponsors.some(s => s.offerNeeded);
+  if (!stillNeedsOffer) {
+    confirmOcrSponsors();
+  }
+};
+
+window.addManualSponsor = function() {
+  // Réinitialiser les champs
+  document.getElementById('manualSponsorName').value = '';
+  document.getElementById('manualSponsorAmount').value = '';
+  document.getElementById('manualSponsorPaid').checked = false;
+  
+  closeModal('ocrScannerModal');
+  openModal('manualSponsorModal');
+};
+
+window.saveManualSponsor = function() {
+  const name = document.getElementById('manualSponsorName').value.trim();
+  const amount = parseInt(document.getElementById('manualSponsorAmount').value) || 0;
+  const paid = document.getElementById('manualSponsorPaid').checked;
+  
+  if (!name || amount <= 0) {
+    showToast('Nom et montant requis', 'error');
+    return;
+  }
+  
+  const existingClients = appState.clients || [];
+  const offers = appState.offers || [];
+  
+  // Recherche client
+  let matchedClient = existingClients.find(c => {
+    if (!c.name) return false;
+    const cName = c.name.toLowerCase().trim();
+    const nName = name.toLowerCase().trim();
+    return cName.includes(nName) || nName.includes(cName);
+  });
+  
+  // Recherche offre
+  let matchedOffer = offers.find(o => {
+    if (!o.priceDzd && !o.price) return false;
+    const price = o.priceDzd || o.price;
+    return Math.abs(price - amount) < 100;
+  });
+  
+  if (!matchedOffer && amount > 0) {
+    const similarOffer = offers.find(o => {
+      if (!o.priceDzd && !o.price) return false;
+      const price = o.priceDzd || o.price;
+      return Math.abs(price - amount) < 500;
+    });
+    if (similarOffer) matchedOffer = { ...similarOffer, custom: true };
+  }
+  
+  pendingOcrSponsors.push({
+    name,
+    amount,
+    paid,
+    checkCount: paid ? 2 : 1,
+    clientId: matchedClient ? matchedClient.id : null,
+    clientFound: !!matchedClient,
+    offerId: matchedOffer ? matchedOffer.id : null,
+    offer: matchedOffer,
+    offerNeeded: !matchedOffer,
+    needsNewClient: !matchedClient,
+    needsNewOffer: !matchedOffer
+  });
+  
+  closeModal('manualSponsorModal');
+  openModal('ocrScannerModal');
+  displayOcrResults(pendingOcrSponsors);
+  
+  showToast('Sponsor ajouté !', 'success');
+};
+
+// === HANDLERS PERFORMANCE SALARIÉS ===
+window.addEmployeePerformance = function() {
+  const employeeId = document.getElementById('perf-employee').value;
+  const tasks = Number(document.getElementById('perf-tasks').value);
+  const date = document.getElementById('perf-date').value;
+
+  if (!employeeId || tasks <= 0 || !date) {
+    showToast('Veuillez remplir tous les champs', 'error');
+    return;
+  }
+
+  // Add tasks as individual transactions
+  for (let i = 0; i < tasks; i++) {
+    const txEntry = {
+      id: 'tx-emp-' + Date.now() + '-' + i,
+      date: date,
+      employeeId: employeeId,
+      createdAt: Date.now()
+    };
+
+    if (!appState.transactions) appState.transactions = [];
+    appState.transactions.push(txEntry);
+  }
+
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+
+  showToast(tasks + ' tâche(s) ajoutée(s) !', 'success');
+};
+
+window.exportPerformanceCSV = function() {
+  const employees = appState.employees || [];
+  const txs = appState.transactions || [];
+  const config = appState.performanceConfig || {
+    ratePerTask: 1700,
+    fixedCosts: {
+      salary: 40000,
+      internet: 3000,
+      pub: 20000,
+      risque: 15000
+    }
+  };
+
+  function calculPrime(gain) {
+    if (gain >= 350000) return 12000;
+    if (gain >= 250000) return 8000;
+    if (gain >= 150000) return 5000;
+    return 0;
+  }
+
+  // Get counts by employee
+  const counts = {};
+  txs.forEach(tx => {
+    const id = tx.employeeId || 'unassigned';
+    counts[id] = (counts[id] || 0) + 1;
+  });
+
+  const rows = Object.keys(counts).map(id => {
+    const emp = employees.find(e => e.id === id);
+    const tasks = counts[id];
+    const gain = tasks * config.ratePerTask;
+    const share = gain * 0.3;
+    const prime = calculPrime(gain);
+    const net = gain
+      - config.fixedCosts.salary
+      - config.fixedCosts.internet
+      - config.fixedCosts.pub
+      - config.fixedCosts.risque
+      - prime;
+
+    return {
+      name: emp ? emp.name : 'Non attribué',
+      tasks,
+      gain,
+      share,
+      prime,
+      net
+    };
+  }).sort((a, b) => b.gain - a.gain);
+
+  let csv = "Nom,Tâches,Gain Société,Valeur 30%,Prime,Bénéfice Net\n";
+  rows.forEach(p => {
+    csv += `${p.name},${p.tasks},${p.gain},${Math.round(p.share)},${p.prime},${p.net}\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', 'performance_salaries.csv');
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  showToast('Export CSV terminé !', 'success');
+};
+
+
 
