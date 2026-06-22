@@ -127,8 +127,8 @@ function inRangeYmd(ymd, start, end) {
 function startOfWeek(d) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
-  const day = (x.getDay() + 6) % 7;
-  x.setDate(x.getDate() - day);
+  const day = x.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  x.setDate(x.getDate() - day); // subtract day to get to Sunday
   return x;
 }
 

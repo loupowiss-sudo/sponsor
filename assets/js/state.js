@@ -38,6 +38,21 @@ if (!window.appState) {
     expenses: [], recurringExpenses: [], clientRequests: [], usdtExpenses: [],
     todoTransactions: [], adAccounts: [],
     manualBalances: { liquide: 0, baridimob: 0, usdt: 0 },
+    // Nouvelles collections pour la gestion d'entreprise
+    roles: [],
+    employees: [],
+    products: [],
+    employeePayments: [],
+    employeePerformance: [], // Pour enregistrer les données de performance
+    performanceConfig: {
+      ratePerTask: 1700, // Taux par tâche (RATE)
+      fixedCosts: {
+        salary: 40000,
+        internet: 3000,
+        pub: 20000,
+        risque: 15000
+      }
+    }
   };
 }
 

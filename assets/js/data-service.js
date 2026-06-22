@@ -31,7 +31,21 @@ window.normalizeAppState = function() {
     changed = true;
   }
 
-  const collections = ['clients', 'offers', 'transactions', 'todoTransactions', 'payments', 'usdPurchases', 'expenses', 'usdtExpenses', 'recurringExpenses', 'clientRequests', 'employees', 'adAccounts'];
+  const collections = ['clients', 'offers', 'transactions', 'todoTransactions', 'payments', 'usdPurchases', 'expenses', 'usdtExpenses', 'recurringExpenses', 'clientRequests', 'employees', 'adAccounts', 'products', 'employeePayments', 'employeePerformance'];
+  
+  // Initialiser performanceConfig si non existant
+  if (!appState.performanceConfig) {
+    appState.performanceConfig = {
+      ratePerTask: 1700,
+      fixedCosts: {
+        salary: 40000,
+        internet: 3000,
+        pub: 20000,
+        risque: 15000
+      }
+    };
+    changed = true;
+  }
   
   collections.forEach(col => {
     if (!Array.isArray(appState[col])) {

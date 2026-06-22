@@ -6611,6 +6611,7 @@
         if (typeof populateAdAccountSelect === 'function') populateAdAccountSelect();
         if (typeof recalculateFinanceBalances === 'function') recalculateFinanceBalances();
         if (typeof renderTables === 'function') renderTables();
+        if (typeof updateNavButtonsVisibility === 'function') updateNavButtonsVisibility();
         if (typeof renderAdsTable === 'function') renderAdsTable();
         if (typeof renderAdAccountsList === 'function') renderAdAccountsList();
         if (typeof renderAuditLog === 'function') renderAuditLog();
