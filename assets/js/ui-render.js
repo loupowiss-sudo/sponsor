@@ -4,7 +4,41 @@
  * Affiche un onglet spécifique
  * @param {string} tabId 
  */
+// Function to check if employee has access to a tab
+function hasTabAccess(tabId) {
+  // Admin has full access
+  if (!appState.session || appState.session.type !== 'employee') return true;
+  // Employee checks permissions
+  const permissions = appState.session.permissions || {};
+  return permissions[tabId] === true;
+}
+
+// Function to update navigation buttons visibility
+function updateNavButtonsVisibility() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const onclickAttr = btn.getAttribute('onclick');
+    if (!onclickAttr) return;
+    const match = onclickAttr.match(/showTab\('([^']+)'\)/);
+    if (!match) return;
+    const tabId = match[1];
+    if (hasTabAccess(tabId)) {
+      btn.style.display = '';
+    } else {
+      btn.style.display = 'none';
+    }
+  });
+}
+
 window.showTab = function(tabId) {
+  // Check access
+  if (!hasTabAccess(tabId)) {
+    // Find first accessible tab
+    const allTabs = ['dashboard', 'clients', 'history', 'todo', 'offers', 'expenses', 'paiements', 'achats', 'reminders', 'ad-accounts', 'requests', 'performance', 'settings'];
+    const firstAccessible = allTabs.find(t => hasTabAccess(t));
+    if (firstAccessible) tabId = firstAccessible;
+    else return;
+  }
+
   appState.currentTab = tabId;
   
   // Update buttons
@@ -30,6 +64,18 @@ window.renderCurrentTab = function() {
   const container = document.getElementById('tabContentContainer');
   if (!container) return;
 
+  // Check access
+  if (!hasTabAccess(tab)) {
+    const allTabs = ['dashboard', 'clients', 'history', 'todo', 'offers', 'expenses', 'paiements', 'achats', 'reminders', 'ad-accounts', 'requests', 'performance', 'settings'];
+    const firstAccessible = allTabs.find(t => hasTabAccess(t));
+    if (firstAccessible) {
+      appState.currentTab = firstAccessible;
+    } else {
+      container.innerHTML = '<p class="text-center py-8 text-gray-500">Accès refusé</p>';
+      return;
+    }
+  }
+
   // Clear container
   container.innerHTML = '';
 
@@ -46,8 +92,12 @@ window.renderCurrentTab = function() {
     case 'reminders': renderRemindersTable(container); break;
     case 'ad-accounts': renderAdAccountsTable(container); break;
     case 'requests': renderRequests(container); break;
+    case 'performance': renderEmployeePerformance(container); break;
     case 'settings': renderSettingsAdmin(container); break;
   }
+
+  // Update nav visibility
+  updateNavButtonsVisibility();
 };
 
 function getUiState() {
@@ -296,6 +346,44 @@ window.renderDashboard = function(container) {
   
   container.innerHTML = `
     ${alertsHtml}
+    
+    <!-- Absence System -->
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 border dark:border-gray-700 mb-8">
+      <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-3">
+        <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+          <i class="fas fa-user-times text-indigo-600"></i> Absences des employés
+        </h3>
+        <button onclick="openAbsenceHistoryModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-all">
+          <i class="fas fa-history mr-2"></i> Historique
+        </button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        ${employees.filter(e => e.active).map(e => {
+          const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+          const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+          const absence = (appState.absences || []).find(a => a.employeeId === e.id && a.date === todayStr);
+          const isAbsent = !!absence;
+          return `
+            <div class="p-4 border rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+              <div>
+                <div class="font-bold text-gray-800 dark:text-white">${e.name || e.login}</div>
+                <div class="text-xs text-gray-500">${isAbsent ? `Absent (marqué à ${new Date(absence.time).toLocaleTimeString('fr-FR')})` : 'Présent'}</div>
+              </div>
+              <button onclick="${isAbsent ? `removeAbsence('${e.id}')` : `markAbsent('${e.id}')`}" 
+                class="px-4 py-2 rounded-xl font-bold text-xs ${isAbsent ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}">
+                ${isAbsent ? 'Annuler absence' : 'Marquer absent'}
+              </button>
+            </div>
+          `;
+        }).join('')}
+        ${employees.filter(e => e.active).length === 0 ? `
+          <div class="col-span-full text-center py-8 text-gray-500 dark:text-gray-400 italic">
+            Aucun employé actif
+          </div>
+        ` : ''}
+      </div>
+    </div>
+    
     ${isAdmin ? `
     <div class="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-4">
       <div class="text-sm text-gray-500 dark:text-gray-400 font-bold">Soldes</div>
@@ -912,11 +1000,10 @@ window.renderSettingsAdmin = function(container) {
           <div class="p-5 bg-gray-50 rounded-2xl border">
             <div class="font-black text-gray-800 mb-4">Ajouter un employé</div>
             <div class="space-y-3">
-              <div class="hidden">
-                <input id="employeeName" type="text" placeholder="Nom complet" class="w-full p-3 border rounded-xl bg-white">
-              </div>
+              <input id="employeeName" type="text" placeholder="Nom complet" class="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-gray-800 outline-none">
               <input id="employeeLogin" type="text" placeholder="Nom d'utilisateur" class="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-gray-800 outline-none">
               <input id="employeePassword" type="password" placeholder="Mot de passe" class="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-gray-800 outline-none">
+              <input id="employeeSalary" type="number" placeholder="Salaire (DA)" class="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-gray-800 outline-none">
               <div class="hidden">
                 <label class="flex items-center gap-2 text-sm text-gray-700 font-bold">
                   <input id="employeeActive" type="checkbox" checked>
@@ -935,7 +1022,9 @@ window.renderSettingsAdmin = function(container) {
                 <div class="p-4 border rounded-2xl flex flex-col gap-3">
                   <div class="flex items-center justify-between">
                     <div>
-                      <div class="font-bold text-gray-800">${e.login}</div>
+                      <div class="font-bold text-gray-800">${e.name || e.login}</div>
+                      <div class="text-xs text-gray-500">${e.login}</div>
+                      <div class="text-sm text-gray-600 font-semibold">Salaire: ${(e.salary || 0).toLocaleString()} DA</div>
                     </div>
                     <div class="flex items-center gap-2">
                       <button onclick="toggleEmployeeActive('${e.id}')" class="px-3 py-2 rounded-xl text-xs font-black ${e.active === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">
@@ -944,12 +1033,34 @@ window.renderSettingsAdmin = function(container) {
                       <button onclick="deleteEmployee('${e.id}')" class="px-3 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-black hover:bg-gray-200">Supprimer</button>
                     </div>
                   </div>
+                  <!-- Edit Salary -->
+                  <div class="border-t pt-3 mt-1">
+                    <div class="text-xs font-bold text-gray-500 mb-2 uppercase">Modifier le salaire :</div>
+                    <div class="flex gap-2">
+                      <input type="number" id="editSalary-${e.id}" value="${e.salary || 0}" placeholder="Nouveau salaire" class="flex-1 p-2 border rounded-xl bg-gray-50">
+                      <button onclick="updateEmployeeSalary('${e.id}')" class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl">Mettre à jour</button>
+                    </div>
+                  </div>
                   <!-- Permissions -->
                   <div class="border-t pt-3 mt-1">
                     <div class="text-xs font-bold text-gray-500 mb-2 uppercase">Permissions d'Accès :</div>
                     <div class="flex flex-wrap gap-3">
-                      ${['expenses', 'paiements', 'achats'].map(tab => {
-                        const labels = { expenses: 'Frais', paiements: 'Paiements', achats: 'Achats USD' };
+                      ${['dashboard', 'clients', 'history', 'todo', 'offers', 'expenses', 'paiements', 'achats', 'reminders', 'ad-accounts', 'requests', 'performance', 'employees'].map(tab => {
+                        const labels = { 
+                          dashboard: 'Dashboard', 
+                          clients: 'Clients', 
+                          history: 'Historique', 
+                          todo: 'Nouvelle To-Do', 
+                          offers: 'Offres', 
+                          expenses: 'Frais', 
+                          paiements: 'Paiements', 
+                          achats: 'Achats USD', 
+                          reminders: 'Dettes/Relances', 
+                          'ad-accounts': 'Comptes Pub', 
+                          requests: 'Demandes',
+                          performance: 'Performance Salariés',
+                          employees: 'Employés'
+                        };
                         const isChecked = e.permissions && e.permissions[tab] === true;
                         return "<label class='flex items-center gap-1 text-sm font-semibold text-gray-700 cursor-pointer'>" +
                                "<input type='checkbox' " + (isChecked ? "checked" : "") + " onchange='updateEmployeePermission(\"" + e.id + "\", \"" + tab + "\", this.checked)' class='rounded text-gray-900 focus:ring-gray-900'> " +
@@ -1408,6 +1519,9 @@ window.renderNewTodoForm = function(container) {
           <button type="button" onclick="handleNewTodoSubmit('direct', event)" class="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-500 text-white font-black rounded-2xl shadow-lg hover:shadow-green-200 transition-all flex items-center justify-center gap-3">
             <i class="fas fa-rocket"></i> Sponsor Direct
           </button>
+          <button type="button" onclick="openModal('ocrScannerModal')" class="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-500 text-white font-black rounded-2xl shadow-lg hover:shadow-purple-200 transition-all flex items-center justify-center gap-3">
+            <i class="fas fa-camera"></i> Scanner Carnet
+          </button>
         </div>
       </form>
     </div>
@@ -1797,4 +1911,492 @@ window.updateTodoBadge = function() {
   } else {
     badge.classList.add('hidden');
   }
+};
+
+// === FONCTIONS PERFORMANCE SALARIÉS ===
+window.renderEmployeePerformance = function(container) {
+  const employees = appState.employees || [];
+  const txs = appState.transactions || [];
+  const config = appState.performanceConfig || {
+    ratePerTask: 1700,
+    fixedCosts: {
+      salary: 40000,
+      internet: 3000,
+      pub: 20000,
+      risque: 15000
+    }
+  };
+
+  function calculPrime(gain) {
+    if (gain >= 350000) return 12000;
+    if (gain >= 250000) return 8000;
+    if (gain >= 150000) return 5000;
+    return 0;
+  }
+
+  function toYmd(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  
+  const now = new Date();
+  const algeriaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+  const today = new Date(algeriaTime);
+  today.setHours(0,0,0,0);
+  
+  // Initialize UI state
+  const ui = appState.ui?.performance || {
+    startDate: toYmd(new Date(today.getFullYear(), today.getMonth(), 1)),
+    endDate: toYmd(today)
+  };
+  appState.ui = appState.ui || {};
+  appState.ui.performance = ui;
+
+  // Helper to count tasks for a date range
+  function countTasksInRange(fromYmd, toYmd) {
+    const counts = {};
+    const from = parseYmd(fromYmd);
+    const to = parseYmd(toYmd);
+    if (!from || !to) return counts;
+    
+    txs.forEach(t => {
+      if (!t || !t.date) return;
+      if (!inRangeYmd(t.date, from, to)) return;
+      const id = t.employeeId || 'unassigned';
+      counts[id] = (counts[id] || 0) + 1;
+    });
+    return counts;
+  }
+
+  // Get weekly, monthly, yearly counts for all employees
+  function getEmployeeStats(id, startYmd, endYmd) {
+    // Today's count
+    const todayStr = toYmd(today);
+    const todayCounts = countTasksInRange(todayStr, todayStr);
+    
+    // Yesterday
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = toYmd(yesterday);
+    const yesterdayCounts = countTasksInRange(yesterdayStr, yesterdayStr);
+    
+    // This week (Sunday to today)
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday start
+    const weekStartStr = toYmd(weekStart);
+    const weekCounts = countTasksInRange(weekStartStr, todayStr);
+    
+    // This month
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthStartStr = toYmd(monthStart);
+    const monthCounts = countTasksInRange(monthStartStr, todayStr);
+    
+    // Selected range
+    const rangeCounts = countTasksInRange(startYmd, endYmd);
+    
+    return {
+      today: todayCounts[id] || 0,
+      yesterday: yesterdayCounts[id] || 0,
+      week: weekCounts[id] || 0,
+      month: monthCounts[id] || 0,
+      range: rangeCounts[id] || 0
+    };
+  }
+
+  // Get monthly history for charts
+  const monthlyHistory = [];
+  for(let i = 0; i < 12; i++) {
+    const monthDate = new Date(today);
+    monthDate.setMonth(today.getMonth() - i);
+    const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+    const ymdFrom = toYmd(monthStart);
+    const ymdTo = toYmd(monthEnd);
+    const monthCounts = countTasksInRange(ymdFrom, ymdTo);
+    
+    const monthData = {
+      month: `${monthDate.getFullYear()}-${String(monthDate.getMonth()+1).padStart(2,'0')}`,
+      label: monthDate.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }),
+      counts: {}
+    };
+    
+    const ids = new Set();
+    employees.forEach(e => ids.add(e.id));
+    Object.keys(monthCounts).forEach(k => ids.add(k));
+    
+    ids.forEach(id => {
+      monthData.counts[id] = monthCounts[id] || 0;
+    });
+    
+    monthlyHistory.unshift(monthData); // Add to beginning to get ascending order
+  }
+
+  // Get all employees
+  const allIds = new Set();
+  employees.forEach(e => allIds.add(e.id));
+  // Also include unassigned
+  allIds.add('unassigned');
+
+  // Build the table rows
+  const rows = Array.from(allIds).map(id => {
+    const emp = employees.find(e => e.id === id);
+    const stats = getEmployeeStats(id, ui.startDate, ui.endDate);
+    const tasks = stats.range;
+    const gain = tasks * config.ratePerTask;
+    const share = gain * 0.3;
+    const prime = calculPrime(gain);
+    const net = gain
+      - config.fixedCosts.salary
+      - config.fixedCosts.internet
+      - config.fixedCosts.pub
+      - config.fixedCosts.risque
+      - prime;
+    
+    return {
+      id,
+      name: emp ? emp.name : (id === 'unassigned' ? 'Non attribué' : id),
+      today: stats.today,
+      yesterday: stats.yesterday,
+      week: stats.week,
+      month: stats.month,
+      range: stats.range,
+      gain,
+      share,
+      prime,
+      net
+    };
+  }).sort((a, b) => (b.range - a.range) || (b.month - a.month) || (b.week - a.week) || String(a.name || '').localeCompare(String(b.name || '')));
+
+  let totalEmployees = rows.length;
+  let totalGain = 0;
+  let totalShare = 0;
+  let totalPrime = 0;
+  let totalNet = 0;
+  
+  rows.forEach(r => {
+    totalGain += r.gain;
+    totalShare += r.share;
+    totalPrime += r.prime;
+    totalNet += r.net;
+  });
+
+  container.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 border dark:border-gray-700 fade-in mb-8">
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">Ajouter une tâche</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <select id="perf-employee" class="p-4 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white">
+          <option value="">-- Choisir un salarié --</option>
+          ${employees.map(emp => `<option value="${emp.id}">${emp.name}</option>`).join('')}
+        </select>
+        <input type="number" id="perf-tasks" placeholder="Nombre de tâches" value="1" class="p-4 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white">
+        <input type="date" id="perf-date" value="${toYmd(today)}" class="p-4 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white">
+      </div>
+      
+      <button onclick="addEmployeePerformance()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all">
+        Ajouter la tâche
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 border dark:border-gray-700 mb-8">
+      <h3 class="text-xl font-bold mb-6 flex items-center gap-2 dark:text-white">
+        <i class="fas fa-filter text-indigo-500"></i>Filtrer les données
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Date de début</label>
+          <input type="date" id="perf-start" value="${ui.startDate}" class="w-full p-4 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white">
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Date de fin</label>
+          <input type="date" id="perf-end" value="${ui.endDate}" class="w-full p-4 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 dark:text-white">
+        </div>
+        <div class="md:col-span-2 flex gap-2">
+          <button onclick="perfFilter('today')" class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold rounded-xl transition-all">Aujourd'hui</button>
+          <button onclick="perfFilter('week')" class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold rounded-xl transition-all">Cette semaine</button>
+          <button onclick="perfFilter('month')" class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold rounded-xl transition-all">Ce mois</button>
+          <button onclick="perfFilter('year')" class="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold rounded-xl transition-all">Cette année</button>
+        </div>
+      </div>
+      <button onclick="applyPerfFilter()" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all">
+        Appliquer le filtre
+      </button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border dark:border-gray-700">
+        <p class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Total Salariés</p>
+        <p class="text-2xl font-bold text-gray-800 dark:text-white">${totalEmployees}</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border dark:border-gray-700">
+        <p class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Gain Société</p>
+        <p class="text-2xl font-bold text-gray-800 dark:text-white">${totalGain.toLocaleString()} DA</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border dark:border-gray-700">
+        <p class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Valeur 30%</p>
+        <p class="text-2xl font-bold text-gray-800 dark:text-white">${Math.round(totalShare).toLocaleString()} DA</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border dark:border-gray-700">
+        <p class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Total Primes</p>
+        <p class="text-2xl font-bold text-gray-800 dark:text-white">${totalPrime.toLocaleString()} DA</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border dark:border-gray-700">
+        <p class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Bénéfice Net</p>
+        <p class="text-2xl font-bold text-gray-800 dark:text-white">${totalNet.toLocaleString()} DA</p>
+      </div>
+    </div>
+
+    <!-- Monthly Chart -->
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 border dark:border-gray-700 mb-8">
+      <h3 class="text-xl font-bold mb-6 flex items-center gap-2 dark:text-white">
+        <i class="fas fa-chart-bar text-indigo-500"></i>Performance Mensuelle (12 derniers mois)
+      </h3>
+      <div class="h-64">
+        <canvas id="employeePerformanceChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Employee Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 border dark:border-gray-700">
+      <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-3">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Classement Salariés</h2>
+        <button onclick="exportPerformanceCSV()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-all">
+          <i class="fas fa-download mr-2"></i>Exporter CSV
+        </button>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-gray-100 dark:bg-gray-700">
+              <th class="p-4 text-left rounded-tl-xl font-bold text-gray-700 dark:text-white">Nom</th>
+              <th class="p-4 text-center font-bold text-gray-700 dark:text-white">Aujourd'hui</th>
+              <th class="p-4 text-center font-bold text-gray-700 dark:text-white">Hier</th>
+              <th class="p-4 text-center font-bold text-gray-700 dark:text-white">Cette Semaine</th>
+              <th class="p-4 text-center font-bold text-gray-700 dark:text-white">Ce Mois</th>
+              <th class="p-4 text-center font-bold text-gray-700 dark:text-white">Période</th>
+              <th class="p-4 text-center font-bold text-gray-700 dark:text-white">Gain</th>
+              <th class="p-4 text-center font-bold text-gray-700 dark:text-white">30%</th>
+              <th class="p-4 text-center font-bold text-gray-700 dark:text-white">Prime</th>
+              <th class="p-4 text-center rounded-tr-xl font-bold text-gray-700 dark:text-white">Net</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y dark:divide-gray-700">
+            ${rows.length === 0 ? `
+              <tr>
+                <td colspan="10" class="text-center p-12 text-gray-500 dark:text-gray-400 italic">Aucune performance enregistrée</td>
+              </tr>
+            ` : rows.map(r => `
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td class="p-4 font-medium text-gray-800 dark:text-white">${r.name}</td>
+                <td class="p-4 text-center text-indigo-600 font-bold">${r.today}</td>
+                <td class="p-4 text-center text-indigo-600 font-bold">${r.yesterday}</td>
+                <td class="p-4 text-center text-indigo-600 font-bold">${r.week}</td>
+                <td class="p-4 text-center text-indigo-600 font-bold">${r.month}</td>
+                <td class="p-4 text-center text-green-600 font-bold">${r.range}</td>
+                <td class="p-4 text-center text-gray-700 dark:text-gray-300">${r.gain.toLocaleString()} DA</td>
+                <td class="p-4 text-center text-gray-700 dark:text-gray-300">${Math.round(r.share).toLocaleString()} DA</td>
+                <td class="p-4 text-center text-gray-700 dark:text-gray-300">${r.prime.toLocaleString()} DA</td>
+                <td class="p-4 text-center text-gray-700 dark:text-gray-300">${r.net.toLocaleString()} DA</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Employee Payments -->
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 border dark:border-gray-700">
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">Gestion des paiements des salariés</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        ${employees.filter(e => e.active).map(emp => {
+          const empPayments = (appState.employeePayments || []).filter(p => p.employeeId === emp.id);
+          const totalPaid = empPayments.filter(p => p.paid).reduce((sum, p) => sum + Number(p.amount), 0);
+          
+          // Calculate for current month (from selected range)
+          const fromDate = parseYmd(ui.startDate);
+          const toDate = parseYmd(ui.endDate);
+          const monthStart = new Date(fromDate.getFullYear(), fromDate.getMonth(), 1);
+          const monthEnd = new Date(toDate.getFullYear(), toDate.getMonth() + 1, 0);
+          const fromStr = toYmd(monthStart);
+          const toStr = toYmd(monthEnd);
+          
+          // Get absences in that month
+          const monthAbsences = (appState.absences || []).filter(a => 
+            a.employeeId === emp.id && a.date >= fromStr && a.date <= toStr
+          );
+          
+          // Calculate prime for that month
+          const empStats = getEmployeeStats(emp.id, fromStr, toStr);
+          const tasksInMonth = empStats.range;
+          const gain = tasksInMonth * (config.ratePerTask || 1700);
+          const prime = calculPrime(gain);
+          
+          // Calculate adjusted salary
+          const baseSalary = emp.salary || 0;
+          const dailySalary = baseSalary / 30; // Assume 30-day month
+          const absenceDeduction = dailySalary * monthAbsences.length;
+          const adjustedSalary = Math.max(0, baseSalary + prime - absenceDeduction);
+          
+          const totalDue = Math.max(0, adjustedSalary - totalPaid);
+          
+          return `
+            <div class="p-4 border rounded-2xl bg-gray-50 dark:bg-gray-700">
+              <div class="flex justify-between items-start mb-4">
+                <div>
+                  <h4 class="font-bold text-gray-800 dark:text-white">${emp.name || emp.login}</h4>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">Salaire: ${(baseSalary).toLocaleString()} DA</p>
+                </div>
+                <button onclick="openAddPaymentModal('${emp.id}')" class="px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700">
+                  Ajouter paiement
+                </button>
+              </div>
+              
+              <!-- Salary breakdown -->
+              <div class="bg-white dark:bg-gray-900 p-3 rounded-xl mb-4 border">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Détail du mois:</p>
+                <div class="space-y-1 text-sm">
+                  <div class="flex justify-between text-gray-700 dark:text-gray-300">
+                    <span>Salaire de base</span>
+                    <span>${baseSalary.toLocaleString()} DA</span>
+                  </div>
+                  <div class="flex justify-between text-green-700 dark:text-green-400">
+                    <span>Prime</span>
+                    <span>+${prime.toLocaleString()} DA</span>
+                  </div>
+                  <div class="flex justify-between text-red-700 dark:text-red-400">
+                    <span>Absences (${monthAbsences.length}j)</span>
+                    <span>-${Math.round(absenceDeduction).toLocaleString()} DA</span>
+                  </div>
+                  <div class="border-t border-gray-200 dark:border-gray-700 pt-1 mt-1 flex justify-between font-bold text-gray-800 dark:text-white">
+                    <span>Total à payer</span>
+                    <span>${Math.round(adjustedSalary).toLocaleString()} DA</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-green-100 dark:bg-green-900/30 p-3 rounded-xl">
+                  <p class="text-xs text-green-700 dark:text-green-400 font-bold">Payé</p>
+                  <p class="text-lg font-black text-green-800 dark:text-green-300">${totalPaid.toLocaleString()} DA</p>
+                </div>
+                <div class="bg-red-100 dark:bg-red-900/30 p-3 rounded-xl">
+                  <p class="text-xs text-red-700 dark:text-red-400 font-bold">Restant</p>
+                  <p class="text-lg font-black text-red-800 dark:text-red-300">${Math.round(totalDue).toLocaleString()} DA</p>
+                </div>
+              </div>
+              
+              <div class="space-y-2 max-h-40 overflow-y-auto">
+                ${empPayments.length === 0 ? `
+                  <p class="text-sm text-gray-500 italic">Aucun paiement enregistré</p>
+                ` : empPayments.slice().reverse().map(p => `
+                  <div class="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded-xl border">
+                    <div>
+                      <p class="text-sm font-bold text-gray-800 dark:text-white">${p.description || 'Paiement'}</p>
+                      <p class="text-xs text-gray-500">${p.date}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-bold ${p.paid ? 'text-green-600' : 'text-red-600'}">${Number(p.amount).toLocaleString()} DA</span>
+                      <button onclick="togglePaymentStatus('${p.id}')" class="px-2 py-1 text-xs font-bold rounded-lg ${p.paid ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}">
+                        ${p.paid ? 'Payé ✓' : 'Non payé'}
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }).join('')}
+        ${employees.filter(e => e.active).length === 0 ? `
+          <div class="col-span-full text-center py-8 text-gray-500 dark:text-gray-400 italic">Aucun employé actif</div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  // Render the chart
+  if (typeof Chart !== 'undefined') {
+    const ctx = document.getElementById('employeePerformanceChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: monthlyHistory.map(m => m.label),
+        datasets: employees.slice(0, 5).map((emp, i) => {
+          const colors = [
+            { bg: 'rgba(99, 102, 241, 0.7)', border: 'rgb(99, 102, 241)' },
+            { bg: 'rgba(16, 185, 129, 0.7)', border: 'rgb(16, 185, 129)' },
+            { bg: 'rgba(245, 158, 11, 0.7)', border: 'rgb(245, 158, 11)' },
+            { bg: 'rgba(239, 68, 68, 0.7)', border: 'rgb(239, 68, 68)' },
+            { bg: 'rgba(139, 92, 246, 0.7)', border: 'rgb(139, 92, 246)' }
+          ];
+          return {
+            label: emp.name,
+            data: monthlyHistory.map(m => m.counts[emp.id] || 0),
+            backgroundColor: colors[i].bg,
+            borderColor: colors[i].border,
+            borderWidth: 1
+          };
+        })
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+};
+
+// Helper functions for filter buttons
+window.perfFilter = function(period) {
+  const toYmd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const now = new Date();
+  const algeriaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+  const today = new Date(algeriaTime);
+  today.setHours(0,0,0,0);
+  let start, end;
+  
+  if (period === 'today') {
+    start = toYmd(today);
+    end = start;
+  } else if (period === 'week') {
+    start = new Date(today);
+    start.setDate(start.getDate() - start.getDay()); // Sunday
+    end = toYmd(today);
+    start = toYmd(start);
+  } else if (period === 'month') {
+    start = new Date(today.getFullYear(), today.getMonth(), 1);
+    end = toYmd(today);
+    start = toYmd(start);
+  } else if (period === 'year') {
+    start = new Date(today.getFullYear(), 0, 1);
+    end = toYmd(today);
+    start = toYmd(start);
+  }
+  
+  if (document.getElementById('perf-start')) {
+    document.getElementById('perf-start').value = start;
+  }
+  if (document.getElementById('perf-end')) {
+    document.getElementById('perf-end').value = end;
+  }
+  
+  if (appState.ui?.performance) {
+    appState.ui.performance.startDate = start;
+    appState.ui.performance.endDate = end;
+  }
+};
+
+window.applyPerfFilter = function() {
+  const start = document.getElementById('perf-start')?.value;
+  const end = document.getElementById('perf-end')?.value;
+  if (start && end && appState.ui?.performance) {
+    appState.ui.performance.startDate = start;
+    appState.ui.performance.endDate = end;
+  }
+  renderCurrentTab();
 };
