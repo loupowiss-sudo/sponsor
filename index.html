@@ -1,972 +1,1195 @@
-<!DOCTYPE html>
-<html lang="fr">
+<!DOCTYPE html> 
+<html lang="fr"> 
+<head> 
+  <meta charset="UTF-8"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>Sponsoring Manager PRO</title> 
+  <script src="https://cdn.tailwindcss.com"></script> 
+  <style> 
+    /* Animations pour les cards et boutons */ 
+    .fade-in { animation: fadeIn 0.8s ease forwards; opacity: 0; } 
+    @keyframes fadeIn { to { opacity: 1; } } 
+    .hover-scale:hover { transform: scale(1.05); transition: transform 0.3s; } 
+    .active-tab { @apply bg-blue-600 text-white; }
+    /* Hide scrollbar for clean look */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+  </style> 
+</head> 
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen p-6 font-sans text-slate-800"> 
+  <div class="max-w-7xl mx-auto space-y-6"> 
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hichem Sponsor - CRM PRO</title>
-  
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#4f46e5">
-  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3233/3233483.png">
+    <!-- HEADER --> 
+    <header class="bg-white rounded-3xl shadow-2xl p-8 border fade-in"> 
+      <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4"> 
+        <div> 
+          <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2"> 
+            💰 Sponsoring Manager PRO 
+          </h1> 
+          <p class="text-lg md:text-xl text-gray-600">Gestion clients • Offres • Transactions • Paiements • Achats USD • Employés • Produits</p> 
+        </div> 
+        <div class="flex gap-3 flex-wrap"> 
+          <button onclick="exportPDF()" class="px-6 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 hover-scale transition-all shadow">📄 Export PDF</button> 
+          <button onclick="backupData()" class="px-6 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 hover-scale transition-all shadow">💾 Backup JSON</button> 
+          <button onclick="importData()" class="px-6 py-3 bg-gray-500 text-white font-bold rounded-xl hover:bg-gray-600 hover-scale transition-all shadow">📂 Import JSON</button>
+          <button onclick="showStats()" class="px-6 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 hover-scale transition-all shadow">📊 Statistiques</button> 
+        </div> 
+      </div> 
+    </header> 
 
-  <!-- External Libraries -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap"
-    rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- NAV TABS --> 
+    <nav class="bg-white rounded-3xl shadow-xl p-6 border mb-6 fade-in" style="animation-delay: 0.1s;"> 
+      <div class="flex flex-wrap -mx-2"> 
+        <button onclick="showTab('dashboard')" id="tab-dashboard" class="tab-btn m-1 px-6 py-3 font-bold bg-blue-600 text-white rounded-2xl shadow hover-scale">📊 Dashboard</button> 
+        <button onclick="showTab('clients')" id="tab-clients" class="tab-btn m-1 px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-blue-100 rounded-xl transition-all hover-scale">👥 Clients</button> 
+        <button onclick="showTab('transactions')" id="tab-transactions" class="tab-btn m-1 px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-green-100 rounded-xl transition-all hover-scale">💸 Transactions</button> 
+        <button onclick="showTab('offers')" id="tab-offers" class="tab-btn m-1 px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-purple-100 rounded-xl transition-all hover-scale">🎁 Offres</button> 
+        <button onclick="showTab('paiements')" id="tab-paiements" class="tab-btn m-1 px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-orange-100 rounded-xl transition-all hover-scale">💳 Paiements</button> 
+        <button onclick="showTab('achats')" id="tab-achats" class="tab-btn m-1 px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-teal-100 rounded-xl transition-all hover-scale">💵 Achats USD</button> 
+        <button onclick="showTab('employees')" id="tab-employees" class="tab-btn m-1 px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-yellow-100 rounded-xl transition-all hover-scale">👨‍💼 Employés</button> 
+        <button onclick="showTab('products')" id="tab-products" class="tab-btn m-1 px-6 py-3 font-semibold text-gray-700 bg-gray-100 hover:bg-indigo-100 rounded-xl transition-all hover-scale">📦 Produits</button> 
+      </div> 
+    </nav> 
 
-  <!-- Firebase compat SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    <!-- DASHBOARD TAB --> 
+    <section id="dashboard" class="tab-content fade-in" style="animation-delay: 0.2s;"> 
+      <!-- STATS CARDS --> 
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"> 
+        <div class="bg-gradient-to-br from-emerald-500 to-green-600 text-white p-6 rounded-2xl shadow-xl hover-scale"> 
+          <p class="text-sm opacity-90 mb-2">Profit Aujourd'hui</p> 
+          <p id="todayProfit" class="text-3xl font-black">0 DZD</p> 
+        </div> 
+        <div class="bg-gradient-to-br from-blue-500 to-cyan-600 text-white p-6 rounded-2xl shadow-xl hover-scale"> 
+          <p class="text-sm opacity-90 mb-2">Profit Semaine</p> 
+          <p id="weekProfit" class="text-3xl font-black">0 DZD</p> 
+        </div> 
+        <div class="bg-gradient-to-br from-purple-500 to-pink-600 text-white p-6 rounded-2xl shadow-xl hover-scale"> 
+          <p class="text-sm opacity-90 mb-2">Profit Total</p> 
+          <p id="totalProfit" class="text-3xl font-black">0 DZD</p> 
+        </div> 
+        <div class="bg-gradient-to-br from-orange-500 to-red-600 text-white p-6 rounded-2xl shadow-xl hover-scale"> 
+          <p class="text-sm opacity-90 mb-2">Total Clients</p> 
+          <p id="totalClients" class="text-3xl font-black">0</p> 
+        </div> 
+      </div> 
 
-  <!-- Custom Assets -->
-  <link rel="stylesheet" href="assets/css/style.css">
-</head>
-
-<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen p-4 md:p-6 font-sans text-slate-800">
-
-  <!-- LOGIN CONTAINER -->
-  <div id="loginContainer" class="min-h-screen flex items-center justify-center">
-    <div class="bg-white shadow-2xl rounded-3xl p-8 max-w-md w-full border">
-      <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center gap-3 mb-2">
-          <div
-            class="w-12 h-12 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center shadow">
-            <i class="fas fa-bullhorn text-white text-2xl"></i>
-          </div>
-          <div class="text-2xl font-black tracking-wide text-gray-800">Sponsor hichem</div>
-        </div>
-        <p class="text-gray-600 text-sm">Bienvenue sur votre plateforme de sponsoring.</p>
-      </div>
-      <button onclick="showClientSpace()" type="button"
-        class="w-full mb-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow hover:shadow-lg transition-all flex items-center justify-center gap-2">
-        <i class="fas fa-user-tag"></i>
-        Espace Client (Accès Libre)
-      </button>
-      <h2 class="text-lg font-bold mb-3 text-center text-gray-800">
-        Connexion Admin/Employé
-      </h2>
-      <div class="space-y-4">
-        <div>
-          <label for="loginEmail" class="block text-sm font-semibold mb-2">Email</label>
-          <input id="loginEmail" type="email"
-            class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-        </div>
-        <div>
-          <label for="loginPassword" class="block text-sm font-semibold mb-2">Mot de passe</label>
-          <input id="loginPassword" type="password"
-            class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-        </div>
-        <div id="loginError" class="text-red-600 text-sm"></div>
-
-        <button id="loginButton" type="button" onclick="handleLoginClick()"
-          class="w-full mt-2 py-3 bg-gray-900 text-white font-bold rounded-xl shadow hover:shadow-lg transition-all">
-          Se connecter
-        </button>
-        <div class="relative flex py-5 items-center">
-          <div class="flex-grow border-t border-gray-300"></div>
-          <span class="flex-shrink-0 mx-4 text-gray-400">Ou</span>
-          <div class="flex-grow border-t border-gray-300"></div>
-        </div>
-        <div class="bg-gray-50 border rounded-2xl p-4 space-y-3">
-          <div class="text-center font-bold text-gray-800">Créer un compte Client</div>
-          <input id="signupClientName" type="text" placeholder="Nom complet" class="w-full p-3 border rounded-xl">
-          <input id="signupClientUsername" type="text" placeholder="Nom d'utilisateur"
-            class="w-full p-3 border rounded-xl">
-          <input id="signupClientPhone" type="text" placeholder="Téléphone" class="w-full p-3 border rounded-xl">
-          <input id="signupClientEmail" type="email" placeholder="Email (optionnel)"
-            class="w-full p-3 border rounded-xl">
-          <input id="signupClientPassword" type="password" placeholder="Mot de passe"
-            class="w-full p-3 border rounded-xl">
-          <button type="button" onclick="signupClient()"
-            class="w-full py-3 bg-green-600 text-white font-bold rounded-xl shadow hover:bg-green-700 transition-all">
-            Créer mon compte
-          </button>
-        </div>
-        <div class="bg-gray-50 border rounded-2xl p-4 space-y-3 mt-3">
-          <div class="text-center font-bold text-gray-800">Connexion Client</div>
-          <input id="clientQuickId" type="text" placeholder="Téléphone ou Nom d'utilisateur ou Email"
-            class="w-full p-3 border rounded-xl">
-          <button type="button" onclick="loginClientQuick()"
-            class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl shadow hover:bg-blue-700 transition-all">
-            Se connecter
-          </button>
-        </div>
-        <button onclick="showClientSpace()" type="button"
-          class="w-full py-3 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-xl shadow hover:bg-blue-50 transition-all flex items-center justify-center gap-2">
-          <i class="fas fa-user-tag"></i>
-          Espace Client (Accès Libre)
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- CLIENT SPACE CONTAINER -->
-  <div id="clientSpaceContainer" class="min-h-screen p-4 md:p-6" style="display:none;">
-    <div class="max-w-7xl mx-auto space-y-6">
-      <!-- Header Client -->
-      <header
-        class="bg-white rounded-3xl shadow-2xl p-6 border flex flex-col md:flex-row justify-between items-center gap-4 fade-in">
-        <div class="flex items-center gap-3">
-          <div
-            class="w-12 h-12 bg-gradient-to-r from-teal-500 to-emerald-600 rounded-2xl flex items-center justify-center">
-            <i class="fas fa-store text-white text-2xl"></i>
-          </div>
-          <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-gray-800" data-i18n="client_title">Espace Client</h1>
-            <p class="text-gray-600" data-i18n="client_subtitle">Bienvenue dans votre espace dédié</p>
-          </div>
-        </div>
-        <button onclick="logoutClient()"
-          class="px-6 py-2 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-all">
-          <i class="fas fa-sign-out-alt mr-2"></i> <span>Se déconnecter</span>
-        </button>
-      </header>
-
-      <!-- Navigation Client -->
-      <nav class="bg-white rounded-3xl shadow-xl p-4 border fade-in">
-        <div class="flex flex-wrap gap-2 justify-center md:justify-start">
-          <button onclick="showClientTab('client-infos')"
-            class="client-tab-btn px-4 py-2 rounded-xl font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all active-client-tab"
-            data-tab="client-infos">
-            <i class="fas fa-info-circle mr-2"></i> <span data-i18n="nav_info">Informations</span>
-          </button>
-          <button onclick="showClientTab('client-offres')"
-            class="client-tab-btn px-4 py-2 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all"
-            data-tab="client-offres">
-            <i class="fas fa-tags mr-2"></i> <span data-i18n="nav_offers">Nos Offres</span>
-          </button>
-          <button onclick="showClientTab('client-method')"
-            class="client-tab-btn px-4 py-2 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all"
-            data-tab="client-method">
-            <i class="fas fa-cogs mr-2"></i> <span data-i18n="nav_method">Méthode de travail</span>
-          </button>
-          <button onclick="showClientTab('client-payment')"
-            class="client-tab-btn px-4 py-2 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all"
-            data-tab="client-payment">
-            <i class="fas fa-wallet mr-2"></i> <span data-i18n="nav_payment">Paiement</span>
-          </button>
-          <button onclick="showClientTab('client-order')"
-            class="client-tab-btn px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow hover:shadow-lg transition-all"
-            data-tab="client-order">
-            <i class="fas fa-shopping-cart mr-2"></i> <span data-i18n="nav_order">Commander un Sponsor</span>
-          </button>
-          <button onclick="showClientTab('client-requests')"
-            class="client-tab-btn px-4 py-2 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all"
-            data-tab="client-requests">
-            <i class="fas fa-inbox mr-2"></i> Mes Demandes
-          </button>
-          <button onclick="showClientTab('client-custom')"
-            class="client-tab-btn px-4 py-2 rounded-xl font-semibold text-gray-600 hover:bg-gray-100 transition-all"
-            data-tab="client-custom">
-            <i class="fas fa-star mr-2"></i> <span id="clientCustomTabTitle" data-i18n="nav_custom">Nos
-              Réalisations</span>
-          </button>
-        </div>
-      </nav>
-
-      <!-- Client Content Sections -->
-      <div class="bg-white rounded-3xl shadow-2xl p-6 md:p-8 border min-h-[400px] fade-in relative">
-
-        <!-- INFO SECTION -->
-        <div id="client-infos" class="client-tab-content">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800" data-i18n="info_title">Informations Générales</h2>
-          <p class="text-gray-600 leading-relaxed" data-i18n="info_desc">
-            Bienvenue sur notre plateforme de sponsoring. Ici, vous pouvez consulter nos offres, comprendre notre
-            fonctionnement et passer commande directement sans avoir besoin de créer un compte.
-          </p>
-          <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="p-4 bg-white rounded-xl border">
-              <div class="font-bold mb-3">Mon compte</div>
-              <div class="space-y-2">
-                <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-sm text-gray-600">Nom</div>
-                  <input id="clientAccName" type="text" class="col-span-2 p-2 border rounded-lg">
-                </div>
-                <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-sm text-gray-600">Utilisateur</div>
-                  <input id="clientAccUser" type="text" class="col-span-2 p-2 border rounded-lg">
-                </div>
-                <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-sm text-gray-600">Téléphone</div>
-                  <input id="clientAccPhone" type="text" class="col-span-2 p-2 border rounded-lg">
-                </div>
-                <div class="grid grid-cols-3 gap-2 items-center">
-                  <div class="text-sm text-gray-600">Email</div>
-                  <input id="clientAccEmail" type="email" class="col-span-2 p-2 border rounded-lg">
-                </div>
-                <div class="flex justify-end">
-                  <button onclick="saveClientIdentifiers()"
-                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Enregistrer</button>
-                </div>
-              </div>
-            </div>
-            <div class="p-4 bg-white rounded-xl border">
-              <div class="font-bold mb-3">Réseaux sociaux</div>
-              <div class="space-y-3">
-                <div>
-                  <div class="text-sm text-gray-600 mb-1">Comptes Instagram</div>
-                  <div class="flex gap-2">
-                    <input id="clientAddInstagram" type="text" placeholder="@mon_compte"
-                      class="flex-1 p-2 border rounded-lg">
-                    <button onclick="addClientInstagram()"
-                      class="px-4 py-2 bg-green-600 text-white rounded-lg">Ajouter</button>
-                  </div>
-                  <div id="clientInstagramList" class="mt-2 flex flex-wrap gap-2"></div>
-                </div>
-                <div>
-                  <div class="text-sm text-gray-600 mb-1">Pages Facebook</div>
-                  <div class="flex gap-2">
-                    <input id="clientAddFacebook" type="text" placeholder="Ma Page"
-                      class="flex-1 p-2 border rounded-lg">
-                    <button onclick="addClientFacebook()"
-                      class="px-4 py-2 bg-green-600 text-white rounded-lg">Ajouter</button>
-                  </div>
-                  <div id="clientFacebookList" class="mt-2 flex flex-wrap gap-2"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
-              <i class="fas fa-bolt text-blue-500 text-2xl mb-2"></i>
-              <h3 class="font-bold text-gray-800" data-i18n="info_speed">Rapidité</h3>
-              <p class="text-sm text-gray-600" data-i18n="info_speed_desc">Traitement rapide de vos demandes.</p>
-            </div>
-            <div class="p-4 bg-green-50 rounded-xl border border-green-100">
-              <i class="fas fa-shield-alt text-green-500 text-2xl mb-2"></i>
-              <h3 class="font-bold text-gray-800" data-i18n="info_security">Sécurité</h3>
-              <p class="text-sm text-gray-600" data-i18n="info_security_desc">Paiements et données sécurisés.</p>
-            </div>
-            <div class="p-4 bg-purple-50 rounded-xl border border-purple-100">
-              <i class="fas fa-headset text-purple-500 text-2xl mb-2"></i>
-              <h3 class="font-bold text-gray-800" data-i18n="info_support">Support</h3>
-              <p class="text-sm text-gray-600" data-i18n="info_support_desc">Assistance disponible pour vous aider.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- OFFRES SECTION -->
-        <div id="client-offres" class="client-tab-content hidden">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800" data-i18n="offers_title">Nos Offres Disponibles</h2>
-          <p class="text-gray-500 mb-6" data-i18n="offers_subtitle">Sélectionnez une offre pour voir les détails.</p>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="clientOffersGrid"></div>
-        </div>
-
-        <!-- METHODE SECTION -->
-        <div id="client-method" class="client-tab-content hidden">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800" data-i18n="method_title">Méthode de Travail</h2>
-          <div id="clientMethodContent" class="space-y-4"></div>
-        </div>
-
-        <!-- CUSTOM SECTION -->
-        <div id="client-custom" class="client-tab-content hidden">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800" id="clientCustomTitle" data-i18n="nav_custom">Nos
-            Réalisations</h2>
-          <div id="clientCustomContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </div>
-
-        <!-- PAIEMENT SECTION -->
-        <div id="client-payment" class="client-tab-content hidden">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800" data-i18n="payment_title">Moyens de Paiement</h2>
-          <p class="mb-6 text-gray-600" data-i18n="payment_subtitle">Voici les coordonnées pour effectuer vos paiements
-            :</p>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- CCP -->
-            <div class="p-6 border border-yellow-200 bg-yellow-50 rounded-2xl relative overflow-hidden">
-              <div class="absolute top-0 right-0 w-24 h-24 bg-yellow-200 rounded-full -mr-12 -mt-12 opacity-50"></div>
-              <div class="relative z-10">
-                <h3 class="font-bold text-xl text-yellow-800 mb-2 flex items-center gap-2">
-                  <i class="fas fa-university"></i> CCP
-                </h3>
-                <div class="space-y-1 text-yellow-900 font-medium">
-                  <p>Numéro : <span id="conf-ccp-number" class="font-mono text-lg">0044032948</span> Clé <span
-                      id="conf-ccp-key" class="font-mono">28</span></p>
-                  <p id="conf-ccp-name" class="uppercase">BENDJEDDOU HICHEM</p>
-                  <p id="conf-ccp-address" class="text-sm opacity-75">CITE VERT BT28 ODF OULED FAYET - 16094</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- BaridiMob -->
-            <div class="p-6 border border-blue-200 bg-blue-50 rounded-2xl relative overflow-hidden">
-              <div class="absolute top-0 right-0 w-24 h-24 bg-blue-200 rounded-full -mr-12 -mt-12 opacity-50"></div>
-              <div class="relative z-10">
-                <h3 class="font-bold text-xl text-blue-800 mb-2 flex items-center gap-2">
-                  <i class="fas fa-mobile-alt"></i> BaridiMob
-                </h3>
-                <div class="space-y-1 text-blue-900 font-medium">
-                  <p id="conf-baridimob-number" class="font-mono text-lg tracking-wider">00799999004403294836</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- RedotPay -->
-            <div class="p-6 border border-red-200 bg-red-50 rounded-2xl relative overflow-hidden md:col-span-2">
-              <div class="absolute top-0 right-0 w-24 h-24 bg-red-200 rounded-full -mr-12 -mt-12 opacity-50"></div>
-              <div class="relative z-10">
-                <h3 class="font-bold text-xl text-red-800 mb-2 flex items-center gap-2">
-                  <i class="fas fa-credit-card"></i> RedotPay
-                </h3>
-                <div class="flex flex-col md:flex-row gap-6 justify-between items-start">
-                  <div class="space-y-1 text-red-900 font-medium">
-                    <p>ID : <span id="conf-redotpay-id" class="font-mono text-2xl tracking-wider">1956595423</span></p>
-                    <p class="text-sm opacity-75">Binance Pay / USDT / RedotPay Transfer</p>
-                  </div>
-                  <div class="bg-white p-4 rounded-xl border border-red-100 shadow-sm w-full md:w-auto">
-                    <p class="text-xs text-gray-500 mb-1">Taux de conversion</p>
-                    <p class="font-bold text-gray-800">1 USD = <span id="conf-redotpay-rate">340</span> DZD</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- COMMANDER SECTION -->
-        <div id="client-order" class="client-tab-content hidden">
-          <h2 class="text-2xl font-bold mb-6 text-gray-800" data-i18n="order_title">Commander un Sponsor</h2>
-
-          <form id="orderForm" onsubmit="handleOrderSubmit(event)" class="space-y-6">
-            <div class="border rounded-xl p-4 bg-gray-50">
-              <label class="flex items-center gap-2 font-semibold text-gray-700 mb-2">
-                <input id="customOfferToggle" type="checkbox" class="w-4 h-4" onchange="toggleCustomOfferFields()">
-                Offre personnalisable
-              </label>
-              <div id="customOfferFields" class="grid grid-cols-1 md:grid-cols-3 gap-4 hidden">
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Mode</label>
-                  <select id="customOfferMode" class="w-full p-3 border rounded-xl bg-white"
-                    onchange="updateCustomOfferSummary()">
-                    <option value="dzd">Budget en DZD</option>
-                    <option value="usd">Budget en USD</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Budget</label>
-                  <input id="customOfferBudget" type="number" step="0.01" class="w-full p-3 border rounded-xl bg-white"
-                    oninput="updateCustomOfferSummary()">
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Durée (jours)</label>
-                  <input id="customOfferDuration" type="number" min="3" class="w-full p-3 border rounded-xl bg-white"
-                    oninput="updateCustomOfferSummary()">
-                </div>
-                <div class="md:col-span-3">
-                  <div id="customOfferSummary" class="text-sm text-gray-700 bg-white border rounded-xl p-3"></div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_platform">Plateforme</label>
-              <select id="platformSelect" onchange="updateFormLogic()"
-                class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
-                <option value="" data-i18n="opt_choose_platform">-- Choisir une plateforme --</option>
-                <option value="meta">Meta (Instagram / Facebook)</option>
-                <option value="tiktok">TikTok</option>
-              </select>
-            </div>
-
-            <!-- META SECTION -->
-            <div id="metaSection" class="hidden space-y-4 border-l-4 border-blue-500 pl-4 bg-blue-50 p-4 rounded-r-xl">
-              <h3 class="font-bold text-blue-800" data-i18n="meta_config">Configuration Meta</h3>
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_objective">Objectif</label>
-                <select id="metaObjective" onchange="updateMetaLogic()"
-                  class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
-                  <option value="" data-i18n="opt_choose_objective">-- Choisir l'objectif --</option>
-                  <option value="followers" data-i18n="opt_followers">Plus d'abonnés</option>
-                  <option value="messages" data-i18n="opt_messages">Messages</option>
-                  <option value="conversion" data-i18n="opt_conversion">Conversion sur site</option>
-                </select>
-              </div>
-              <div id="metaFollowersOptions" class="hidden">
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_target_network">Réseau
-                  cible pour les abonnés</label>
-                <div class="flex gap-4">
-                  <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="metaFollowersTarget"
-                      value="instagram" class="w-4 h-4 text-blue-600"> Instagram</label>
-                  <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="metaFollowersTarget"
-                      value="facebook" class="w-4 h-4 text-blue-600"> Facebook</label>
-                </div>
-              </div>
-              <div id="metaMessagesOptions" class="hidden">
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_msg_dest">Réception des
-                  messages sur</label>
-                <div class="flex gap-4 flex-wrap">
-                  <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="metaMsgTarget"
-                      value="instagram" class="w-4 h-4 text-blue-600"> Instagram</label>
-                  <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="metaMsgTarget"
-                      value="facebook" class="w-4 h-4 text-blue-600"> Facebook</label>
-                  <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="metaMsgTarget"
-                      value="both" class="w-4 h-4 text-blue-600"> <span data-i18n="lbl_both">Les deux</span></label>
-                </div>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_insta_name">Nom du compte
-                    Instagram</label>
-                  <input type="text" id="metaInstaName" class="w-full p-3 border rounded-xl" placeholder="@moncompte"
-                    data-i18n="ph_insta">
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_fb_name">Nom de la page
-                    Facebook</label>
-                  <input type="text" id="metaFbName" class="w-full p-3 border rounded-xl" placeholder="Ma Page"
-                    data-i18n="ph_fb">
-                </div>
-              </div>
-            </div>
-
-            <!-- TIKTOK SECTION -->
-            <div id="tiktokSection" class="hidden space-y-4 border-l-4 border-black pl-4 bg-gray-50 p-4 rounded-r-xl">
-              <h3 class="font-bold text-gray-800" data-i18n="tiktok_config">Configuration TikTok</h3>
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_objective">Objectif</label>
-                <select id="tiktokObjective" onchange="updateTikTokLogic()"
-                  class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-black outline-none">
-                  <option value="" data-i18n="opt_choose_objective">-- Choisir l'objectif --</option>
-                  <option value="conversion" data-i18n="opt_conversion">Site Web (Conversion)</option>
-                  <option value="messages" data-i18n="opt_messages">Messages</option>
-                </select>
-              </div>
-              <div id="tiktokMessagesOptions" class="hidden">
-                <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="lbl_msg_dest">Destination des
-                  messages</label>
-                <div class="flex gap-4 flex-wrap">
-                  <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="tiktokMsgTarget"
-                      value="tiktok" class="w-4 h-4 text-black"> TikTok</label>
-                  <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="tiktokMsgTarget"
-                      value="facebook" class="w-4 h-4 text-black"> Facebook</label>
-                  <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="tiktokMsgTarget"
-                      value="whatsapp" class="w-4 h-4 text-black"> WhatsApp</label>
-                </div>
-              </div>
-            </div>
-
-            <div id="websiteLinkSection" class="hidden">
-              <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_site_link">Lien du site
-                web</label>
-              <input type="url" id="websiteUrl" class="w-full p-3 border rounded-xl" placeholder="https://monsite.com"
-                data-i18n="ph_website">
-            </div>
-
-            <div id="commonFields" class="hidden space-y-4 pt-4 border-t">
-              <div>
-                <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_offer_chosen">Offre
-                  Choisie</label>
-                <select id="orderOfferSelect" class="w-full p-3 border rounded-xl outline-none"></select>
+      <!-- CALCULATOR + RESULTS --> 
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"> 
+        <!-- CALCULATOR --> 
+        <div class="bg-white p-8 rounded-2xl shadow-xl border fade-in"> 
+          <h2 class="text-2xl font-bold mb-6 text-gray-800">🧮 Nouvelle Transaction</h2> 
+          <div class="space-y-4"> 
+            <div class="grid grid-cols-2 gap-4"> 
+              <div> 
+                <label class="block text-sm font-semibold mb-2">💵 Taux Achat $</label> 
+                <input id="buyRate" type="number" value="255" class="w-full p-4 border rounded-xl text-lg focus:ring-2 focus:ring-blue-500 outline-none" oninput="calculatePreview()"> 
+              </div> 
+              <div> 
+                <label class="block text-sm font-semibold mb-2">💰 Taux Vente $</label> 
+                <input id="sellRate" type="number" value="357" class="w-full p-4 border rounded-xl text-lg focus:ring-2 focus:ring-blue-500 outline-none" oninput="calculatePreview()"> 
+              </div> 
+            </div> 
+            <div> 
+              <label class="block text-sm font-semibold mb-2">💎 Montant $</label> 
+              <input id="dollarAmount" type="number" step="0.1" placeholder="8" class="w-full p-5 border-2 border-dashed border-blue-300 rounded-xl text-2xl font-bold text-center focus:border-blue-500 outline-none" oninput="calculatePreview()"> 
+            </div> 
+            <div class="grid grid-cols-2 gap-4"> 
+              <div> 
+                <label class="block text-sm font-semibold mb-2">👥 Client</label> 
+                <select id="clientSelect" class="w-full p-4 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"> 
+                  <option value="">Choisir...</option> 
+                  <!-- Clients injected here -->
+                </select> 
               </div>
               <div>
-                <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_pub_link">Lien de la
-                  publication (Post/Reel/Video)</label>
-                <input type="url" id="pubLink" class="w-full p-3 border rounded-xl" placeholder="https://..."
-                  data-i18n="ph_pub_link">
+                <label class="block text-sm font-semibold mb-2">🎁 Offre</label> 
+                <select id="offerSelect" class="w-full p-4 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"> 
+                  <option value="">Standard</option> 
+                  <!-- Offers injected here -->
+                </select> 
               </div>
-              <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_payment_method">Moyen de
-                  paiement utilisé</label>
-                <select id="paymentMethodSelect" onchange="toggleRedotpayCalculator()"
-                  class="w-full p-3 border rounded-xl outline-none bg-white mb-4">
-                  <option value="" data-i18n="opt_choose_payment">-- Choisir --</option>
-                  <option value="ccp">CCP</option>
-                  <option value="baridimob">BaridiMob</option>
-                  <option value="redotpay">RedotPay</option>
-                  <option value="cash" data-i18n="opt_cash">Espèces / Autre</option>
-                </select>
-                <!-- RedotPay Calculator -->
-                <div id="redotpayCalculator" class="hidden mb-4">
-                  <div class="bg-red-50 border border-red-100 p-4 rounded-lg">
-                    <h4 class="font-bold text-red-800 mb-2 text-sm flex items-center gap-2"><i
-                        class="fas fa-calculator"></i> <span data-i18n="calc_title">Calculateur RedotPay</span></h4>
-                    <div class="mb-3 flex items-center justify-between bg-white p-2 rounded border border-red-100">
-                      <span id="calc-redotpay-id" class="text-xs font-mono font-bold text-gray-600">ID:
-                        1956595423</span>
-                      <button type="button" onclick="copyToClipboard('1956595423')"
-                        class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">Copier</button>
-                    </div>
-                    <div class="flex gap-4 items-end">
-                      <div class="flex-1">
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">DZD</label>
-                        <input type="number" id="redotpayDzdAmount" oninput="calculateRedotpayUsd()"
-                          class="w-full p-2 border rounded-lg">
-                      </div>
-                      <div class="flex-1">
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">USD</label>
-                        <div id="redotpayUsdDisplay"
-                          class="font-mono text-xl font-bold text-red-600 bg-white p-2 rounded-lg border border-red-100 text-center">
-                          0.00 $</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_proof">Preuve de paiement
-                  (Photo)</label>
-                <div
-                  class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-all cursor-pointer relative">
-                  <input type="file" id="paymentProof" accept="image/*"
-                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="previewFile(this)">
-                  <div id="filePreview" class="pointer-events-none">
-                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
-                    <p class="text-gray-500" data-i18n="lbl_upload_proof_hint">Cliquez ou déposez votre reçu ici</p>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-bold text-gray-700 mb-2" data-i18n="lbl_client_note">Note
-                  (Optionnel)</label>
-                <textarea id="clientNote" rows="2" class="w-full p-3 border rounded-xl"
-                  placeholder="Ajoutez une note..." data-i18n="ph_client_note"></textarea>
-              </div>
-              <button type="submit"
-                class="w-full py-4 bg-gradient-to-r from-green-600 to-teal-600 text-white font-bold rounded-xl shadow-lg">
-                <i class="fas fa-paper-plane mr-2"></i> <span data-i18n="btn_submit">Envoyer la commande</span>
-              </button>
             </div>
-          </form>
-        </div>
+            
+            <!-- Live Preview -->
+            <div class="bg-gray-50 p-4 rounded-xl border space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span>Coût (Achat):</span>
+                    <span id="previewCost" class="font-bold text-red-500">0 DZD</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span>Vente:</span>
+                    <span id="previewRevenue" class="font-bold text-green-500">0 DZD</span>
+                </div>
+                <div class="border-t pt-2 flex justify-between text-lg font-bold">
+                    <span>Marge:</span>
+                    <span id="previewProfit" class="text-blue-600">0 DZD</span>
+                </div>
+            </div>
 
-        <!-- MES DEMANDES SECTION -->
-        <div id="client-requests" class="client-tab-content hidden">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800">Mes Demandes</h2>
-          <div id="clientRequestsList" class="space-y-3"></div>
+            <button onclick="addTransaction()" class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl hover-scale transition-all text-lg">
+                ✅ Valider la Transaction
+            </button>
+          </div> 
+        </div>
+        
+        <!-- RECENT ACTIVITY -->
+        <div class="bg-white p-8 rounded-2xl shadow-xl border fade-in">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">🕒 Activité Récente</h2>
+            <div id="recentTransactions" class="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                <!-- Transactions list -->
+                <p class="text-gray-400 text-center italic">Aucune transaction récente</p>
+            </div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- APP CONTAINER (DASHBOARD) -->
-  <div id="appContainer"
-    class="max-w-7xl mx-auto space-y-6 min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 p-4 md:p-6"
-    style="display:none;">
-    <header class="bg-white dark:bg-gray-800 dark:border-gray-700 rounded-3xl shadow-2xl p-6 md:p-8 border fade-in">
-      <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <div>
-          <div class="flex items-center gap-3 mb-2">
-            <div
-              class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center">
-              <i class="fas fa-handshake text-white text-2xl"></i>
+    <!-- CLIENTS TAB -->
+    <section id="clients" class="tab-content hidden fade-in">
+        <div class="bg-white p-8 rounded-3xl shadow-xl border">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Liste des Clients</h2>
+                <button onclick="openModal('clientModal')" class="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 hover-scale">+ Nouveau Client</button>
             </div>
-            <div>
-              <h1
-                class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Hichem Sponsor</h1>
-              <p class="text-sm md:text-lg text-gray-600 dark:text-gray-400 mt-1">Gestion clients • Offres •
-                Transactions • Paiements • Achats USD</p>
-              <p id="globalLastUpdated" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Dernière mise à jour: —
-              </p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-gray-100 rounded-lg">
+                            <th class="p-4 rounded-l-lg">Nom</th>
+                            <th class="p-4">Contact</th>
+                            <th class="p-4">Total Dépensé</th>
+                            <th class="p-4 rounded-r-lg">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientsTableBody"></tbody>
+                </table>
             </div>
-          </div>
         </div>
-        <div class="flex gap-2 md:gap-3 flex-wrap justify-center items-center">
-          <button onclick="toggleTheme()"
-            class="w-10 h-10 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-bold flex items-center justify-center hover:bg-gray-200 transition-all">
-            <i id="themeIcon" class="fas fa-moon"></i>
-          </button>
-          <button onclick="exportPDF()" class="px-4 py-2 bg-red-600 text-white rounded-xl font-bold"><i
-              class="fas fa-file-pdf mr-2"></i>Export PDF</button>
-          <button onclick="exportLocalBackup()" class="px-4 py-2 bg-green-600 text-white rounded-xl font-bold"
-            title="Sauvegarder en local"><i class="fas fa-download"></i><span class="hidden md:inline ml-2">Sauvegarde
-              Locale</span></button>
-          <button onclick="document.getElementById('importBackupInput').click()"
-            class="px-4 py-2 bg-yellow-600 text-white rounded-xl font-bold" title="Restaurer depuis local"><i
-              class="fas fa-upload"></i><span class="hidden md:inline ml-2">Restaurer</span></button>
-          <input type="file" id="importBackupInput" accept=".json" class="hidden" onchange="importLocalBackup(event)">
-          <button onclick="forceCloudSave()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold"><i
-              class="fas fa-save mr-2"></i>Sauvegarder</button>
-          <button onclick="logout()" class="px-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-xl font-bold"><i
-              class="fas fa-sign-out-alt mr-2"></i>Déconnexion</button>
+    </section>
+
+    <!-- TRANSACTIONS TAB -->
+    <section id="transactions" class="tab-content hidden fade-in">
+        <div class="bg-white p-8 rounded-3xl shadow-xl border">
+            <h2 class="text-2xl font-bold mb-6">Historique des Transactions</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-gray-100 rounded-lg">
+                            <th class="p-4 rounded-l-lg">Date</th>
+                            <th class="p-4">Client</th>
+                            <th class="p-4">Montant $</th>
+                            <th class="p-4">Taux Vente</th>
+                            <th class="p-4">Total DZD</th>
+                            <th class="p-4">Profit</th>
+                            <th class="p-4 rounded-r-lg">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsTableBody"></tbody>
+                </table>
+            </div>
         </div>
-      </div>
-    </header>
+    </section>
 
-    <nav class="bg-white dark:bg-gray-800 dark:border-gray-700 rounded-3xl shadow-xl p-4 md:p-6 border mb-6 fade-in">
-      <div class="flex flex-wrap gap-2">
-        <button onclick="showTab('dashboard')"
-          class="tab-btn px-4 py-2 rounded-xl bg-blue-600 text-white font-bold">Dashboard</button>
-        <button onclick="showTab('clients')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Clients</button>
+    <!-- OFFERS TAB -->
+    <section id="offers" class="tab-content hidden fade-in">
+        <div class="bg-white p-8 rounded-3xl shadow-xl border">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Gestion des Offres</h2>
+                <button onclick="openModal('offerModal')" class="px-6 py-2 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 hover-scale">+ Nouvelle Offre</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="offersGrid">
+                <!-- Offers cards -->
+            </div>
+        </div>
+    </section>
 
-        <button onclick="showTab('history')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Historique</button>
-        <button onclick="showTab('todo')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Nouvelle
-          To-Do</button>
-        <button onclick="showTab('offers')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Offres</button>
-        <button id="tabBtn-expenses" onclick="showTab('expenses')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Frais</button>
-        <button id="tabBtn-paiements" onclick="showTab('paiements')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Paiements</button>
+    <!-- PAIEMENTS TAB -->
+    <section id="paiements" class="tab-content hidden fade-in">
+        <div class="bg-white p-8 rounded-3xl shadow-xl border">
+             <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Suivi des Paiements</h2>
+                 <button onclick="openModal('paymentModal')" class="px-6 py-2 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 hover-scale">+ Enregistrer Paiement</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-gray-100 rounded-lg">
+                            <th class="p-4 rounded-l-lg">Date</th>
+                            <th class="p-4">Client</th>
+                            <th class="p-4">Montant</th>
+                            <th class="p-4">Méthode</th>
+                            <th class="p-4 rounded-r-lg">Note</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+    
+    <!-- ACHATS USD TAB -->
+    <section id="achats" class="tab-content hidden fade-in">
+         <div class="bg-white p-8 rounded-3xl shadow-xl border">
+             <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Achats de Stock USD</h2>
+                 <button onclick="openModal('usdPurchaseModal')" class="px-6 py-2 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 hover-scale">+ Nouvel Achat USD</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-gray-100 rounded-lg">
+                            <th class="p-4 rounded-l-lg">Date</th>
+                            <th class="p-4">Montant $</th>
+                            <th class="p-4">Taux Achat</th>
+                            <th class="p-4">Total DZD</th>
+                            <th class="p-4 rounded-r-lg">Source</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usdPurchasesTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
 
-        <button onclick="showTab('reminders')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Dettes/Relances</button>
-        <button onclick="showTab('ad-accounts')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Comptes
-          Pub</button>
-        <button onclick="showTab('requests')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Demandes
-          <span id="requestsBadge"
-            class="hidden bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">0</span></button>
-        <button id="tabBtn-settings" onclick="showTab('settings')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Paramètres</button>
-      </div>
-    </nav>
+    <!-- EMPLOYEES TAB -->
+    <section id="employees" class="tab-content hidden fade-in">
+        <div class="bg-white p-8 rounded-3xl shadow-xl border">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Gestion des Employés</h2>
+                <button onclick="openModal('employeeModal')" class="px-6 py-2 bg-yellow-600 text-white rounded-xl font-bold hover:bg-yellow-700 hover-scale">+ Nouvel Employé</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="employeesGrid">
+                <!-- Employees cards -->
+            </div>
+        </div>
+    </section>
 
-    <div class="space-y-6">
-      <!-- TABS CONTENT (DASHBOARD, CLIENTS, ETC.) WILL BE MANAGED BY JS -->
-      <div id="tabContentContainer"></div>
-    </div>
-  </div>
+    <!-- PRODUCTS TAB -->
+    <section id="products" class="tab-content hidden fade-in">
+        <div class="bg-white p-8 rounded-3xl shadow-xl border">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Gestion des Produits</h2>
+                <button onclick="openModal('productModal')" class="px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 hover-scale">+ Nouveau Produit</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="productsGrid">
+                <!-- Products cards -->
+            </div>
+        </div>
+    </section>
+
+  </div> 
 
   <!-- MODALS -->
-  <div id="modalContainer">
-    <!-- CLIENT MODAL -->
-    <div id="clientModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-      <div
-        class="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl w-full max-w-md shadow-2xl fade-in border dark:border-gray-700">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold flex items-center gap-2 dark:text-white">
-            <i class="fas fa-user-plus text-blue-600"></i> Nouveau Client
-          </h3>
-          <button onclick="closeModal('clientModal')" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times text-xl"></i>
-          </button>
-        </div>
-        <div class="space-y-4 mb-6">
-          <input id="newClientName" type="text" placeholder="Nom complet"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <input id="newClientPhone" type="text" placeholder="Numéro WhatsApp"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <input id="newClientInstagram" type="text" placeholder="Instagram (@mon_compte)"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <input id="newClientFacebook" type="text" placeholder="Page Facebook"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <textarea id="newClientNotes" placeholder="Notes (optionnel)"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white"
-            rows="3"></textarea>
-        </div>
-        <div class="flex justify-end gap-3">
-          <button onclick="closeModal('clientModal')"
-            class="px-6 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">Annuler</button>
-          <button onclick="addClient()"
-            class="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all">Enregistrer</button>
-        </div>
+  <div id="clientModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+      <div class="bg-white p-8 rounded-2xl w-full max-w-md m-4">
+          <h3 class="text-xl font-bold mb-4">Ajouter un Client</h3>
+          <input id="newClientName" type="text" placeholder="Nom du client" class="w-full p-3 border rounded-xl mb-3">
+          <input id="newClientContact" type="text" placeholder="Contact (Tél/FB)" class="w-full p-3 border rounded-xl mb-4">
+          <div class="flex justify-end gap-3">
+              <button onclick="closeModal('clientModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Annuler</button>
+              <button onclick="addClient()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Enregistrer</button>
+          </div>
       </div>
-    </div>
-
-    <!-- OFFER MODAL -->
-    <div id="offerModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-      <div class="bg-white p-6 md:p-8 rounded-3xl w-full max-w-md shadow-2xl fade-in">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold flex items-center gap-2">
-            <i class="fas fa-gift text-purple-600"></i> Nouvelle Offre
-          </h3>
-          <button onclick="closeModal('offerModal')" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times text-xl"></i>
-          </button>
-        </div>
-        <div class="space-y-4 mb-6">
-          <input id="newOfferName" type="text" placeholder="Nom de l'offre"
-            class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50">
-          <textarea id="newOfferDesc" placeholder="Description"
-            class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50"
-            rows="2"></textarea>
-          <div class="grid grid-cols-2 gap-4">
-            <input id="newOfferPrice" type="number" placeholder="Prix Vente (DZD)"
-              class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50">
-            <input id="newOfferCostPerUnit" type="number" step="0.01" placeholder="Coût ($)"
-              class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50">
-          </div>
-          <input id="newOfferDuration" type="text" placeholder="Durée (ex: 30 jours)"
-            class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50">
-        </div>
-        <div class="flex justify-end gap-3">
-          <button onclick="closeModal('offerModal')"
-            class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl font-bold">Annuler</button>
-          <button onclick="addOffer()"
-            class="px-6 py-2 bg-purple-600 text-white rounded-xl font-bold shadow-lg hover:bg-purple-700 transition-all">Enregistrer</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- EXPENSE MODAL -->
-    <div id="expenseModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-      <div
-        class="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl w-full max-w-md shadow-2xl fade-in border dark:border-gray-700">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold flex items-center gap-2 dark:text-white">
-            <i class="fas fa-receipt text-rose-600"></i> Nouveau Frais
-          </h3>
-          <button onclick="closeModal('expenseModal')" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times text-xl"></i>
-          </button>
-        </div>
-        <div class="space-y-4 mb-6">
-          <input id="expenseDate" type="date"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-rose-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <input id="expenseCategory" type="text" placeholder="Catégorie (ex: Internet, Loyer...)"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-rose-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <select id="expenseAccount"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-rose-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-            <option value="liquide">Liquide</option>
-            <option value="baridimob">BaridiMob</option>
-            <option value="usdt">USDT</option>
-          </select>
-          <input id="expenseAmount" type="number" placeholder="Montant (DZD)"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-rose-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <textarea id="expenseNote" placeholder="Note (optionnel)"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-rose-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white"
-            rows="2"></textarea>
-        </div>
-        <div class="flex justify-end gap-3">
-          <button onclick="closeModal('expenseModal')"
-            class="px-6 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">Annuler</button>
-          <button onclick="addExpense()"
-            class="px-6 py-2 bg-rose-600 text-white rounded-xl font-bold shadow-lg hover:bg-rose-700 transition-all">Enregistrer</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="balancesModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-      <div
-        class="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl w-full max-w-md shadow-2xl fade-in border dark:border-gray-700">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold flex items-center gap-2 dark:text-white">
-            <i class="fas fa-sliders-h text-gray-600"></i> Ajuster les soldes
-          </h3>
-          <button onclick="closeModal('balancesModal')" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times text-xl"></i>
-          </button>
-        </div>
-        <div class="space-y-4 mb-6">
-          <div class="text-xs text-gray-500 dark:text-gray-400">Tu modifies l'affichage des soldes via un ajustement
-            manuel (théorique + ajustement).</div>
-          <div>
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Liquide (DZD)</label>
-            <input id="balanceLiquideDesired" type="number"
-              class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-gray-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-            <div id="balanceLiquideTheo" class="text-xs text-gray-500 dark:text-gray-400 mt-1"></div>
-          </div>
-          <div>
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">BaridiMob (DZD)</label>
-            <input id="balanceBaridiDesired" type="number"
-              class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-gray-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-            <div id="balanceBaridiTheo" class="text-xs text-gray-500 dark:text-gray-400 mt-1"></div>
-          </div>
-          <div>
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Stock USDT</label>
-            <input id="balanceUsdtDesired" type="number" step="0.01"
-              class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-gray-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-            <div id="balanceUsdtTheo" class="text-xs text-gray-500 dark:text-gray-400 mt-1"></div>
-          </div>
-        </div>
-        <div class="flex justify-end gap-3">
-          <button onclick="closeModal('balancesModal')"
-            class="px-6 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">Annuler</button>
-          <button onclick="saveBalancesAdjustments()"
-            class="px-6 py-2 bg-gray-900 text-white rounded-xl font-bold shadow-lg hover:bg-black transition-all">Enregistrer</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- PAYMENT MODAL -->
-    <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-      <div class="bg-white p-6 md:p-8 rounded-3xl w-full max-w-md shadow-2xl fade-in">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold flex items-center gap-2">
-            <i class="fas fa-money-bill-wave text-orange-600"></i> Nouveau Paiement
-          </h3>
-          <button onclick="closeModal('paymentModal')" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times text-xl"></i>
-          </button>
-        </div>
-        <div class="space-y-4 mb-6">
-          <select id="paymentClientId"
-            class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-orange-500 outline-none bg-gray-50">
-            <option value="">Sélectionner un client</option>
-            <!-- Sera rempli dynamiquement si besoin ou via appState -->
-          </select>
-          <input id="paymentAmount" type="number" placeholder="Montant (DZD)"
-            class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-orange-500 outline-none bg-gray-50">
-          <select id="paymentMethod"
-            class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-orange-500 outline-none bg-gray-50">
-            <option value="Cash">Espèces</option>
-            <option value="BaridiMob">BaridiMob</option>
-            <option value="CCP">CCP</option>
-            <option value="USDT">USDT</option>
-          </select>
-          <textarea id="paymentNote" placeholder="Note (optionnel)"
-            class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-orange-500 outline-none bg-gray-50"
-            rows="2"></textarea>
-        </div>
-        <div class="flex justify-end gap-3">
-          <button onclick="closeModal('paymentModal')"
-            class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl font-bold">Annuler</button>
-          <button onclick="addPayment()"
-            class="px-6 py-2 bg-orange-600 text-white rounded-xl font-bold shadow-lg hover:bg-orange-700 transition-all">Enregistrer</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- USD PURCHASE MODAL -->
-    <div id="usdPurchaseModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-      <div
-        class="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl w-full max-w-md shadow-2xl fade-in border dark:border-gray-700">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold flex items-center gap-2 dark:text-white">
-            <i class="fas fa-dollar-sign text-teal-600"></i> Nouvel Achat USD
-          </h3>
-          <button onclick="closeModal('usdPurchaseModal')" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times text-xl"></i>
-          </button>
-        </div>
-        <div class="space-y-4 mb-6">
-          <input id="usdAmount" type="number" step="0.01" placeholder="Montant USD ($)"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-teal-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <input id="usdRate" type="number" step="0.01" placeholder="Taux (DZD)"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-teal-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <input id="usdSource" type="text" placeholder="Source (ex: Binance, CCP...)"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-teal-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-        </div>
-        <div class="flex justify-end gap-3">
-          <button onclick="closeModal('usdPurchaseModal')"
-            class="px-6 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">Annuler</button>
-          <button onclick="addUsdPurchase()"
-            class="px-6 py-2 bg-teal-600 text-white rounded-xl font-bold shadow-lg hover:bg-teal-700 transition-all">Enregistrer</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- AD ACCOUNT MODAL -->
-    <div id="adAccountModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-      <div
-        class="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl w-full max-w-md shadow-2xl fade-in border dark:border-gray-700">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold flex items-center gap-2 dark:text-white">
-            <i class="fas fa-desktop text-indigo-600"></i> Nouveau Compte Pub
-          </h3>
-          <button onclick="closeModal('adAccountModal')" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times text-xl"></i>
-          </button>
-        </div>
-        <div class="space-y-4 mb-6">
-          <input id="accName" type="text" placeholder="Nom du compte"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <select id="accPlatform"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-            <option value="meta">Meta (Facebook/Instagram)</option>
-            <option value="tiktok">TikTok Ads</option>
-          </select>
-          <input id="accBalance" type="number" step="0.01" placeholder="Solde Initial ($)"
-            class="w-full p-4 border dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <div class="text-xs text-gray-500 dark:text-gray-400">Solde initial = le solde de départ du compte (avant
-            recharges et dépenses).</div>
-        </div>
-        <div class="flex justify-end gap-3">
-          <button onclick="closeModal('adAccountModal')"
-            class="px-6 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">Annuler</button>
-          <button onclick="addAdAccount()"
-            class="px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all">Enregistrer</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- EDIT TRANSACTION MODAL -->
-    <div id="editTransactionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-      <div class="bg-white p-6 md:p-8 rounded-3xl w-full max-w-md shadow-2xl fade-in">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold flex items-center gap-2">
-            <i class="fas fa-edit text-blue-600"></i> Modifier Transaction
-          </h3>
-          <button onclick="closeModal('editTransactionModal')" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times text-xl"></i>
-          </button>
-        </div>
-        <div class="space-y-4 mb-6">
-          <input id="editTxId" type="hidden">
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Date</label>
-            <input type="date" id="editTxDate" class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
-          </div>
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Compte Publicitaire</label>
-            <select id="editTxAdAccountId" class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
-                <option value="">-- Aucun compte (Organique) --</option>
-                <!-- This will be populated dynamically -->
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Montant (USD)</label>
-            <input id="editTxAmount" type="number" step="0.01" class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
-          </div>
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Prix (DZD)</label>
-            <input id="editTxPrice" type="number" class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
-          </div>
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Durée (jours/mois)</label>
-            <input id="editTxDuration" type="text" class="w-full p-4 border rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
-          </div>
-          <div class="flex items-center gap-4 p-4 border rounded-2xl bg-gray-50">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="editTxPaid" class="w-5 h-5 text-blue-600">
-              <span class="font-bold text-gray-700">Payé</span>
-            </label>
-          </div>
-        </div>
-        <div class="flex justify-end gap-3">
-          <button onclick="closeModal('editTransactionModal')"
-            class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl font-bold">Annuler</button>
-          <button onclick="saveEditTransaction()"
-            class="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all">Enregistrer</button>
-        </div>
-      </div>
-    </div>
   </div>
 
-  <!-- Scripts Order is Important -->
-  <!-- External Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="assets/js/theme.js?v=26"></script>
-  <script src="assets/js/state.js?v=26"></script>
-  <script src="assets/js/firebase-init.js?v=26"></script>
-  <script src="assets/js/utils.js?v=26"></script>
-  <script src="assets/js/calculations.js?v=26"></script>
-  <script src="assets/js/auth.js?v=26"></script>
-  <script src="assets/js/data-service.js?v=26"></script>
-  <script src="assets/js/ui-render.js?v=26"></script>
-  <script src="assets/js/ui-handlers.js?v=26"></script>
-  <script src="assets/js/meta-live.js?v=26"></script>
-  <script src="assets/js/app.js?v=26"></script>
-  <script src="assets/js/demo.js?v=26"></script>
+  <div id="offerModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+      <div class="bg-white p-8 rounded-2xl w-full max-w-md m-4">
+          <h3 class="text-xl font-bold mb-4">Ajouter une Offre</h3>
+          <input id="newOfferName" type="text" placeholder="Nom de l'offre (ex: Pack Gold)" class="w-full p-3 border rounded-xl mb-3">
+          <input id="newOfferDesc" type="text" placeholder="Description" class="w-full p-3 border rounded-xl mb-3">
+          <input id="newOfferPrice" type="number" placeholder="Prix standard (DZD)" class="w-full p-3 border rounded-xl mb-4">
+          <div class="flex justify-end gap-3">
+              <button onclick="closeModal('offerModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Annuler</button>
+              <button onclick="addOffer()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Enregistrer</button>
+          </div>
+      </div>
+  </div>
+  
+  <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+      <div class="bg-white p-8 rounded-2xl w-full max-w-md m-4">
+          <h3 class="text-xl font-bold mb-4">Enregistrer Paiement</h3>
+          <select id="paymentClientSelect" class="w-full p-3 border rounded-xl mb-3"></select>
+          <input id="paymentAmount" type="number" placeholder="Montant (DZD)" class="w-full p-3 border rounded-xl mb-3">
+          <select id="paymentMethod" class="w-full p-3 border rounded-xl mb-4">
+              <option value="Cash">Cash</option>
+              <option value="CCP">CCP</option>
+              <option value="BaridiMob">BaridiMob</option>
+              <option value="Paysera">Paysera</option>
+          </select>
+          <div class="flex justify-end gap-3">
+              <button onclick="closeModal('paymentModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Annuler</button>
+              <button onclick="addPayment()" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600">Enregistrer</button>
+          </div>
+      </div>
+  </div>
+  
+  <div id="usdPurchaseModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+      <div class="bg-white p-8 rounded-2xl w-full max-w-md m-4">
+          <h3 class="text-xl font-bold mb-4">Achat Stock USD</h3>
+          <input id="usdAmount" type="number" placeholder="Montant USD ($)" class="w-full p-3 border rounded-xl mb-3">
+          <input id="usdRate" type="number" placeholder="Taux d'achat (DZD)" value="255" class="w-full p-3 border rounded-xl mb-3">
+          <input id="usdSource" type="text" placeholder="Source (ex: Binance P2P)" class="w-full p-3 border rounded-xl mb-4">
+          <div class="flex justify-end gap-3">
+              <button onclick="closeModal('usdPurchaseModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Annuler</button>
+              <button onclick="addUsdPurchase()" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">Enregistrer</button>
+          </div>
+      </div>
+  </div>
+
+  <!-- EMPLOYEE MODAL -->
+  <div id="employeeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+      <div class="bg-white p-8 rounded-2xl w-full max-w-lg m-4 max-h-[90vh] overflow-y-auto">
+          <h3 id="employeeModalTitle" class="text-xl font-bold mb-4">Ajouter un Employé</h3>
+          <input type="hidden" id="editEmployeeId">
+          <input id="newEmployeeName" type="text" placeholder="Nom de l'employé" class="w-full p-3 border rounded-xl mb-3">
+          <input id="newEmployeeLogin" type="text" placeholder="Login" class="w-full p-3 border rounded-xl mb-3">
+          <input id="newEmployeePassword" type="password" placeholder="Mot de passe" class="w-full p-3 border rounded-xl mb-3">
+          <select id="newEmployeeRole" class="w-full p-3 border rounded-xl mb-3">
+              <option value="">Sélectionner un rôle</option>
+          </select>
+          <label class="flex items-center gap-2 mb-3">
+              <input type="checkbox" id="newEmployeeActive" checked class="w-4 h-4">
+              <span>Actif</span>
+          </label>
+          <div class="mb-4">
+              <p class="text-sm font-semibold mb-2">Produits assignés</p>
+              <div id="employeeProductCheckboxes" class="space-y-2 max-h-32 overflow-y-auto"></div>
+          </div>
+          <div class="flex justify-end gap-3">
+              <button onclick="closeModal('employeeModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Annuler</button>
+              <button onclick="saveEmployee()" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">Enregistrer</button>
+          </div>
+      </div>
+  </div>
+
+  <!-- PRODUCT MODAL -->
+  <div id="productModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+      <div class="bg-white p-8 rounded-2xl w-full max-w-md m-4">
+          <h3 id="productModalTitle" class="text-xl font-bold mb-4">Ajouter un Produit</h3>
+          <input type="hidden" id="editProductId">
+          <input id="newProductName" type="text" placeholder="Nom du produit" class="w-full p-3 border rounded-xl mb-3">
+          <input id="newProductSku" type="text" placeholder="SKU (Référence)" class="w-full p-3 border rounded-xl mb-3">
+          <input id="newProductDesc" type="text" placeholder="Description" class="w-full p-3 border rounded-xl mb-3">
+          <input id="newProductStock" type="number" placeholder="Stock disponible" class="w-full p-3 border rounded-xl mb-3">
+          <input id="newProductMinStock" type="number" placeholder="Alerte stock minimum" value="5" class="w-full p-3 border rounded-xl mb-3">
+          <input id="newProductPrice" type="number" placeholder="Prix (DZD)" class="w-full p-3 border rounded-xl mb-4">
+          <div class="flex justify-end gap-3">
+              <button onclick="closeModal('productModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Annuler</button>
+              <button onclick="saveProduct()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Enregistrer</button>
+          </div>
+      </div>
+  </div>
+
+  <!-- EMPLOYEE PAYMENT MODAL -->
+  <div id="employeePaymentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+      <div class="bg-white p-8 rounded-2xl w-full max-w-md m-4">
+          <h3 class="text-xl font-bold mb-4">Enregistrer Paiement Employé</h3>
+          <input type="hidden" id="paymentEmployeeId">
+          <p id="paymentEmployeeName" class="text-lg font-semibold mb-3"></p>
+          <input id="employeePaymentAmount" type="number" placeholder="Montant (DZD)" class="w-full p-3 border rounded-xl mb-3">
+          <input id="employeePaymentDate" type="date" class="w-full p-3 border rounded-xl mb-3">
+          <input id="employeePaymentNote" type="text" placeholder="Note" class="w-full p-3 border rounded-xl mb-4">
+          <div class="flex justify-end gap-3">
+              <button onclick="closeModal('employeePaymentModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Annuler</button>
+              <button onclick="saveEmployeePayment()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Enregistrer</button>
+          </div>
+      </div>
+  </div>
+
+  <input type="file" id="fileInput" class="hidden" accept=".json" onchange="handleFileLoad(this)">
+
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(registration => {
-            console.log('ServiceWorker registration successful');
-          })
-          .catch(err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
-      });
+    // DATA STORE
+    let data = {
+        clients: [],
+        transactions: [],
+        offers: [],
+        payments: [],
+        usdPurchases: [],
+        roles: [
+            { id: 'confirmateur', name: 'Confirmateur de Commandes', description: 'Valide les commandes, gère les upsell' },
+            { id: 'gestionnaire_stock', name: 'Gestionnaire de Stock', description: 'Gère le stock des produits' },
+            { id: 'emballeur', name: 'Emballeur', description: 'Prépare les colis' },
+            { id: 'employe_general', name: 'Employé Général', description: 'Rôle polyvalent' }
+        ],
+        employees: [],
+        products: [],
+        employeePayments: []
+    };
+
+    // INIT
+    window.onload = function() {
+        loadData();
+        renderAll();
+    };
+
+    // TABS LOGIC
+    function showTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.getElementById(tabId).classList.remove('hidden');
+        
+        document.querySelectorAll('.tab-btn').forEach(el => {
+            el.classList.remove('bg-blue-600', 'text-white');
+            el.classList.add('bg-gray-100', 'text-gray-700');
+        });
+        const activeBtn = document.getElementById('tab-' + tabId);
+        if(activeBtn) {
+            activeBtn.classList.remove('bg-gray-100', 'text-gray-700');
+            activeBtn.classList.add('bg-blue-600', 'text-white');
+        }
+    }
+    
+    function showStats() {
+        showTab('dashboard');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // MODALS
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+        document.getElementById(id).classList.add('flex');
+        if(id === 'paymentModal') populateSelect('paymentClientSelect', data.clients);
+        if(id === 'employeeModal') populateEmployeeModal();
+        if(id === 'productModal') populateProductModal();
+        if(id === 'employeePaymentModal') {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('employeePaymentDate').value = today;
+        }
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+        document.getElementById(id).classList.remove('flex');
+    }
+
+    // CALCULATOR
+    function calculatePreview() {
+        const buyRate = parseFloat(document.getElementById('buyRate').value) || 0;
+        const sellRate = parseFloat(document.getElementById('sellRate').value) || 0;
+        const amount = parseFloat(document.getElementById('dollarAmount').value) || 0;
+
+        const cost = buyRate * amount;
+        const revenue = sellRate * amount;
+        const profit = revenue - cost;
+
+        document.getElementById('previewCost').innerText = cost.toLocaleString() + ' DZD';
+        document.getElementById('previewRevenue').innerText = revenue.toLocaleString() + ' DZD';
+        document.getElementById('previewProfit').innerText = profit.toLocaleString() + ' DZD';
+    }
+
+    // CORE ACTIONS
+    function addTransaction() {
+        const buyRate = parseFloat(document.getElementById('buyRate').value);
+        const sellRate = parseFloat(document.getElementById('sellRate').value);
+        const amount = parseFloat(document.getElementById('dollarAmount').value);
+        const clientId = document.getElementById('clientSelect').value;
+        
+        if(!amount || !clientId) {
+            alert('Veuillez remplir le montant et choisir un client.');
+            return;
+        }
+
+        const client = data.clients.find(c => c.id == clientId);
+        const cost = buyRate * amount;
+        const revenue = sellRate * amount;
+        const profit = revenue - cost;
+
+        const transaction = {
+            id: Date.now(),
+            date: new Date().toISOString(),
+            clientId,
+            clientName: client ? client.name : 'Inconnu',
+            buyRate,
+            sellRate,
+            amount,
+            cost,
+            revenue,
+            profit
+        };
+
+        data.transactions.unshift(transaction); // Add to top
+        saveData();
+        renderAll();
+        // Reset amount only, keep rates
+        document.getElementById('dollarAmount').value = '';
+        calculatePreview();
+        alert('Transaction ajoutée ! 💰');
+    }
+
+    function addClient() {
+        const name = document.getElementById('newClientName').value;
+        const contact = document.getElementById('newClientContact').value;
+        
+        if(!name) return;
+
+        data.clients.push({
+            id: Date.now(),
+            name,
+            contact,
+            totalSpent: 0
+        });
+        saveData();
+        renderAll();
+        closeModal('clientModal');
+        document.getElementById('newClientName').value = '';
+        document.getElementById('newClientContact').value = '';
+    }
+
+    function addOffer() {
+        const name = document.getElementById('newOfferName').value;
+        const desc = document.getElementById('newOfferDesc').value;
+        const price = document.getElementById('newOfferPrice').value;
+
+        if(!name) return;
+
+        data.offers.push({
+            id: Date.now(),
+            name,
+            desc,
+            price
+        });
+        saveData();
+        renderAll();
+        closeModal('offerModal');
+    }
+
+    function addPayment() {
+        const clientId = document.getElementById('paymentClientSelect').value;
+        const amount = parseFloat(document.getElementById('paymentAmount').value);
+        const method = document.getElementById('paymentMethod').value;
+
+        if(!clientId || !amount) return;
+
+        const client = data.clients.find(c => c.id == clientId);
+
+        data.payments.push({
+            id: Date.now(),
+            date: new Date().toISOString(),
+            clientId,
+            clientName: client ? client.name : 'Inconnu',
+            amount,
+            method
+        });
+        saveData();
+        renderAll();
+        closeModal('paymentModal');
+    }
+    
+    function addUsdPurchase() {
+        const amount = parseFloat(document.getElementById('usdAmount').value);
+        const rate = parseFloat(document.getElementById('usdRate').value);
+        const source = document.getElementById('usdSource').value;
+        
+        if(!amount || !rate) return;
+        
+        data.usdPurchases.push({
+            id: Date.now(),
+            date: new Date().toISOString(),
+            amount,
+            rate,
+            total: amount * rate,
+            source
+        });
+        saveData();
+        renderAll();
+        closeModal('usdPurchaseModal');
+    }
+
+    // EMPLOYEE FUNCTIONS
+    function populateEmployeeModal(employeeId = null) {
+        // Reset form
+        document.getElementById('editEmployeeId').value = '';
+        document.getElementById('newEmployeeName').value = '';
+        document.getElementById('newEmployeeLogin').value = '';
+        document.getElementById('newEmployeePassword').value = '';
+        document.getElementById('newEmployeeRole').value = '';
+        document.getElementById('newEmployeeActive').checked = true;
+        document.getElementById('employeeModalTitle').textContent = 'Ajouter un Employé';
+        
+        // Populate roles dropdown
+        const roleSelect = document.getElementById('newEmployeeRole');
+        roleSelect.innerHTML = '<option value="">Sélectionner un rôle</option>' + 
+            data.roles.map(role => `<option value="${role.id}">${role.name}</option>`).join('');
+        
+        // Populate product checkboxes
+        const productContainer = document.getElementById('employeeProductCheckboxes');
+        productContainer.innerHTML = data.products.map(product => `
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" class="employee-product-checkbox w-4 h-4" data-product-id="${product.id}">
+                <span class="text-gray-700">${product.name}</span>
+            </label>
+        `).join('');
+        
+        // If editing, populate with existing data
+        if(employeeId) {
+            const emp = data.employees.find(e => e.id == employeeId);
+            if(emp) {
+                document.getElementById('editEmployeeId').value = emp.id;
+                document.getElementById('newEmployeeName').value = emp.name || '';
+                document.getElementById('newEmployeeLogin').value = emp.login || '';
+                document.getElementById('newEmployeePassword').value = emp.password || '';
+                document.getElementById('newEmployeeRole').value = emp.roleId || '';
+                document.getElementById('newEmployeeActive').checked = emp.active !== false;
+                document.getElementById('employeeModalTitle').textContent = 'Modifier Employé';
+                
+                // Check assigned products
+                (emp.assignedProductIds || []).forEach(prodId => {
+                    const checkbox = document.querySelector(`.employee-product-checkbox[data-product-id="${prodId}"]`);
+                    if(checkbox) checkbox.checked = true;
+                });
+            }
+        }
+    }
+
+    function saveEmployee() {
+        const name = document.getElementById('newEmployeeName').value.trim();
+        const login = document.getElementById('newEmployeeLogin').value.trim();
+        const password = document.getElementById('newEmployeePassword').value;
+        const roleId = document.getElementById('newEmployeeRole').value;
+        const active = document.getElementById('newEmployeeActive').checked;
+        const editId = document.getElementById('editEmployeeId').value;
+        
+        if(!name || !login || !roleId) {
+            alert('Nom, login et rôle sont requis.');
+            return;
+        }
+        
+        // Get assigned product IDs
+        const assignedProductIds = Array.from(document.querySelectorAll('.employee-product-checkbox:checked'))
+            .map(cb => cb.dataset.productId);
+        
+        if(editId) {
+            // Edit existing
+            const emp = data.employees.find(e => e.id == editId);
+            if(emp) {
+                Object.assign(emp, {
+                    name,
+                    login,
+                    password: password || emp.password, // Keep existing password if not changed
+                    roleId,
+                    active,
+                    assignedProductIds,
+                    updatedAt: Date.now()
+                });
+                alert('Employé modifié avec succès !');
+            }
+        } else {
+            // Create new
+            if(!password) {
+                alert('Mot de passe requis pour un nouvel employé.');
+                return;
+            }
+            data.employees.push({
+                id: Date.now(),
+                name,
+                login,
+                password,
+                roleId,
+                active,
+                assignedProductIds,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
+            alert('Employé ajouté avec succès !');
+        }
+        
+        saveData();
+        closeModal('employeeModal');
+        renderAll();
+    }
+
+    function editEmployee(employeeId) {
+        populateEmployeeModal(employeeId);
+        openModal('employeeModal');
+    }
+
+    function deleteEmployee(employeeId) {
+        if(!confirm('Êtes-vous sûr de vouloir supprimer cet employé ?')) return;
+        data.employees = data.employees.filter(e => e.id != employeeId);
+        saveData();
+        renderAll();
+    }
+
+    // PRODUCT FUNCTIONS
+    function populateProductModal(productId = null) {
+        // Reset form
+        document.getElementById('editProductId').value = '';
+        document.getElementById('newProductName').value = '';
+        document.getElementById('newProductSku').value = '';
+        document.getElementById('newProductDesc').value = '';
+        document.getElementById('newProductStock').value = '';
+        document.getElementById('newProductMinStock').value = '5';
+        document.getElementById('newProductPrice').value = '';
+        document.getElementById('productModalTitle').textContent = 'Ajouter un Produit';
+        
+        // If editing, populate with existing data
+        if(productId) {
+            const prod = data.products.find(p => p.id == productId);
+            if(prod) {
+                document.getElementById('editProductId').value = prod.id;
+                document.getElementById('newProductName').value = prod.name || '';
+                document.getElementById('newProductSku').value = prod.sku || '';
+                document.getElementById('newProductDesc').value = prod.description || '';
+                document.getElementById('newProductStock').value = prod.stockQuantity || 0;
+                document.getElementById('newProductMinStock').value = prod.minStockAlert || 5;
+                document.getElementById('newProductPrice').value = prod.priceDzd || 0;
+                document.getElementById('productModalTitle').textContent = 'Modifier Produit';
+            }
+        }
+    }
+
+    function saveProduct() {
+        const name = document.getElementById('newProductName').value.trim();
+        const sku = document.getElementById('newProductSku').value.trim();
+        const description = document.getElementById('newProductDesc').value.trim();
+        const stockQuantity = parseFloat(document.getElementById('newProductStock').value) || 0;
+        const minStockAlert = parseFloat(document.getElementById('newProductMinStock').value) || 5;
+        const priceDzd = parseFloat(document.getElementById('newProductPrice').value) || 0;
+        const editId = document.getElementById('editProductId').value;
+        
+        if(!name) {
+            alert('Nom du produit requis.');
+            return;
+        }
+        
+        if(editId) {
+            // Edit existing
+            const prod = data.products.find(p => p.id == editId);
+            if(prod) {
+                Object.assign(prod, {
+                    name,
+                    sku,
+                    description,
+                    stockQuantity,
+                    minStockAlert,
+                    priceDzd,
+                    updatedAt: Date.now()
+                });
+                alert('Produit modifié avec succès !');
+            }
+        } else {
+            // Create new
+            data.products.push({
+                id: Date.now(),
+                name,
+                sku,
+                description,
+                stockQuantity,
+                minStockAlert,
+                priceDzd,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
+            alert('Produit ajouté avec succès !');
+        }
+        
+        saveData();
+        closeModal('productModal');
+        renderAll();
+    }
+
+    function editProduct(productId) {
+        populateProductModal(productId);
+        openModal('productModal');
+    }
+
+    function deleteProduct(productId) {
+        if(!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+        data.products = data.products.filter(p => p.id != productId);
+        saveData();
+        renderAll();
+    }
+
+    // EMPLOYEE PAYMENT FUNCTIONS
+    function openEmployeePaymentModal(employeeId) {
+        const emp = data.employees.find(e => e.id == employeeId);
+        if(!emp) return;
+        
+        document.getElementById('paymentEmployeeId').value = emp.id;
+        document.getElementById('paymentEmployeeName').textContent = emp.name;
+        document.getElementById('employeePaymentAmount').value = '';
+        document.getElementById('employeePaymentNote').value = '';
+        
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('employeePaymentDate').value = today;
+        
+        openModal('employeePaymentModal');
+    }
+
+    function saveEmployeePayment() {
+        const employeeId = document.getElementById('paymentEmployeeId').value;
+        const amountDzd = parseFloat(document.getElementById('employeePaymentAmount').value);
+        const date = document.getElementById('employeePaymentDate').value;
+        const note = document.getElementById('employeePaymentNote').value.trim();
+        
+        if(!employeeId || !amountDzd || !date) {
+            alert('Employé, montant et date sont requis.');
+            return;
+        }
+        
+        data.employeePayments.push({
+            id: Date.now(),
+            employeeId,
+            amountDzd,
+            date,
+            note,
+            createdAt: Date.now()
+        });
+        
+        saveData();
+        closeModal('employeePaymentModal');
+        alert('Paiement enregistré avec succès !');
+        renderAll();
+    }
+
+    // RENDER FUNCTIONS
+    function renderAll() {
+        populateSelect('clientSelect', data.clients);
+        renderStats();
+        renderRecentTransactions();
+        renderClients();
+        renderTransactionsHistory();
+        renderOffers();
+        renderPayments();
+        renderUsdPurchases();
+        renderEmployees();
+        renderProducts();
+    }
+
+    function populateSelect(id, items) {
+        const select = document.getElementById(id);
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">Choisir...</option>';
+        items.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.innerText = item.name;
+            select.appendChild(opt);
+        });
+        select.value = currentVal;
+    }
+
+    function renderStats() {
+        const today = new Date().toDateString();
+        const now = new Date();
+        const oneWeekAgo = new Date(now.setDate(now.getDate() - 7));
+
+        let todayProf = 0;
+        let weekProf = 0;
+        let totalProf = 0;
+
+        data.transactions.forEach(t => {
+            const tDate = new Date(t.date);
+            totalProf += t.profit;
+            if(tDate.toDateString() === today) todayProf += t.profit;
+            if(tDate >= oneWeekAgo) weekProf += t.profit;
+        });
+
+        document.getElementById('todayProfit').innerText = todayProf.toLocaleString() + ' DZD';
+        document.getElementById('weekProfit').innerText = weekProf.toLocaleString() + ' DZD';
+        document.getElementById('totalProfit').innerText = totalProf.toLocaleString() + ' DZD';
+        document.getElementById('totalClients').innerText = data.clients.length;
+    }
+
+    function renderRecentTransactions() {
+        const container = document.getElementById('recentTransactions');
+        container.innerHTML = '';
+        
+        const recent = data.transactions.slice(0, 10); // Last 10
+        if(recent.length === 0) {
+            container.innerHTML = '<p class="text-gray-400 text-center italic">Aucune transaction récente</p>';
+            return;
+        }
+
+        recent.forEach(t => {
+            const div = document.createElement('div');
+            div.className = 'flex justify-between items-center p-4 bg-gray-50 rounded-xl border hover:bg-blue-50 transition-colors';
+            div.innerHTML = `
+                <div>
+                    <p class="font-bold text-gray-800">${t.clientName}</p>
+                    <p class="text-xs text-gray-500">${new Date(t.date).toLocaleTimeString()} • ${t.amount} $</p>
+                </div>
+                <div class="text-right">
+                    <p class="font-bold text-green-600">+${t.revenue.toLocaleString()} DZD</p>
+                    <p class="text-xs text-blue-500">Marge: ${t.profit.toLocaleString()}</p>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function renderClients() {
+        const tbody = document.getElementById('clientsTableBody');
+        tbody.innerHTML = '';
+        data.clients.forEach(c => {
+            // Calc total spent
+            const spent = data.transactions.filter(t => t.clientId == c.id).reduce((acc, t) => acc + t.revenue, 0);
+            
+            const tr = document.createElement('tr');
+            tr.className = 'border-b hover:bg-gray-50';
+            tr.innerHTML = `
+                <td class="p-4 font-bold">${c.name}</td>
+                <td class="p-4">${c.contact}</td>
+                <td class="p-4 text-green-600 font-bold">${spent.toLocaleString()} DZD</td>
+                <td class="p-4">
+                    <button onclick="deleteItem('clients', ${c.id})" class="text-red-500 hover:text-red-700">Supprimer</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderTransactionsHistory() {
+        const tbody = document.getElementById('transactionsTableBody');
+        tbody.innerHTML = '';
+        data.transactions.forEach(t => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b hover:bg-gray-50';
+            tr.innerHTML = `
+                <td class="p-4 text-sm text-gray-600">${new Date(t.date).toLocaleString()}</td>
+                <td class="p-4 font-bold">${t.clientName}</td>
+                <td class="p-4 font-bold text-blue-600">${t.amount} $</td>
+                <td class="p-4">${t.sellRate}</td>
+                <td class="p-4 font-bold text-green-600">${t.revenue.toLocaleString()} DZD</td>
+                <td class="p-4 font-bold text-purple-600">+${t.profit.toLocaleString()}</td>
+                <td class="p-4">
+                    <button onclick="deleteItem('transactions', ${t.id})" class="text-red-500 hover:text-red-700">Supprimer</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderOffers() {
+        const grid = document.getElementById('offersGrid');
+        grid.innerHTML = '';
+        data.offers.forEach(o => {
+            const div = document.createElement('div');
+            div.className = 'bg-gray-50 p-6 rounded-2xl border hover:shadow-lg transition-all';
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-bold text-purple-700">${o.name}</h3>
+                    <button onclick="deleteItem('offers', ${o.id})" class="text-red-400 hover:text-red-600">×</button>
+                </div>
+                <p class="text-gray-600 mb-4 h-12 overflow-hidden">${o.desc}</p>
+                <div class="flex justify-between items-center">
+                    <span class="text-2xl font-black text-gray-800">${o.price} DZD</span>
+                    <button class="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-bold">Modifier</button>
+                </div>
+            `;
+            grid.appendChild(div);
+        });
+    }
+
+    function renderPayments() {
+        const tbody = document.getElementById('paymentsTableBody');
+        tbody.innerHTML = '';
+        data.payments.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b hover:bg-gray-50';
+            tr.innerHTML = `
+                <td class="p-4 text-sm">${new Date(p.date).toLocaleDateString()}</td>
+                <td class="p-4 font-bold">${p.clientName}</td>
+                <td class="p-4 font-bold text-green-600">${p.amount.toLocaleString()} DZD</td>
+                <td class="p-4"><span class="px-2 py-1 bg-gray-200 rounded text-xs">${p.method}</span></td>
+                <td class="p-4 text-gray-500">-</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    
+    function renderUsdPurchases() {
+        const tbody = document.getElementById('usdPurchasesTableBody');
+        tbody.innerHTML = '';
+        data.usdPurchases.forEach(p => {
+             const tr = document.createElement('tr');
+            tr.className = 'border-b hover:bg-gray-50';
+            tr.innerHTML = `
+                <td class="p-4 text-sm">${new Date(p.date).toLocaleDateString()}</td>
+                <td class="p-4 font-bold text-blue-600">${p.amount} $</td>
+                <td class="p-4">${p.rate}</td>
+                <td class="p-4 font-bold text-red-500">-${p.total.toLocaleString()} DZD</td>
+                <td class="p-4 text-gray-500">${p.source}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderEmployees() {
+        const grid = document.getElementById('employeesGrid');
+        grid.innerHTML = '';
+        data.employees.forEach(emp => {
+            const role = data.roles.find(r => r.id === emp.roleId);
+            const totalPaid = data.employeePayments.filter(p => p.employeeId == emp.id).reduce((sum, p) => sum + (p.amountDzd || 0), 0);
+            const assignedProducts = (emp.assignedProductIds || [])
+                .map(id => data.products.find(p => p.id == id))
+                .filter(p => p);
+            
+            const div = document.createElement('div');
+            div.className = `p-6 rounded-2xl border hover:shadow-lg transition-all ${emp.active ? 'bg-white' : 'bg-gray-100 opacity-70'}`;
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-yellow-700">${emp.name}</h3>
+                        <p class="text-sm text-gray-500">${role ? role.name : 'Rôle non défini'}</p>
+                        <p class="text-xs text-gray-400">Login: ${emp.login}</p>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="editEmployee(${emp.id})" class="p-2 text-blue-600 hover:bg-blue-100 rounded-lg">✏️</button>
+                        <button onclick="openEmployeePaymentModal(${emp.id})" class="p-2 text-green-600 hover:bg-green-100 rounded-lg">💵</button>
+                        <button onclick="deleteEmployee(${emp.id})" class="p-2 text-red-400 hover:text-red-600">×</button>
+                    </div>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Total payé:</span>
+                        <span class="font-bold text-green-700">${totalPaid.toLocaleString()} DZD</span>
+                    </div>
+                    <div class="border-t pt-2">
+                        <p class="text-gray-500 mb-1">Produits assignés (${assignedProducts.length}):</p>
+                        <div class="flex flex-wrap gap-1">
+                            ${assignedProducts.map(p => `<span class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs">${p.name}</span>`).join('')}
+                            ${assignedProducts.length === 0 ? '<span class="text-gray-400 text-xs">Aucun</span>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(div);
+        });
+        
+        if(data.employees.length === 0) {
+            grid.innerHTML = '<p class="text-gray-400 text-center italic col-span-full py-8">Aucun employé</p>';
+        }
+    }
+
+    function renderProducts() {
+        const grid = document.getElementById('productsGrid');
+        grid.innerHTML = '';
+        data.products.forEach(prod => {
+            const isLowStock = prod.stockQuantity <= prod.minStockAlert;
+            const assignedEmployees = data.employees.filter(e => (e.assignedProductIds || []).includes(String(prod.id)));
+            
+            const div = document.createElement('div');
+            div.className = `p-6 rounded-2xl border hover:shadow-lg transition-all ${isLowStock ? 'bg-red-50 border-red-200' : 'bg-white'}`;
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-indigo-700">${prod.name}</h3>
+                        ${prod.sku ? `<p class="text-sm text-gray-500">SKU: ${prod.sku}</p>` : ''}
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="editProduct(${prod.id})" class="p-2 text-blue-600 hover:bg-blue-100 rounded-lg">✏️</button>
+                        <button onclick="deleteProduct(${prod.id})" class="p-2 text-red-400 hover:text-red-600">×</button>
+                    </div>
+                </div>
+                ${prod.description ? `<p class="text-gray-600 mb-3 text-sm">${prod.description}</p>` : ''}
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Prix:</span>
+                        <span class="font-bold">${prod.priceDzd.toLocaleString()} DZD</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Stock:</span>
+                        <span class="font-bold ${isLowStock ? 'text-red-600' : 'text-green-700'}">${prod.stockQuantity} ${isLowStock ? '⚠️' : ''}</span>
+                    </div>
+                    <div class="border-t pt-2">
+                        <p class="text-gray-500 mb-1">Assigné à (${assignedEmployees.length}):</p>
+                        <div class="flex flex-wrap gap-1">
+                            ${assignedEmployees.map(e => `<span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">${e.name}</span>`).join('')}
+                            ${assignedEmployees.length === 0 ? '<span class="text-gray-400 text-xs">Personne</span>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(div);
+        });
+        
+        if(data.products.length === 0) {
+            grid.innerHTML = '<p class="text-gray-400 text-center italic col-span-full py-8">Aucun produit</p>';
+        }
+    }
+
+    // PERSISTENCE
+    function saveData() {
+        localStorage.setItem('sponsoringData', JSON.stringify(data));
+    }
+    
+    function loadData() {
+        const saved = localStorage.getItem('sponsoringData');
+        if(saved) {
+            const loadedData = JSON.parse(saved);
+            // Merge with default roles to ensure they exist
+            data = {
+                ...loadedData,
+                roles: [
+                    { id: 'confirmateur', name: 'Confirmateur de Commandes', description: 'Valide les commandes, gère les upsell' },
+                    { id: 'gestionnaire_stock', name: 'Gestionnaire de Stock', description: 'Gère le stock des produits' },
+                    { id: 'emballeur', name: 'Emballeur', description: 'Prépare les colis' },
+                    { id: 'employe_general', name: 'Employé Général', description: 'Rôle polyvalent' }
+                ]
+            };
+            // Ensure new fields exist
+            if(!data.employees) data.employees = [];
+            if(!data.products) data.products = [];
+            if(!data.employeePayments) data.employeePayments = [];
+        }
+    }
+    
+    function deleteItem(type, id) {
+        if(confirm('Êtes-vous sûr ?')) {
+            data[type] = data[type].filter(i => i.id != id);
+            saveData();
+            renderAll();
+        }
+    }
+
+    function backupData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "sponsoring_backup_" + new Date().toISOString().slice(0,10) + ".json");
+        document.body.appendChild(downloadAnchorNode); // required for firefox
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+    
+    function importData() {
+        document.getElementById('fileInput').click();
+    }
+    
+    function handleFileLoad(input) {
+        const file = input.files[0];
+        if(!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                // Basic validation could go here
+                data = importedData;
+                // Ensure roles exist
+                data.roles = [
+                    { id: 'confirmateur', name: 'Confirmateur de Commandes', description: 'Valide les commandes, gère les upsell' },
+                    { id: 'gestionnaire_stock', name: 'Gestionnaire de Stock', description: 'Gère le stock des produits' },
+                    { id: 'emballeur', name: 'Emballeur', description: 'Prépare les colis' },
+                    { id: 'employe_general', name: 'Employé Général', description: 'Rôle polyvalent' }
+                ];
+                if(!data.employees) data.employees = [];
+                if(!data.products) data.products = [];
+                if(!data.employeePayments) data.employeePayments = [];
+                saveData();
+                renderAll();
+                alert('Données importées avec succès !');
+            } catch(err) {
+                alert('Erreur lors de l\'import du fichier.');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function exportPDF() {
+        window.print();
     }
   </script>
-
-</body>
-
+</body> 
 </html>
