@@ -158,6 +158,7 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.email != null
         && request.auth.token.email.lower() in [
+             'loupotec@outlook.fr',
              'hichem@sponsor.com'
              // Ajoutez ici d'autres emails admin si besoin, en minuscules.
            ];
