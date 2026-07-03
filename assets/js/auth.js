@@ -17,7 +17,7 @@ window.getUserRole = function () {
     // autorisé ; d'autres emails peuvent être ajoutés via
     // appState.globalConfig.adminEmails (à configurer uniquement par un
     // admin déjà connecté, dans les Paramètres).
-    const defaultAdmins = ['hichem@sponsor.com'];
+    const defaultAdmins = ['loupotec@outlook.fr', 'hichem@sponsor.com'];
     const extraAdmins = (window.appState && window.appState.globalConfig && Array.isArray(window.appState.globalConfig.adminEmails))
       ? window.appState.globalConfig.adminEmails
       : [];

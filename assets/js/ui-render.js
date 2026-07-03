@@ -1094,6 +1094,7 @@ window.renderSettingsAdmin = function(container) {
             Tout autre compte Firebase authentifié sera automatiquement refusé et déconnecté.
           </div>
           <div class="flex flex-wrap gap-2 mb-4">
+            <span class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-full text-xs font-bold">loupotec@outlook.fr (par défaut)</span>
             <span class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-full text-xs font-bold">hichem@sponsor.com (par défaut)</span>
             ${((appState.globalConfig && appState.globalConfig.adminEmails) || []).map((em, idx) => `
               <span class="px-3 py-1.5 bg-red-600 text-white rounded-full text-xs font-bold flex items-center gap-2">
