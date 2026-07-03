@@ -1,0 +1,177 @@
+// ==========================================================================
+// RÈGLES DE SÉCURITÉ FIRESTORE — Sponsor Manager
+// ==========================================================================
+// À COPIER-COLLER dans Firebase Console > Firestore Database > Règles,
+// puis cliquer "Publier". Peut aussi être déployé via Firebase CLI :
+//   firebase deploy --only firestore:rules
+//
+// ⚠️ LIMITE IMPORTANTE À COMPRENDRE AVANT DE DÉPLOYER :
+// Dans cette application, seul le compte Admin (hichem@sponsor.com) se
+// connecte via Firebase Authentication (email/mot de passe). Les employés
+// et les clients utilisent un système de session "maison" (comparaison de
+// mot de passe côté JavaScript) et accèdent à Firestore SANS jamais passer
+// par Firebase Auth. Résultat : Firestore ne peut pas distinguer "un employé
+// légitime de l'entreprise" d'un "visiteur anonyme sur le site", puisque les
+// deux se présentent de la même façon (request.auth == null).
+//
+// Ces règles :
+//   ✅ Empêchent l'accès à toute collection non prévue par l'app
+//   ✅ Empêchent d'écrire des documents mal formés (types incorrects, champs
+//      requis manquants) — bloque les scripts de spam/vandalisme basiques
+//   ✅ Donnent au compte Admin authentifié un accès total et exclusif à la
+//      collection "users" (ses réglages globaux) et "admins" (liste blanche)
+//   ⚠️ Doivent NÉCESSAIREMENT laisser les collections métier (clients,
+//      transactions, paiements, employees, etc.) lisibles/écrivables sans
+//      authentification Firebase, sinon les employés et les clients ne
+//      peuvent plus utiliser l'application (page blanche, sync cassée).
+//
+// ➜ Pour une vraie isolation par entreprise (empêcher un visiteur d'appeler
+// l'API Firestore directement pour lire/modifier les données), il faut faire
+// évoluer l'authentification employé/client vers de vrais tokens Firebase
+// (via une Cloud Function côté serveur). C'est un chantier à part, plus
+// large — je peux vous accompagner dessus séparément si vous le souhaitez.
+// ==========================================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Liste blanche des emails admin (lecture par tous pour vérif. côté
+    // client si besoin, écriture réservée à un admin déjà authentifié) ---
+    match /admins/{email} {
+      allow read: if true;
+      allow write: if isAuthenticatedAdmin();
+    }
+
+    // --- Réglages globaux liés à un compte admin (clé = uid Firebase Auth) ---
+    match /users/{uid} {
+      allow read, write: if isAuthenticatedAdmin() && request.auth.uid == uid;
+    }
+
+    // --- Collections métier de l'application ---
+    // Accès nécessaire sans Firebase Auth car employés/clients n'en ont pas
+    // (voir avertissement ci-dessus). On limite la casse avec une validation
+    // minimale des documents écrits.
+    match /clients/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /employees/{docId} {
+      // Lecture nécessaire pour permettre la vérification du login employé
+      // avant même qu'il ne soit "connecté". Les mots de passe sont hashés
+      // (SHA-256 + sel) côté application, donc une lecture de ce document
+      // n'expose plus le mot de passe en clair.
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /offers/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /transactions/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /todoTransactions/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /payments/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /usdPurchases/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /expenses/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /usdtExpenses/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /recurringExpenses/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /clientRequests/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /adAccounts/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /products/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /employeePayments/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    match /employeePerformance/{docId} {
+      allow read: if true;
+      allow create, update: if isWellFormed();
+      allow delete: if isAuthenticatedAdmin();
+    }
+
+    // Tout le reste : refusé par défaut.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ---------------- Fonctions utilitaires ----------------
+
+    function isAuthenticatedAdmin() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() in [
+             'hichem@sponsor.com'
+             // Ajoutez ici d'autres emails admin si besoin, en minuscules.
+           ];
+    }
+
+    // Validation basique : le document doit avoir un identifiant "uid" (le
+    // compte auquel il appartient) non vide, et une taille raisonnable, pour
+    // éviter les écritures de spam/données corrompues. Ne remplace pas une
+    // vraie vérification d'identité (voir avertissement en haut du fichier).
+    function isWellFormed() {
+      return request.resource.data.keys().hasAny(['uid'])
+        && request.resource.data.uid is string
+        && request.resource.data.uid.size() > 0
+        && request.resource.data.size() < 100;
+    }
+  }
+}

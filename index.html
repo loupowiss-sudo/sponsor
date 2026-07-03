@@ -18,7 +18,6 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap"
     rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
@@ -95,6 +94,8 @@
         <div class="bg-gray-50 border rounded-2xl p-4 space-y-3 mt-3">
           <div class="text-center font-bold text-gray-800">Connexion Client</div>
           <input id="clientQuickId" type="text" placeholder="Téléphone ou Nom d'utilisateur ou Email"
+            class="w-full p-3 border rounded-xl">
+          <input id="clientQuickPass" type="password" placeholder="Mot de passe"
             class="w-full p-3 border rounded-xl">
           <button type="button" onclick="loginClientQuick()"
             class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl shadow hover:bg-blue-700 transition-all">
@@ -1103,18 +1104,20 @@
   <!-- External Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="assets/js/theme.js?v=26"></script>
-  <script src="assets/js/state.js?v=26"></script>
-  <script src="assets/js/firebase-init.js?v=26"></script>
-  <script src="assets/js/utils.js?v=26"></script>
-  <script src="assets/js/calculations.js?v=26"></script>
-  <script src="assets/js/auth.js?v=26"></script>
-  <script src="assets/js/data-service.js?v=26"></script>
-  <script src="assets/js/ui-render.js?v=26"></script>
-  <script src="assets/js/ui-handlers.js?v=26"></script>
-  <script src="assets/js/meta-live.js?v=26"></script>
-  <script src="assets/js/app.js?v=26"></script>
-  <script src="assets/js/demo.js?v=26"></script>
+  <script src="assets/js/theme.js?v=30"></script>
+  <script src="assets/js/state.js?v=30"></script>
+  <script src="assets/js/firebase-init.js?v=30"></script>
+  <script src="assets/js/utils.js?v=30"></script>
+  <script src="assets/js/calculations.js?v=30"></script>
+  <script src="assets/js/core.js?v=30"></script>
+  <script src="assets/js/auth.js?v=30"></script>
+  <script src="assets/js/data-service.js?v=30"></script>
+  <script src="assets/js/ui-render.js?v=30"></script>
+  <script src="assets/js/ui-handlers.js?v=30"></script>
+  <script src="assets/js/client-space.js?v=30"></script>
+  <script src="assets/js/meta-live.js?v=30"></script>
+  <script src="assets/js/app.js?v=30"></script>
+  <script src="assets/js/demo.js?v=30"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
