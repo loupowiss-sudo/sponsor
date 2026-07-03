@@ -5,11 +5,34 @@
  * @returns {string} 'admin' | 'employee' | 'client' | 'none'
  */
 window.getUserRole = function () {
-  const user = auth ? auth.currentUser : null;
+  const rawUser = auth ? auth.currentUser : null;
+  // Un utilisateur Firebase "anonyme" (ajouté pour sécuriser l'accès Firestore
+  // des employés/clients) ne doit jamais être traité comme un admin : seul un
+  // vrai compte email/mot de passe compte ici.
+  const user = (rawUser && !rawUser.isAnonymous) ? rawUser : null;
   const sess = (window.appState && window.appState.session) ? window.appState.session : null;
 
-  if (user && user.email === 'hichem@sponsor.com') return 'admin'; // Hardcoded admin for now or check custom claims
-  if (user) return 'admin'; // Default for Firebase Auth users in this app
+  if (user) {
+    // Liste blanche des emails admin. Le compte historique reste toujours
+    // autorisé ; d'autres emails peuvent être ajoutés via
+    // appState.globalConfig.adminEmails (à configurer uniquement par un
+    // admin déjà connecté, dans les Paramètres).
+    const defaultAdmins = ['hichem@sponsor.com'];
+    const extraAdmins = (window.appState && window.appState.globalConfig && Array.isArray(window.appState.globalConfig.adminEmails))
+      ? window.appState.globalConfig.adminEmails
+      : [];
+    const allowlist = [...defaultAdmins, ...extraAdmins].map(e => String(e || '').toLowerCase());
+    const userEmail = (user.email || '').toLowerCase();
+
+    if (allowlist.includes(userEmail)) return 'admin';
+
+    // Sécurité : un compte Firebase Auth authentifié mais absent de la
+    // liste blanche n'obtient AUCUN rôle. Avant cette correction, tout
+    // utilisateur authentifié devenait automatiquement admin.
+    console.warn('Connexion Firebase Auth refusée : email non autorisé en tant qu\'admin ->', userEmail);
+    return 'none';
+  }
+
   if (sess && sess.type === 'employee') return 'employee';
   if (sess && sess.type === 'client') return 'client';
 

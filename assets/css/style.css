@@ -1,97 +1,149 @@
-.fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
+/* === STYLE.CSS — Sponsor Manager PRO === */
+
+/* ── Animations ── */
+.fade-in { animation: fadeIn 0.4s ease forwards; opacity: 0; }
 @keyframes fadeIn { to { opacity: 1; } }
-.hover-scale:hover { transform: scale(1.03); transition: transform 0.2s; }
+
+.slide-up { animation: slideUp 0.35s ease forwards; opacity: 0; }
+@keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ── Navigation active tab ── */
 .active-tab {
-  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%) !important;
+  color: white !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
 }
+
+/* ── Card hover ── */
+.card-hover { transition: all 0.25s ease; border: 1px solid transparent; }
+.card-hover:hover { border-color: #6366f1; box-shadow: 0 8px 30px -6px rgba(99, 102, 241, 0.18); transform: translateY(-2px); }
+
+/* ── Modals ── */
+.modal-show { animation: modalIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes modalIn { from { opacity: 0; transform: scale(0.94) translateY(-10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+/* ── Badges profit/loss ── */
+.profit-badge { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.loss-badge   { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 6px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ── Hidden utility ── */
 .hidden { display: none !important; }
+
+/* ── Employee mode — hide restricted elements ── */
 .employee-mode .employee-hidden { display: none !important; }
-.employee-mode #financeHeaderSection,
-.employee-mode #financeCardsSection,
-.employee-mode #taxCard,
-.employee-mode #card-profit-today,
-.employee-mode #card-stock-usd,
-.employee-mode #profitChartSection,
-.employee-mode #tab-dashboard,
-.employee-mode #dashboard,
-.employee-mode #tab-achats,
-.employee-mode #tab-paiements,
-.employee-mode #tab-ads,
-.employee-mode #employeesSection { display: none !important; }
-.card-hover { transition: all 0.3s ease; border: 1px solid transparent; }
-.card-hover:hover { border-color: #3b82f6; box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.2); }
-.modal-show { animation: modalFadeIn 0.3s ease; }
-@keyframes modalFadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-.profit-badge { background-color: #dcfce7; color: #166534; }
-.loss-badge { background-color: #fee2e2; color: #991b1b; }
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
-::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
 
-.milestone-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(2px);
-}
+/* ── Hover scale ── */
+.hover-scale { transition: transform 0.2s ease; }
+.hover-scale:hover { transform: scale(1.03); }
 
-.milestone-card {
-  width: min(520px, calc(100vw - 32px));
-  background: white;
-  border-radius: 20px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-  padding: 20px 22px;
-  animation: milestonePop 240ms ease-out;
-  position: relative;
-  z-index: 2;
-}
-
-.milestone-title {
-  font-weight: 900;
-  font-size: 18px;
-  color: #0f172a;
-}
-
-.milestone-subtitle {
-  margin-top: 6px;
-  font-size: 13px;
-  color: #64748b;
+/* ── Active client tab ── */
+.active-client-tab {
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
   font-weight: 700;
 }
 
-.milestone-confetti {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  z-index: 1;
-  pointer-events: none;
+/* ── Milestone / Confetti overlay ── */
+.milestone-overlay {
+  position: fixed; inset: 0; z-index: 99999;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(3px);
 }
-
+.milestone-card {
+  width: min(520px, calc(100vw - 32px));
+  background: white; border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
+  padding: 24px 26px;
+  animation: milestonePop 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative; z-index: 2;
+}
+.milestone-title    { font-weight: 900; font-size: 18px; color: #0f172a; }
+.milestone-subtitle { margin-top: 6px; font-size: 13px; color: #64748b; font-weight: 700; }
+.milestone-confetti { position: absolute; inset: 0; overflow: hidden; z-index: 1; pointer-events: none; }
 .milestone-piece {
-  position: absolute;
-  top: -16px;
-  width: 10px;
-  height: 14px;
-  border-radius: 2px;
-  opacity: 0.95;
-  animation: confettiFall 1200ms ease-in forwards;
+  position: absolute; top: -16px; width: 10px; height: 14px;
+  border-radius: 2px; opacity: 0.95;
+  animation: confettiFall 1300ms ease-in forwards;
 }
-
 @keyframes confettiFall {
-  0% { transform: translateY(-20px) rotate(0deg); opacity: 0; }
-  10% { opacity: 1; }
-  100% { transform: translateY(120vh) rotate(720deg); opacity: 0; }
+  0%   { transform: translateY(-20px) rotate(0deg);    opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translateY(120vh) rotate(740deg);  opacity: 0; }
+}
+@keyframes milestonePop {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
 }
 
-@keyframes milestonePop {
-  from { transform: scale(0.96); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+/* ── Tables ── */
+table { border-collapse: collapse; width: 100%; }
+thead th {
+  background: #f8fafc;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: #64748b; font-weight: 700; padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
 }
+tbody tr { transition: background 0.15s; }
+tbody tr:hover { background: #f8fafc; }
+tbody td { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; font-size: 14px; color: #334155; }
+
+/* ── Stat cards ── */
+.stat-card {
+  background: white; border-radius: 20px;
+  padding: 20px 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+}
+.stat-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translateY(-2px); }
+
+/* ── Inputs ── */
+input[type="text"], input[type="email"], input[type="password"],
+input[type="number"], input[type="tel"], input[type="date"],
+select, textarea {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+/* ── Buttons ── */
+button { cursor: pointer; }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Toast container ── */
+#toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Nav scrollable on mobile ── */
+@media (max-width: 768px) {
+  nav .flex { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  nav .flex::-webkit-scrollbar { height: 3px; }
+  .tab-btn { white-space: nowrap; flex-shrink: 0; }
+}
+
+/* ── Print ── */
+@media print {
+  nav, button, #syncIndicator, #toast-container { display: none !important; }
+  body { background: white !important; }
+}
+
+/* ── Dark mode basics ── */
+.dark body { background: #0f172a; color: #e2e8f0; }
+.dark .bg-white { background: #1e293b !important; }
+.dark .border { border-color: #334155 !important; }
+.dark .text-gray-800 { color: #f1f5f9 !important; }
+.dark .text-gray-600 { color: #94a3b8 !important; }
+.dark .text-gray-500 { color: #64748b !important; }
+.dark thead th { background: #1e293b; color: #94a3b8; border-color: #334155; }
+.dark tbody td  { border-color: #1e293b; color: #cbd5e1; }
+.dark tbody tr:hover { background: #1e293b; }

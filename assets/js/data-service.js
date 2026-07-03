@@ -125,7 +125,6 @@ window.saveToCloud = async function() {
     
     // Process pending deletions
     if (appState.sync && appState.sync.pendingDeletions && appState.sync.pendingDeletions.length > 0) {
-        console.log(`Processing ${appState.sync.pendingDeletions.length} pending cloud deletions...`);
         const deletePromises = appState.sync.pendingDeletions.map(del => {
             // Wait, for users/settings and employees, they usually don't have their own granular collection
             // But if they do, we delete. For safety, let's catch errors individually.
@@ -136,7 +135,6 @@ window.saveToCloud = async function() {
         saveToLocalStorage();
     }
     
-    console.log('☁️ Sauvegarde Cloud réussie');
     appState.sync.pendingCloudSave = false;
     
     // Si c'est une sauvegarde manuelle, on notifie
@@ -159,7 +157,7 @@ async function syncGranularToCloud() {
   const uid = auth?.currentUser?.uid || appState?.adminUid;
   if (!uid) return;
 
-  const collections = ['clients', 'offers', 'transactions', 'todoTransactions', 'payments', 'usdPurchases', 'expenses', 'clientRequests', 'recurringExpenses', 'usdtExpenses', 'employees', 'adAccounts'];
+  const collections = ['clients', 'offers', 'transactions', 'todoTransactions', 'payments', 'usdPurchases', 'expenses', 'clientRequests', 'recurringExpenses', 'usdtExpenses', 'employees', 'adAccounts', 'products', 'employeePayments', 'employeePerformance'];
   
   const promises = [];
   
@@ -252,7 +250,7 @@ function loadGranularFromCloud() {
   const uid = auth?.currentUser?.uid || appState?.adminUid;
   if (!uid) return;
 
-  const collections = ['clients', 'offers', 'transactions', 'todoTransactions', 'payments', 'usdPurchases', 'expenses', 'clientRequests', 'recurringExpenses', 'usdtExpenses', 'employees', 'adAccounts'];
+  const collections = ['clients', 'offers', 'transactions', 'todoTransactions', 'payments', 'usdPurchases', 'expenses', 'clientRequests', 'recurringExpenses', 'usdtExpenses', 'employees', 'adAccounts', 'products', 'employeePayments', 'employeePerformance'];
   const totalCollections = collections.length;
   initialLoadCount = 0;
 

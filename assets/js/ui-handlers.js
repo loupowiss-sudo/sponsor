@@ -174,8 +174,21 @@ window.handleLoginClick = async function() {
     const emp = employees.find(e => (e.active !== false) && ((e.login || '').toLowerCase() === email.toLowerCase() || (e.email || '').toLowerCase() === email.toLowerCase()));
     
     if (emp) {
-      if (emp.password !== password) {
+      const check = await verifyAccountPassword(emp, password);
+      if (!check.ok) {
         throw new Error('Mot de passe employé incorrect');
+      }
+
+      // Migration transparente : compte encore en mot de passe clair (créé
+      // avant la mise à jour sécurité) → on le hash immédiatement.
+      if (check.needsMigration) {
+        const salt = generateSalt();
+        emp.passwordHash = await hashPassword(password, salt);
+        emp.passwordSalt = salt;
+        delete emp.password;
+        const idx = (appState.employees || []).findIndex(e => e.id === emp.id);
+        if (idx > -1) appState.employees[idx] = emp;
+        if (typeof autoSave === 'function') autoSave();
       }
       
       appState.adminUid = emp.uid; 
@@ -848,6 +861,66 @@ window.deleteExpense = function(id) {
   showToast('Frais supprimé', 'info');
 };
 
+// === CHARGES FIXES RÉCURRENTES (mensuelles) ===
+window.addRecurringExpense = function() {
+  const label = (document.getElementById('recurringLabel')?.value || '').trim();
+  const category = (document.getElementById('recurringCategory')?.value || '').trim() || 'Récurrent';
+  const account = document.getElementById('recurringAccount')?.value || 'liquide';
+  const amount = Number(document.getElementById('recurringAmount')?.value || 0);
+
+  if (!label) return showToast('Nom de la charge requis', 'error');
+  if (!Number.isFinite(amount) || amount <= 0) return showToast('Montant invalide', 'error');
+
+  const item = {
+    id: generateId('rec'),
+    label,
+    category,
+    account,
+    amount,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+
+  if (!appState.recurringExpenses) appState.recurringExpenses = [];
+  appState.recurringExpenses.push(item);
+
+  ['recurringLabel', 'recurringCategory', 'recurringAmount'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+  showToast('Charge fixe ajoutée', 'success');
+};
+
+window.deleteRecurringExpense = function(id) {
+  if (!confirm('Supprimer cette charge fixe ? Elle ne sera plus prélevée automatiquement chaque mois.')) return;
+  appState.recurringExpenses = (appState.recurringExpenses || []).filter(e => e.id !== id);
+  if (!appState.sync) appState.sync = {};
+  if (!appState.sync.pendingDeletions) appState.sync.pendingDeletions = [];
+  appState.sync.pendingDeletions.push({ col: 'recurringExpenses', id: id });
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+  showToast('Charge fixe supprimée', 'info');
+};
+
+// Force l'application immédiate des charges fixes du mois (au lieu d'attendre le check automatique)
+window.applyRecurringExpensesNow = function() {
+  if (!Array.isArray(appState.recurringExpenses) || appState.recurringExpenses.length === 0) {
+    return showToast('Aucune charge fixe configurée', 'info');
+  }
+  const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  if ((appState.appliedRecurringMonths || []).includes(monthKey)) {
+    return showToast('Les charges fixes du mois ont déjà été prélevées', 'info');
+  }
+  if (typeof applyRecurringExpensesForCurrentMonth === 'function') applyRecurringExpensesForCurrentMonth();
+  if (typeof recalculateFinanceBalances === 'function') recalculateFinanceBalances();
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+  showToast('Charges fixes du mois prélevées', 'success');
+};
+
 window.addUsdPurchase = function() {
   const amount = Number(document.getElementById('usdAmount')?.value || 0);
   const rate = Number(document.getElementById('usdRate')?.value || 0);
@@ -971,7 +1044,36 @@ window.rechargeAdAccount = function(id) {
   showToast(`Compte rechargé de ${amount}$`, 'success');
 };
 
-window.addEmployee = function() {
+// === SÉCURITÉ : liste blanche des emails admin ===
+window.addAdminEmail = function() {
+  const el = document.getElementById('newAdminEmail');
+  const email = (el?.value || '').trim().toLowerCase();
+  if (!email || !email.includes('@')) return showToast('Email invalide', 'error');
+
+  if (!appState.globalConfig) appState.globalConfig = {};
+  if (!Array.isArray(appState.globalConfig.adminEmails)) appState.globalConfig.adminEmails = [];
+
+  if (appState.globalConfig.adminEmails.includes(email) || email === 'hichem@sponsor.com') {
+    return showToast('Cet email est déjà autorisé', 'warning');
+  }
+
+  appState.globalConfig.adminEmails.push(email);
+  if (el) el.value = '';
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+  showToast('Email admin autorisé. N\'oubliez pas de créer ce compte dans Firebase Authentication.', 'success');
+};
+
+window.removeAdminEmail = function(idx) {
+  if (!appState.globalConfig || !Array.isArray(appState.globalConfig.adminEmails)) return;
+  if (!confirm('Retirer cet email de la liste des admins autorisés ?')) return;
+  appState.globalConfig.adminEmails.splice(idx, 1);
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+  showToast('Email retiré', 'info');
+};
+
+window.addEmployee = async function() {
   let name = (document.getElementById('employeeName')?.value || '').trim();
   const login = (document.getElementById('employeeLogin')?.value || '').trim();
   const password = (document.getElementById('employeePassword')?.value || '').trim();
@@ -987,11 +1089,15 @@ window.addEmployee = function() {
   const exists = appState.employees.some(e => (e.login || '').toLowerCase() === login.toLowerCase());
   if (exists) return showToast('Ce nom d\'utilisateur existe déjà', 'warning');
 
+  const salt = generateSalt();
+  const passwordHash = await hashPassword(password, salt);
+
   appState.employees.push({
     id: generateId('emp'),
     name,
     login,
-    password,
+    passwordHash,
+    passwordSalt: salt,
     salary,
     active,
     createdAt: Date.now(),
@@ -1641,7 +1747,6 @@ async function processOcrImage(imageSrc) {
     progressText.textContent = 'Analyse terminée !';
     
     const text = result.data.text;
-    console.log('OCR Result:', text);
     
     // Afficher le texte brut OCR
     document.getElementById('ocrRawText').textContent = text || '(vide)';
@@ -1671,7 +1776,6 @@ function parseNotebookText(text) {
   const amountPattern = /(\d[\d\s,.]{2,8})\s*(?:da|dzd|dz|€|\$)?/i;
   
   for (const line of lines) {
-    console.log('Traitement ligne:', line);
     
     // Compte les checks (✓, ✔, ☑, et 'W' que Tesseract détecte souvent)
     let checkCount = 0;
@@ -1693,7 +1797,6 @@ function parseNotebookText(text) {
     
     const amountMatch = cleanLine.match(amountPattern);
     if (!amountMatch) {
-      console.log('Pas de montant trouvé');
       continue;
     }
     
@@ -1701,7 +1804,6 @@ function parseNotebookText(text) {
     let amountStr = amountMatch[1].replace(/[\s,.]/g, '');
     const amount = parseInt(amountStr);
     if (isNaN(amount) || amount < 100) {
-      console.log('Montant invalide:', amountStr);
       continue;
     }
     
@@ -1710,7 +1812,6 @@ function parseNotebookText(text) {
     name = name.replace(/\s+/g, ' ').trim(); // Remplace multiples espaces par un seul
     
     if (!name || name.length < 2) {
-      console.log('Nom invalide ou trop court:', name);
       continue;
     }
     
@@ -1755,7 +1856,6 @@ function parseNotebookText(text) {
     });
   }
   
-  console.log('Sponsors trouvés:', sponsors);
   return sponsors;
 }
 

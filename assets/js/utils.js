@@ -6,7 +6,63 @@
  * @returns {string}
  */
 window.generateId = function(prefix = 'id') {
-  return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+  const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID().replace(/-/g, '').slice(0, 16)
+    : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 9)}`;
+  return `${prefix}_${uuid}`;
+};
+
+/**
+ * === SÉCURITÉ : hachage des mots de passe (employés/clients) ===
+ * Utilise SHA-256 (Web Crypto, natif navigateur, aucune dépendance) + un sel
+ * unique par compte. Ce n'est pas destiné à remplacer une vraie authentification
+ * serveur, mais évite de stocker et transmettre les mots de passe en clair.
+ */
+window.generateSalt = function() {
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+};
+
+window.hashPassword = async function(password, salt) {
+  const text = `${salt}:${password}`;
+  if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
+    try {
+      const data = new TextEncoder().encode(text);
+      const digest = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+      console.error('Erreur de hachage, fallback non sécurisé:', e);
+    }
+  }
+  // Fallback (navigateurs très anciens / contexte non sécurisé) : ne devrait
+  // normalement jamais être utilisé sur une app servie en HTTPS.
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) { hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0; }
+  return 'fallback_' + Math.abs(hash).toString(16);
+};
+
+/**
+ * Vérifie un mot de passe saisi contre un compte (employé ou client) qui peut
+ * être soit déjà migré (passwordHash + passwordSalt), soit encore en ancien
+ * format (password en clair, comptes créés avant la mise à jour sécurité).
+ * Retourne { ok, needsMigration } — needsMigration=true signifie qu'il faut
+ * réenregistrer le compte avec un hash pour ne plus jamais stocker le clair.
+ */
+window.verifyAccountPassword = async function(account, password) {
+  if (!account) return { ok: false, needsMigration: false };
+  if (account.passwordHash && account.passwordSalt) {
+    const computed = await hashPassword(password, account.passwordSalt);
+    return { ok: computed === account.passwordHash, needsMigration: false };
+  }
+  // Ancien format en clair (compte créé avant la mise à jour sécurité)
+  if (account.password !== undefined) {
+    return { ok: account.password === password, needsMigration: account.password === password };
+  }
+  return { ok: false, needsMigration: false };
 };
 
 /**
@@ -182,7 +238,15 @@ window.copyToClipboard = function(text) {
  * @returns {boolean}
  */
 window.isAdminSession = function() {
-  return !!auth.currentUser || (appState.session && appState.session.type === 'employee');
+  return !!auth.currentUser;
+};
+
+/**
+ * Vérifie si la session actuelle est Admin OU Employé (accès espace pro)
+ * @returns {boolean}
+ */
+window.isStaffSession = function() {
+  return !!auth.currentUser || (appState.session && (appState.session.type === 'employee' || appState.session.type === 'admin'));
 };
 
 /**

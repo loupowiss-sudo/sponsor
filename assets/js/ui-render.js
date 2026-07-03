@@ -321,17 +321,42 @@ window.renderDashboard = function(container) {
   }
 
   const allClients = appState.clients || [];
-  let totalDettes = 0;
-  
+  let totalDettesCount = 0;
+  let totalDettesAmount = 0;
+
   allClients.forEach(c => {
-      if (Number(c.unpaid || 0) > 0) {
-          totalDettes++;
+      const u = Number(c.unpaid || 0);
+      if (u > 0) {
+          totalDettesCount++;
+          totalDettesAmount += u;
       }
   });
 
-  if (totalDettes > 0) {
-      alerts.push({ type: 'danger', icon: 'fa-exclamation-circle', text: `Action Requise : ${totalDettes} client(s) ont une dette en cours.` });
+  if (totalDettesCount > 0) {
+      alerts.push({ type: 'danger', icon: 'fa-exclamation-circle', text: `Action Requise : ${totalDettesCount} client(s) doivent au total ${formatCurrency(totalDettesAmount)}.` });
   }
+
+  // --- Dépenses récurrentes : total mensuel engagé ---
+  const recurringMonthlyTotal = (appState.recurringExpenses || []).reduce((s, re) => s + Number(re && re.amount || 0), 0);
+  if (recurringMonthlyTotal > 0) {
+      const monthKeyNow = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      const alreadyApplied = (appState.appliedRecurringMonths || []).includes(monthKeyNow);
+      if (!alreadyApplied) {
+          alerts.push({ type: 'warning', icon: 'fa-calendar-alt', text: `Charges fixes du mois pas encore prélevées : ${formatCurrency(recurringMonthlyTotal)} (${(appState.recurringExpenses||[]).length} poste(s)).` });
+      }
+  }
+
+  // --- Patrimoine net (trésorerie totale convertie en DZD) ---
+  const redotpayRate = (typeof getRedotpayRate === 'function') ? getRedotpayRate() : 250;
+  const usdtInDzd = (b.usdt || 0) * redotpayRate;
+  const netWorthDzd = (b.liquide || 0) + (b.baridimob || 0) + usdtInDzd;
+  const netWorthWithReceivables = netWorthDzd + totalDettesAmount;
+  const shareOf = (v) => netWorthDzd !== 0 ? Math.max(0, Math.min(100, (v / netWorthDzd) * 100)) : 0;
+  const shareLiquide = shareOf(b.liquide || 0);
+  const shareBaridimob = shareOf(b.baridimob || 0);
+  const shareUsdt = shareOf(usdtInDzd);
+  // Comparaison avec hier pour la tendance (basée sur le profit net d'hier)
+  const netWorthTrend = pYesterday ? Number(pYesterday.netProfit || 0) : null;
 
   const alertsHtml = alerts.length > 0 ? `
     <div class="mb-6 flex flex-col gap-3 fade-in">
@@ -385,8 +410,49 @@ window.renderDashboard = function(container) {
     </div>
     
     ${isAdmin ? `
+    <!-- Hero Trésorerie : patrimoine net consolidé -->
+    <div class="relative overflow-hidden rounded-3xl shadow-xl mb-8 bg-gradient-to-br from-indigo-600 via-blue-600 to-purple-700 p-6 md:p-8 text-white fade-in">
+      <div class="absolute -right-10 -top-10 w-52 h-52 rounded-full bg-white/10"></div>
+      <div class="absolute -right-6 bottom-0 w-32 h-32 rounded-full bg-white/10"></div>
+      <div class="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <div>
+          <div class="flex items-center gap-2 text-indigo-100 text-xs font-black uppercase tracking-widest mb-2">
+            <i class="fas fa-wallet"></i> Trésorerie totale (équivalent DZD)
+          </div>
+          <div class="text-4xl md:text-5xl font-black tracking-tight">${formatCurrency(netWorthDzd)}</div>
+          <div class="mt-2 text-sm text-indigo-100">
+            + ${formatCurrency(totalDettesAmount)} de créances clients en attente
+            <span class="font-black text-white">→ ${formatCurrency(netWorthWithReceivables)} au total</span>
+          </div>
+        </div>
+        <div class="flex gap-6 md:gap-8">
+          <div class="text-right">
+            <div class="text-xs text-indigo-100 uppercase font-bold">Profit aujourd'hui</div>
+            <div class="text-xl font-black ${pToday && pToday.netProfit < 0 ? 'text-red-200' : 'text-green-200'}">${pToday ? formatCurrency(pToday.netProfit) : '—'}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-xs text-indigo-100 uppercase font-bold">Profit du mois</div>
+            <div class="text-xl font-black ${pMonth && pMonth.netProfit < 0 ? 'text-red-200' : 'text-green-200'}">${pMonth ? formatCurrency(pMonth.netProfit) : '—'}</div>
+          </div>
+        </div>
+      </div>
+      <!-- Répartition de la trésorerie -->
+      <div class="relative mt-6">
+        <div class="flex h-3 w-full rounded-full overflow-hidden bg-white/20">
+          <div class="bg-green-300" style="width:${shareLiquide}%" title="Liquide"></div>
+          <div class="bg-blue-300" style="width:${shareBaridimob}%" title="BaridiMob"></div>
+          <div class="bg-purple-300" style="width:${shareUsdt}%" title="USDT"></div>
+        </div>
+        <div class="flex flex-wrap gap-4 mt-3 text-xs font-bold text-indigo-100">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-green-300"></span>Liquide ${safeToFixed(shareLiquide,0)}%</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-300"></span>BaridiMob ${safeToFixed(shareBaridimob,0)}%</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-purple-300"></span>USDT ${safeToFixed(shareUsdt,0)}% <span class="opacity-75">(taux ${formatCurrency(redotpayRate)}/USDT)</span></span>
+        </div>
+      </div>
+    </div>
+
     <div class="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-4">
-      <div class="text-sm text-gray-500 dark:text-gray-400 font-bold">Soldes</div>
+      <div class="text-sm text-gray-500 dark:text-gray-400 font-bold">Soldes par poche</div>
       <button onclick="openModal('balancesModal')" class="px-4 py-2 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:bg-gray-50 dark:hover:bg-gray-700">
         Ajuster
       </button>
@@ -520,6 +586,33 @@ window.renderDashboard = function(container) {
           </button>
        </div>
     </div>
+
+    ${isAdmin && totalDettesCount > 0 ? `
+    <!-- Créances clients à relancer -->
+    <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700">
+      <div class="flex flex-col md:flex-row justify-between md:items-center gap-2 mb-5">
+        <h3 class="text-xl font-bold flex items-center gap-2 dark:text-white">
+          <i class="fas fa-hand-holding-usd text-red-500"></i> Créances à relancer
+        </h3>
+        <div class="text-sm font-black text-red-600">${formatCurrency(totalDettesAmount)} au total</div>
+      </div>
+      <div class="space-y-2">
+        ${allClients.filter(c => Number(c.unpaid || 0) > 0)
+          .sort((a, b) => Number(b.unpaid || 0) - Number(a.unpaid || 0))
+          .slice(0, 5)
+          .map(c => `
+            <div class="flex items-center justify-between p-3 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30">
+              <div class="font-bold text-gray-800 dark:text-gray-200">${c.name || 'Client'}</div>
+              <div class="flex items-center gap-3">
+                <div class="font-black text-red-600">${formatCurrency(c.unpaid)}</div>
+                <button onclick="showTab('clients')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-red-600 text-white hover:bg-red-700">Relancer</button>
+              </div>
+            </div>
+          `).join('')}
+      </div>
+      ${totalDettesCount > 5 ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-3 text-center">+ ${totalDettesCount - 5} autre(s) client(s) débiteur(s) — voir l'onglet Clients</div>` : ''}
+    </div>
+    ` : ''}
 
     ${isAdmin ? `
     <!-- Analytics Section -->
@@ -994,6 +1087,29 @@ window.renderSettingsAdmin = function(container) {
       </div>
 
       <div class="mt-10">
+        <h3 class="font-bold text-lg text-gray-700 border-b pb-2 mb-6">Sécurité — Comptes Admin autorisés</h3>
+        <div class="p-5 bg-red-50 rounded-2xl border border-red-100">
+          <div class="text-sm text-gray-700 mb-3">
+            Seuls ces emails peuvent se connecter en tant qu'<b>Admin</b> (compte historique toujours inclus par défaut).
+            Tout autre compte Firebase authentifié sera automatiquement refusé et déconnecté.
+          </div>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-full text-xs font-bold">hichem@sponsor.com (par défaut)</span>
+            ${((appState.globalConfig && appState.globalConfig.adminEmails) || []).map((em, idx) => `
+              <span class="px-3 py-1.5 bg-red-600 text-white rounded-full text-xs font-bold flex items-center gap-2">
+                ${em}
+                <button onclick="removeAdminEmail(${idx})" class="hover:text-red-200"><i class="fas fa-times"></i></button>
+              </span>
+            `).join('')}
+          </div>
+          <div class="flex gap-2">
+            <input id="newAdminEmail" type="email" placeholder="autre-admin@email.com" class="flex-1 p-3 border rounded-xl bg-white">
+            <button onclick="addAdminEmail()" class="px-4 py-2 bg-red-600 text-white font-bold rounded-xl">Autoriser</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-10">
         <h3 class="font-bold text-lg text-gray-700 border-b pb-2 mb-6">Employés</h3>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1241,6 +1357,55 @@ window.renderExpensesTab = function(container) {
         </table>
       </div>
       ${renderPagination(key, page, filtered.length, pageSize)}
+    </div>
+
+    <!-- Charges fixes récurrentes (mensuelles) -->
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 border dark:border-gray-700 fade-in mt-6">
+      <div class="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-6">
+        <div>
+          <h2 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+            <i class="fas fa-sync-alt text-indigo-500"></i> Charges fixes mensuelles
+          </h2>
+          <div class="text-xs text-gray-500 dark:text-gray-400">Prélevées automatiquement une fois par mois (salaires, internet, pub, etc.)</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="text-sm font-black text-indigo-600">Total: ${formatCurrency((appState.recurringExpenses || []).reduce((s, r) => s + Number(r.amount || 0), 0))}/mois</div>
+          <button onclick="applyRecurringExpensesNow()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold shadow-lg text-sm">
+            <i class="fas fa-bolt mr-1"></i> Prélever maintenant
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-5 p-4 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border dark:border-gray-700">
+        <input id="recurringLabel" type="text" placeholder="Nom (ex: Salaire employé)" class="p-3 border dark:border-gray-700 rounded-xl outline-none bg-white dark:bg-gray-800 dark:text-white md:col-span-2">
+        <input id="recurringCategory" type="text" placeholder="Catégorie" class="p-3 border dark:border-gray-700 rounded-xl outline-none bg-white dark:bg-gray-800 dark:text-white">
+        <select id="recurringAccount" class="p-3 border dark:border-gray-700 rounded-xl outline-none bg-white dark:bg-gray-800 dark:text-white">
+          <option value="liquide">Liquide</option>
+          <option value="baridimob">BaridiMob</option>
+          <option value="usdt">USDT</option>
+        </select>
+        <div class="flex gap-2">
+          <input id="recurringAmount" type="number" placeholder="Montant DZD" class="p-3 border dark:border-gray-700 rounded-xl outline-none bg-white dark:bg-gray-800 dark:text-white w-full">
+          <button onclick="addRecurringExpense()" class="bg-green-600 text-white px-4 rounded-xl font-bold shrink-0"><i class="fas fa-plus"></i></button>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        ${(appState.recurringExpenses || []).length === 0 ? `
+          <div class="text-center py-6 text-gray-400 italic">Aucune charge fixe configurée pour le moment.</div>
+        ` : (appState.recurringExpenses || []).map(r => `
+          <div class="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-900/40 border dark:border-gray-700">
+            <div>
+              <div class="font-bold text-gray-800 dark:text-gray-200">${r.label}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">${r.category || 'Récurrent'} • Compte: ${(r.account || 'liquide').toUpperCase()}</div>
+            </div>
+            <div class="flex items-center gap-4">
+              <div class="font-black text-indigo-600">${formatCurrency(r.amount)}/mois</div>
+              <button onclick="deleteRecurringExpense('${r.id}')" class="text-red-400 hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
     </div>
   `;
 };
