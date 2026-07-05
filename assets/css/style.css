@@ -218,6 +218,145 @@ button[class*="bg-purple-600"]:hover, button[class*="bg-orange-600"]:hover {
   transition: width 0.6s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   LAYOUT SIDEBAR (style app SaaS moderne : menu vertical à
+   gauche avec sections/sous-sections). Purement structurel :
+   les boutons gardent exactement les mêmes classes/onclick
+   utilisés par showTab()/updateNavButtonsVisibility(), donc
+   aucune fonction n'est modifiée, uniquement l'habillage.
+   ═══════════════════════════════════════════════════════════ */
+
+.app-shell { display: flex; min-height: 100vh; align-items: flex-start; }
+
+.app-sidebar {
+  width: 272px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #0b0b1f 0%, #12122b 55%, #191938 100%);
+  color: #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  height: 100vh;
+  z-index: 40;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 4px 0 30px rgba(0,0,0,0.25);
+  overflow-y: auto;
+}
+.app-sidebar.sidebar-open { transform: translateX(0); }
+.app-sidebar::-webkit-scrollbar { width: 5px; }
+.app-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+@media (min-width: 1024px) {
+  .app-sidebar { position: sticky; transform: translateX(0); }
+  .sidebar-close-btn, .sidebar-toggle-btn { display: none !important; }
+}
+
+.sidebar-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 39;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  backdrop-filter: blur(2px);
+}
+.sidebar-overlay.sidebar-overlay-visible { opacity: 1; pointer-events: auto; }
+@media (min-width: 1024px) { .sidebar-overlay { display: none; } }
+
+.sidebar-brand {
+  display: flex; align-items: center; gap: 0.75rem; padding: 1.5rem 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-brand-icon {
+  width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 1.2rem;
+  box-shadow: 0 4px 18px rgba(99,102,241,0.55);
+}
+.sidebar-brand-title { font-weight: 800; color: #fff; font-size: 0.98rem; line-height: 1.2; }
+.sidebar-brand-sub { font-size: 0.68rem; color: #a5b4fc; margin-top: 2px; }
+.sidebar-close-btn {
+  margin-left: auto; color: #94a3b8; background: none; border: none;
+  font-size: 1.1rem; cursor: pointer; padding: 0.25rem;
+}
+
+.sidebar-nav {
+  flex: 1; padding: 0.85rem 0.75rem; display: flex; flex-direction: column;
+  gap: 0.2rem; overflow-y: auto;
+}
+
+.nav-group-label {
+  font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.09em;
+  color: #6366f1; font-weight: 800; padding: 0.9rem 0.75rem 0.35rem;
+}
+
+.nav-item {
+  display: flex !important; align-items: center; gap: 0.85rem;
+  padding: 0.68rem 0.85rem; border-radius: 12px; width: 100%;
+  font-size: 0.86rem; text-align: left;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  position: relative;
+}
+.nav-item-icon { width: 18px; text-align: center; font-size: 0.95rem; flex-shrink: 0; }
+
+/* État inactif — les classes bg-gray-100/text-gray-700 sont posées par showTab() */
+.app-sidebar .nav-item.bg-gray-100 {
+  background: transparent !important;
+  color: #94a3b8 !important;
+}
+.app-sidebar .nav-item.bg-gray-100:hover {
+  background: rgba(255,255,255,0.07) !important;
+  color: #fff !important;
+  transform: translateX(2px);
+}
+
+/* État actif — les classes bg-blue-600/text-white sont posées par showTab() */
+.app-sidebar .nav-item.bg-blue-600 {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 20px -4px rgba(99,102,241,0.65);
+}
+.app-sidebar .nav-item.bg-blue-600::before {
+  content: '';
+  position: absolute; left: -0.75rem; top: 50%; transform: translateY(-50%);
+  width: 4px; height: 60%; border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 0 10px 2px #c4b5fd;
+}
+
+/* Masquage des onglets (permissions employé) — priorité sur .nav-item */
+.nav-hidden { display: none !important; }
+
+.sidebar-footer { padding: 1rem 0.75rem 1.25rem; border-top: 1px solid rgba(255,255,255,0.08); }
+.sidebar-logout-btn {
+  width: 100%; display: flex; align-items: center; gap: 0.75rem; justify-content: center;
+  padding: 0.75rem; border-radius: 12px; font-weight: 700; font-size: 0.85rem;
+  background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.28);
+  transition: all 0.2s ease; cursor: pointer;
+}
+.sidebar-logout-btn:hover { background: rgba(239,68,68,0.25); color: #fff; }
+
+.app-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.app-topbar {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.9rem 1.25rem;
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  position: sticky; top: 0; z-index: 20;
+}
+.dark .app-topbar { background: rgba(15,23,42,0.75); border-color: rgba(255,255,255,0.07); }
+
+.sidebar-toggle-btn {
+  width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  background: #f1f5f9; color: #475569; border: none; cursor: pointer; flex-shrink: 0;
+}
+.dark .sidebar-toggle-btn { background: #1e293b; color: #94a3b8; }
+
+.app-content { padding: 1.1rem 1.25rem 2rem; max-width: 1400px; width: 100%; margin: 0 auto; }
+@media (min-width: 768px) { .app-content { padding: 1.5rem 2rem 2.5rem; } }
+
 /* Petits badges/icônes en dégradé (logos de section, en-têtes) : légère aura lumineuse */
 div[class*="bg-gradient-to-r"][class*="rounded-2xl"][class*="flex"][class*="items-center"][class*="justify-center"],
 div[class*="bg-gradient-to-br"][class*="rounded-2xl"][class*="flex"][class*="items-center"][class*="justify-center"] {
