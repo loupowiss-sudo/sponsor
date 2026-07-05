@@ -3,6 +3,8 @@
 /* ── Animations ── */
 .fade-in { animation: fadeIn 0.4s ease forwards; opacity: 0; }
 @keyframes fadeIn { to { opacity: 1; } }
+.card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -8px rgba(0,0,0,0.18); }
 
 .slide-up { animation: slideUp 0.35s ease forwards; opacity: 0; }
 @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -147,3 +149,77 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .dark thead th { background: #1e293b; color: #94a3b8; border-color: #334155; }
 .dark tbody td  { border-color: #1e293b; color: #cbd5e1; }
 .dark tbody tr:hover { background: #1e293b; }
+
+/* ═══════════════════════════════════════════════════════════
+   DESIGN "FUTURISTE" — touches visuelles globales
+   Purement additif (CSS uniquement) : ne modifie aucun HTML/JS
+   existant, donc ne casse aucune fonction.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Effet verre dépoli sur tous les fonds de modals (overlay noir semi-transparent) */
+body > div[class*="bg-black"][class*="bg-opacity-50"],
+body > div[class*="bg-black/50"] {
+  backdrop-filter: blur(6px) saturate(140%);
+  -webkit-backdrop-filter: blur(6px) saturate(140%);
+}
+
+/* Lueur douce derrière les cartes des modals (le premier enfant direct de l'overlay) */
+body > div[class*="bg-black"][class*="bg-opacity-50"] > div {
+  animation: modalIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 25px 70px -12px rgba(79, 70, 229, 0.25), 0 8px 24px -6px rgba(0,0,0,0.15) !important;
+}
+
+/* Boutons dégradés (bg-gradient-to-r déjà utilisés partout) : effet lumineux au survol */
+button[class*="bg-gradient-to-r"],
+button[class*="bg-gradient-to-br"] {
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.25s ease, filter 0.25s ease;
+}
+button[class*="bg-gradient-to-r"]:hover,
+button[class*="bg-gradient-to-br"]:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08) saturate(1.1);
+  box-shadow: 0 10px 24px -6px rgba(79, 70, 229, 0.4);
+}
+button[class*="bg-gradient-to-r"]:active,
+button[class*="bg-gradient-to-br"]:active {
+  transform: translateY(0);
+}
+
+/* Boutons pleins (couleur unie) : légère élévation au survol, cohérent avec le reste */
+button[class*="bg-indigo-600"]:hover, button[class*="bg-blue-600"]:hover,
+button[class*="bg-green-600"]:hover, button[class*="bg-red-600"]:hover,
+button[class*="bg-purple-600"]:hover, button[class*="bg-orange-600"]:hover {
+  filter: brightness(1.07);
+  box-shadow: 0 6px 16px -4px rgba(0,0,0,0.22);
+}
+
+/* Halo animé discret sur l'onglet actif de la navigation */
+.active-tab { position: relative; overflow: hidden; }
+.active-tab::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.25), transparent);
+  transform: translateX(-100%);
+  animation: navShine 2.2s ease-in-out infinite;
+}
+@keyframes navShine { to { transform: translateX(100%); } }
+
+/* Cartes rondes principales : profondeur légèrement accrue au survol si non déjà gérée */
+.rounded-3xl.shadow-xl:not(.card-hover) {
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.rounded-3xl.shadow-xl:not(.card-hover):hover {
+  box-shadow: 0 14px 32px -10px rgba(30, 41, 59, 0.18);
+}
+
+/* Barre de progression / répartition (utilisée dans le hero trésorerie) : bord lumineux */
+.rounded-full.overflow-hidden.bg-white\/20 > div {
+  transition: width 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Petits badges/icônes en dégradé (logos de section, en-têtes) : légère aura lumineuse */
+div[class*="bg-gradient-to-r"][class*="rounded-2xl"][class*="flex"][class*="items-center"][class*="justify-center"],
+div[class*="bg-gradient-to-br"][class*="rounded-2xl"][class*="flex"][class*="items-center"][class*="justify-center"] {
+  box-shadow: 0 4px 14px -2px rgba(79, 70, 229, 0.35);
+}
