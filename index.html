@@ -570,70 +570,110 @@
 
         <nav class="sidebar-nav">
           <button id="tabBtn-dashboard" onclick="showTab('dashboard')"
-            class="tab-btn nav-item bg-blue-600 text-white font-bold">
+            class="tab-btn nav-item nav-item--top bg-blue-600 text-white font-bold">
             <i class="fas fa-gauge-high nav-item-icon"></i><span>Dashboard</span>
           </button>
 
-          <div class="nav-group-label">Ventes & Clients</div>
-          <button onclick="showTab('clients')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-users nav-item-icon"></i><span>Clients</span>
-          </button>
-          <button onclick="showTab('transactions')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-right-left nav-item-icon"></i><span>Transactions</span>
-          </button>
-          <button onclick="showTab('history')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-clock-rotate-left nav-item-icon"></i><span>Historique</span>
-          </button>
-          <button onclick="showTab('todo')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-list-check nav-item-icon"></i><span>Nouvelle To-Do</span>
-          </button>
-          <button onclick="showTab('offers')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-gift nav-item-icon"></i><span>Offres</span>
-          </button>
-          <button onclick="showTab('reminders')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-bell nav-item-icon"></i><span>Dettes/Relances</span>
-          </button>
+          <div class="nav-group" data-group="ventes">
+            <button type="button" class="nav-group-toggle" onclick="toggleNavGroup('ventes')" aria-expanded="false">
+              <span class="nav-group-toggle-icon"><i class="fas fa-users"></i></span>
+              <span class="nav-group-toggle-label">Ventes & Clients</span>
+              <i class="fas fa-chevron-down nav-group-chevron"></i>
+            </button>
+            <div class="nav-group-panel" id="navGroupPanel-ventes">
+              <div class="nav-group-panel-inner">
+                <button onclick="showTab('clients')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-users nav-item-icon"></i><span>Clients</span>
+                </button>
+                <button onclick="showTab('transactions')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-right-left nav-item-icon"></i><span>Transactions</span>
+                </button>
+                <button onclick="showTab('history')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-clock-rotate-left nav-item-icon"></i><span>Historique</span>
+                </button>
+                <button onclick="showTab('todo')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-list-check nav-item-icon"></i><span>Nouvelle To-Do</span>
+                </button>
+                <button onclick="showTab('offers')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-gift nav-item-icon"></i><span>Offres</span>
+                </button>
+                <button onclick="showTab('reminders')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-bell nav-item-icon"></i><span>Dettes/Relances</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
-          <div class="nav-group-label">Finances</div>
-          <button id="tabBtn-expenses" onclick="showTab('expenses')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-receipt nav-item-icon"></i><span>Frais</span>
-          </button>
-          <button id="tabBtn-paiements" onclick="showTab('paiements')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-money-bill-wave nav-item-icon"></i><span>Paiements</span>
-          </button>
-          <button id="tabBtn-achats" onclick="showTab('achats')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-coins nav-item-icon"></i><span>Achats USD</span>
-          </button>
+          <div class="nav-group" data-group="finances">
+            <button type="button" class="nav-group-toggle" onclick="toggleNavGroup('finances')" aria-expanded="false">
+              <span class="nav-group-toggle-icon"><i class="fas fa-sack-dollar"></i></span>
+              <span class="nav-group-toggle-label">Finances</span>
+              <i class="fas fa-chevron-down nav-group-chevron"></i>
+            </button>
+            <div class="nav-group-panel" id="navGroupPanel-finances">
+              <div class="nav-group-panel-inner">
+                <button id="tabBtn-expenses" onclick="showTab('expenses')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-receipt nav-item-icon"></i><span>Frais</span>
+                </button>
+                <button id="tabBtn-paiements" onclick="showTab('paiements')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-money-bill-wave nav-item-icon"></i><span>Paiements</span>
+                </button>
+                <button id="tabBtn-achats" onclick="showTab('achats')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-coins nav-item-icon"></i><span>Achats USD</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
-          <div class="nav-group-label">Gestion</div>
-          <button onclick="showTab('ad-accounts')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-bullhorn nav-item-icon"></i><span>Comptes Pub</span>
-          </button>
-          <button onclick="showTab('requests')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-inbox nav-item-icon"></i><span>Demandes</span>
-            <span id="requestsBadge" class="hidden bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto">0</span>
-          </button>
-          <button id="tabBtn-performance" onclick="showTab('performance')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-chart-line nav-item-icon"></i><span>Performance Salariés</span>
-          </button>
+          <div class="nav-group" data-group="gestion">
+            <button type="button" class="nav-group-toggle" onclick="toggleNavGroup('gestion')" aria-expanded="false">
+              <span class="nav-group-toggle-icon"><i class="fas fa-briefcase"></i></span>
+              <span class="nav-group-toggle-label">Gestion</span>
+              <i class="fas fa-chevron-down nav-group-chevron"></i>
+            </button>
+            <div class="nav-group-panel" id="navGroupPanel-gestion">
+              <div class="nav-group-panel-inner">
+                <button onclick="showTab('ad-accounts')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-bullhorn nav-item-icon"></i><span>Comptes Pub</span>
+                </button>
+                <button onclick="showTab('requests')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-inbox nav-item-icon"></i><span>Demandes</span>
+                  <span id="requestsBadge" class="hidden bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto">0</span>
+                </button>
+                <button id="tabBtn-performance" onclick="showTab('performance')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-chart-line nav-item-icon"></i><span>Performance Salariés</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
-          <div class="nav-group-label">Système</div>
-          <button id="tabBtn-settings" onclick="showTab('settings')"
-            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
-            <i class="fas fa-gear nav-item-icon"></i><span>Paramètres</span>
-          </button>
+          <div class="nav-group" data-group="systeme">
+            <button type="button" class="nav-group-toggle" onclick="toggleNavGroup('systeme')" aria-expanded="false">
+              <span class="nav-group-toggle-icon"><i class="fas fa-gear"></i></span>
+              <span class="nav-group-toggle-label">Système</span>
+              <i class="fas fa-chevron-down nav-group-chevron"></i>
+            </button>
+            <div class="nav-group-panel" id="navGroupPanel-systeme">
+              <div class="nav-group-panel-inner">
+                <button id="tabBtn-settings" onclick="showTab('settings')"
+                  class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+                  <i class="fas fa-gear nav-item-icon"></i><span>Paramètres</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </nav>
 
         <div class="sidebar-footer">
@@ -1156,6 +1196,7 @@
   <script src="assets/js/data-service.js?v=34"></script>
   <script src="assets/js/ui-render.js?v=34"></script>
   <script src="assets/js/ui-handlers.js?v=34"></script>
+  <script src="assets/js/nav-groups.js?v=34"></script>
   <script src="assets/js/client-space.js?v=34"></script>
   <script src="assets/js/meta-live.js?v=34"></script>
   <script src="assets/js/app.js?v=34"></script>
