@@ -220,16 +220,17 @@ button[class*="bg-purple-600"]:hover, button[class*="bg-orange-600"]:hover {
 
 /* ═══════════════════════════════════════════════════════════
    LAYOUT SIDEBAR (style app SaaS moderne : menu vertical à
-   gauche avec sections/sous-sections). Purement structurel :
-   les boutons gardent exactement les mêmes classes/onclick
-   utilisés par showTab()/updateNavButtonsVisibility(), donc
-   aucune fonction n'est modifiée, uniquement l'habillage.
+   gauche, groupes accordéon repliables — un seul ouvert à la
+   fois, flèche animée). Purement structurel : les boutons
+   gardent exactement les mêmes classes/onclick utilisés par
+   showTab()/updateNavButtonsVisibility(), donc aucune fonction
+   n'est modifiée, uniquement l'habillage.
    ═══════════════════════════════════════════════════════════ */
 
 .app-shell { display: flex; min-height: 100vh; align-items: flex-start; }
 
 .app-sidebar {
-  width: 272px;
+  width: 280px;
   flex-shrink: 0;
   background: linear-gradient(180deg, #0b0b1f 0%, #12122b 55%, #191938 100%);
   color: #cbd5e1;
@@ -243,6 +244,7 @@ button[class*="bg-purple-600"]:hover, button[class*="bg-orange-600"]:hover {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 4px 0 30px rgba(0,0,0,0.25);
   overflow-y: auto;
+  font-family: inherit;
 }
 .app-sidebar.sidebar-open { transform: translateX(0); }
 .app-sidebar::-webkit-scrollbar { width: 5px; }
@@ -280,23 +282,21 @@ button[class*="bg-purple-600"]:hover, button[class*="bg-orange-600"]:hover {
 }
 
 .sidebar-nav {
-  flex: 1; padding: 0.85rem 0.75rem; display: flex; flex-direction: column;
-  gap: 0.2rem; overflow-y: auto;
+  flex: 1; padding: 1rem 0.75rem; display: flex; flex-direction: column;
+  gap: 0.35rem; overflow-y: auto; overflow-x: hidden;
 }
 
-.nav-group-label {
-  font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.09em;
-  color: #6366f1; font-weight: 800; padding: 0.9rem 0.75rem 0.35rem;
-}
-
+/* ── Item de navigation (bouton d'onglet) ──────────────────── */
 .nav-item {
   display: flex !important; align-items: center; gap: 0.85rem;
   padding: 0.68rem 0.85rem; border-radius: 12px; width: 100%;
   font-size: 0.86rem; text-align: left;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
 }
 .nav-item-icon { width: 18px; text-align: center; font-size: 0.95rem; flex-shrink: 0; }
+
+.nav-item--top { margin-bottom: 0.5rem; }
 
 /* État inactif — les classes bg-gray-100/text-gray-700 sont posées par showTab() */
 .app-sidebar .nav-item.bg-gray-100 {
@@ -307,6 +307,10 @@ button[class*="bg-purple-600"]:hover, button[class*="bg-orange-600"]:hover {
   background: rgba(255,255,255,0.07) !important;
   color: #fff !important;
   transform: translateX(2px);
+}
+.app-sidebar .nav-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(129,140,248,0.6);
 }
 
 /* État actif — les classes bg-blue-600/text-white sont posées par showTab() */
@@ -325,6 +329,72 @@ button[class*="bg-purple-600"]:hover, button[class*="bg-orange-600"]:hover {
 
 /* Masquage des onglets (permissions employé) — priorité sur .nav-item */
 .nav-hidden { display: none !important; }
+
+/* ── Groupes accordéon (tiroirs repliables, un seul ouvert) ──
+   Chaque groupe a une couleur d'accent distincte définie par
+   --group-accent / --group-accent-soft, reprise sur l'icône,
+   le survol et le connecteur visuel. ═══════════════════════ */
+.nav-group { margin-top: 0.25rem; }
+.nav-group[data-group="ventes"]   { --group-accent: #818cf8; --group-accent-soft: rgba(129,140,248,0.16); }
+.nav-group[data-group="finances"] { --group-accent: #34d399; --group-accent-soft: rgba(52,211,153,0.16); }
+.nav-group[data-group="gestion"]  { --group-accent: #fb923c; --group-accent-soft: rgba(251,146,60,0.16); }
+.nav-group[data-group="systeme"]  { --group-accent: #94a3b8; --group-accent-soft: rgba(148,163,184,0.16); }
+
+.nav-group-toggle {
+  display: flex; align-items: center; gap: 0.7rem; width: 100%;
+  padding: 0.62rem 0.7rem; border-radius: 12px; border: none; cursor: pointer;
+  background: transparent; color: #cbd5e1; font-weight: 800;
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.nav-group-toggle:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.nav-group-toggle:focus-visible {
+  outline: none; box-shadow: 0 0 0 2px rgba(129,140,248,0.6);
+}
+
+.nav-group-toggle-icon {
+  width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; color: var(--group-accent);
+  background: var(--group-accent-soft);
+  transition: transform 0.2s ease;
+}
+.nav-group--open .nav-group-toggle-icon { transform: scale(1.08); }
+
+.nav-group-toggle-label { flex: 1; min-width: 0; }
+
+.nav-group-chevron {
+  font-size: 0.7rem; color: #64748b; flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
+}
+.nav-group--open .nav-group-chevron { transform: rotate(180deg); color: var(--group-accent); }
+.nav-group--open .nav-group-toggle { color: #fff; background: rgba(255,255,255,0.04); }
+
+/* Animation d'ouverture fluide via la technique grid-template-rows (0fr → 1fr),
+   plus robuste qu'un max-height fixe et sans jank. */
+.nav-group-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nav-group-panel--open { grid-template-rows: 1fr; }
+.nav-group-panel-inner {
+  overflow: hidden;
+  min-height: 0;
+  display: flex; flex-direction: column; gap: 0.2rem;
+  padding-left: 0.9rem;
+  margin-top: 0.15rem;
+  position: relative;
+}
+/* Ligne verticale reliant les items du groupe, teintée par l'accent du groupe */
+.nav-group-panel-inner::before {
+  content: '';
+  position: absolute; left: 0.4rem; top: 0.35rem; bottom: 0.35rem;
+  width: 2px; border-radius: 2px;
+  background: var(--group-accent-soft);
+}
+.nav-group-panel-inner .nav-item { padding-top: 0.55rem; padding-bottom: 0.55rem; font-size: 0.82rem; }
+.nav-group-panel-inner .nav-item.bg-blue-600 { box-shadow: 0 6px 18px -6px rgba(99,102,241,0.6); }
 
 .sidebar-footer { padding: 1rem 0.75rem 1.25rem; border-top: 1px solid rgba(255,255,255,0.08); }
 .sidebar-logout-btn {
