@@ -54,9 +54,9 @@ window.updateAuthUI = function (user) {
     if (el) {
        if (isEmployee) {
            const hasAccess = sess.permissions && sess.permissions[tab] === true;
-           el.style.display = hasAccess ? 'block' : 'none';
+           el.classList.toggle('nav-hidden', !hasAccess);
        } else {
-           el.style.display = 'block';
+           el.classList.remove('nav-hidden');
        }
     }
   });

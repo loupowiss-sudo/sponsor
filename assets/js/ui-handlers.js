@@ -18,6 +18,15 @@ window.updateEmployeePermission = function(empId, tabId, hasAccess) {
   showToast('Permissions mises à jour', 'success');
 };
 
+window.toggleSidebar = function(open) {
+  const sidebar = document.getElementById('appSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  if (!sidebar) return;
+  const shouldOpen = (open === true || open === false) ? open : !sidebar.classList.contains('sidebar-open');
+  sidebar.classList.toggle('sidebar-open', shouldOpen);
+  if (overlay) overlay.classList.toggle('sidebar-overlay-visible', shouldOpen);
+};
+
 window.openModal = function(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return;

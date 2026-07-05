@@ -21,11 +21,7 @@ function updateNavButtonsVisibility() {
     const match = onclickAttr.match(/showTab\('([^']+)'\)/);
     if (!match) return;
     const tabId = match[1];
-    if (hasTabAccess(tabId)) {
-      btn.style.display = '';
-    } else {
-      btn.style.display = 'none';
-    }
+    btn.classList.toggle('nav-hidden', !hasTabAccess(tabId));
   });
 }
 
@@ -54,6 +50,9 @@ window.showTab = function(tabId) {
   }
   
   renderCurrentTab();
+
+  // Sur mobile, on referme le menu latéral après avoir choisi une section
+  if (typeof toggleSidebar === 'function') toggleSidebar(false);
 };
 
 /**
