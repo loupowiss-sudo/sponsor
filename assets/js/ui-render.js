@@ -196,7 +196,7 @@ window.renderDashboard = function(container) {
 
   const employees = appState.employees || [];
   const txs = appState.transactions || [];
-  
+
   const nowMs = Date.now();
   const oneDayMs = 24 * 60 * 60 * 1000;
   const expiringCampaigns = txs.filter(t => {
@@ -205,115 +205,6 @@ window.renderDashboard = function(container) {
       const timeLeft = t.endDate - nowMs;
       return timeLeft > 0 && timeLeft <= oneDayMs;
   });
-
-  const parseYmdLocal = (ymd) => {
-    if (!ymd || typeof ymd !== 'string') return null;
-    const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m) return null;
-    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-    if (Number.isNaN(d.getTime())) return null;
-    d.setHours(0, 0, 0, 0);
-    return d;
-  };
-
-  const inRange = (ymd, from, to) => {
-    const d = parseYmdLocal(ymd);
-    const a = parseYmdLocal(from);
-    const b = parseYmdLocal(to);
-    if (!d || !a || !b) return false;
-    const start = a.getTime() <= b.getTime() ? a : b;
-    const end = a.getTime() <= b.getTime() ? b : a;
-    return d.getTime() >= start.getTime() && d.getTime() <= end.getTime();
-  };
-
-  const employeeRows = (from, to) => {
-    const counts = {};
-    txs.forEach(t => {
-      if (!t || !t.date) return;
-      if (!inRange(t.date, from, to)) return;
-      const id = t.employeeId || 'unassigned';
-      counts[id] = (counts[id] || 0) + 1;
-    });
-    const rows = [];
-    employees.forEach(e => {
-      rows.push({ id: e.id, name: e.name, count: counts[e.id] || 0 });
-    });
-    if (counts.unassigned) rows.push({ id: 'unassigned', name: 'Non attribué', count: counts.unassigned || 0 });
-    rows.sort((a, b) => b.count - a.count);
-    return rows;
-  };
-
-  const employeeCountsMap = (from, to) => {
-    const m = {};
-    txs.forEach(t => {
-      if (!t || !t.date) return;
-      if (!inRange(t.date, from, to)) return;
-      const id = t.employeeId || 'unassigned';
-      m[id] = (m[id] || 0) + 1;
-    });
-    return m;
-  };
-
-  const employeeStatsHtml = (() => {
-    if (!defaultRanges) return '<div class="text-sm text-gray-400 italic">Stats indisponibles.</div>';
-    if (!pCustom) return '<div class="text-sm text-gray-400 italic">Choisis un intervalle ci-dessus.</div>';
-
-    const mToday = employeeCountsMap(defaultRanges.today.from, defaultRanges.today.to);
-    const mYesterday = employeeCountsMap(defaultRanges.yesterday.from, defaultRanges.yesterday.to);
-    const mWeek = employeeCountsMap(defaultRanges.week.from, defaultRanges.week.to);
-    const mMonth = employeeCountsMap(defaultRanges.month.from, defaultRanges.month.to);
-    const mRange = employeeCountsMap(pCustom.fromYmd, pCustom.toYmd);
-
-    const ids = new Set();
-    employees.forEach(e => ids.add(e.id));
-    Object.keys(mToday).forEach(k => ids.add(k));
-    Object.keys(mYesterday).forEach(k => ids.add(k));
-    Object.keys(mWeek).forEach(k => ids.add(k));
-    Object.keys(mMonth).forEach(k => ids.add(k));
-    Object.keys(mRange).forEach(k => ids.add(k));
-
-    const rows = Array.from(ids).map(id => {
-      const emp = employees.find(e => e.id === id);
-      return {
-        id,
-        name: emp ? emp.name : (id === 'unassigned' ? 'Non attribué' : id),
-        today: mToday[id] || 0,
-        yesterday: mYesterday[id] || 0,
-        week: mWeek[id] || 0,
-        month: mMonth[id] || 0,
-        range: mRange[id] || 0
-      };
-    }).sort((a, b) => (b.range - a.range) || (b.week - a.week) || String(a.name || '').localeCompare(String(b.name || '')));
-
-    return `
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
-          <thead>
-            <tr class="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-black uppercase border-b dark:border-gray-700">
-              <th class="p-3">Employé</th>
-              <th class="p-3 text-right">Aujourd'hui</th>
-              <th class="p-3 text-right">Hier</th>
-              <th class="p-3 text-right">Semaine</th>
-              <th class="p-3 text-right">Mois</th>
-              <th class="p-3 text-right">Intervalle</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y dark:divide-gray-700">
-            ${rows.map(r => `
-              <tr class="hover:bg-white dark:hover:bg-gray-800/60">
-                <td class="p-3 font-bold text-gray-800 dark:text-gray-200">${r.name}</td>
-                <td class="p-3 text-right font-black text-indigo-600">${r.today}</td>
-                <td class="p-3 text-right font-black text-indigo-600">${r.yesterday}</td>
-                <td class="p-3 text-right font-black text-indigo-600">${r.week}</td>
-                <td class="p-3 text-right font-black text-indigo-600">${r.month}</td>
-                <td class="p-3 text-right font-black text-green-600">${r.range}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  })();
 
   // --- SMART ALERTS ---
   const alerts = [];
@@ -343,10 +234,11 @@ window.renderDashboard = function(container) {
 
   // --- Dépenses récurrentes : total mensuel engagé ---
   const recurringMonthlyTotal = (appState.recurringExpenses || []).reduce((s, re) => s + Number(re && re.amount || 0), 0);
+  let recurringAlreadyApplied = true;
   if (recurringMonthlyTotal > 0) {
       const monthKeyNow = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-      const alreadyApplied = (appState.appliedRecurringMonths || []).includes(monthKeyNow);
-      if (!alreadyApplied) {
+      recurringAlreadyApplied = (appState.appliedRecurringMonths || []).includes(monthKeyNow);
+      if (!recurringAlreadyApplied) {
           alerts.push({ type: 'warning', icon: 'fa-calendar-alt', text: `Charges fixes du mois pas encore prélevées : ${formatCurrency(recurringMonthlyTotal)} (${(appState.recurringExpenses||[]).length} poste(s)).` });
       }
   }
@@ -360,8 +252,19 @@ window.renderDashboard = function(container) {
   const shareLiquide = shareOf(b.liquide || 0);
   const shareBaridimob = shareOf(b.baridimob || 0);
   const shareUsdt = shareOf(usdtInDzd);
-  // Comparaison avec hier pour la tendance (basée sur le profit net d'hier)
+  // Tendance : profit net d'hier, affiché comme indicateur à côté de la trésorerie totale
   const netWorthTrend = pYesterday ? Number(pYesterday.netProfit || 0) : null;
+
+  // --- Demandes clients en attente (pour la carte "Gestion") ---
+  const pendingRequestsCount = (appState.clientRequests || []).filter(r => !r.read).length;
+
+  // --- Employés actifs / absents aujourd'hui (résumé compact + détail repliable) ---
+  const activeEmployees = employees.filter(e => e.active);
+  const todayAlg = getAlgeriaNow();
+  const todayStrAlg = `${todayAlg.getFullYear()}-${String(todayAlg.getMonth()+1).padStart(2,'0')}-${String(todayAlg.getDate()).padStart(2,'0')}`;
+  const absentTodayIds = new Set((appState.absences || []).filter(a => a.date === todayStrAlg).map(a => a.employeeId));
+  const absentCount = activeEmployees.filter(e => absentTodayIds.has(e.id)).length;
+  const presentCount = activeEmployees.length - absentCount;
 
   const alertsHtml = alerts.length > 0 ? `
     <div class="mb-6 flex flex-col gap-3 fade-in">
@@ -373,296 +276,313 @@ window.renderDashboard = function(container) {
         `).join('')}
     </div>
   ` : '';
-  
+
+  // --- Cartes "Accès rapide" : vision globale par domaine + redirection directe ---
+  const quickCards = isAdmin ? [
+    {
+      group: 'ventes', icon: 'fa-users', tab: 'clients',
+      title: 'Ventes & Clients',
+      metric: `${allClients.length}`,
+      metricLabel: 'client(s)',
+      sub: totalDettesCount > 0 ? `${formatCurrency(totalDettesAmount)} de créances` : 'Aucune créance en attente',
+      subClass: totalDettesCount > 0 ? 'dash-quick-sub--danger' : 'dash-quick-sub--ok',
+      cta: 'Gérer les clients'
+    },
+    {
+      group: 'finances', icon: 'fa-sack-dollar', tab: 'expenses',
+      title: 'Finances',
+      metric: formatCurrency(recurringMonthlyTotal),
+      metricLabel: 'charges fixes / mois',
+      sub: recurringMonthlyTotal > 0 && !recurringAlreadyApplied ? 'Pas encore prélevées ce mois' : 'À jour',
+      subClass: recurringMonthlyTotal > 0 && !recurringAlreadyApplied ? 'dash-quick-sub--warning' : 'dash-quick-sub--ok',
+      cta: 'Voir les frais'
+    },
+    {
+      group: 'gestion', icon: 'fa-briefcase', tab: 'requests',
+      title: 'Gestion',
+      metric: `${pendingRequestsCount}`,
+      metricLabel: 'demande(s) en attente',
+      sub: expiringCampaigns.length > 0 ? `${expiringCampaigns.length} campagne(s) expirent bientôt` : 'Aucune campagne urgente',
+      subClass: expiringCampaigns.length > 0 ? 'dash-quick-sub--warning' : 'dash-quick-sub--ok',
+      cta: 'Voir les demandes'
+    },
+    {
+      group: 'systeme', icon: 'fa-gear', tab: 'settings',
+      title: 'Système',
+      metric: `${activeEmployees.length}`,
+      metricLabel: 'employé(s) actif(s)',
+      sub: `${presentCount} présent(s) • ${absentCount} absent(s) aujourd'hui`,
+      subClass: absentCount > 0 ? 'dash-quick-sub--warning' : 'dash-quick-sub--ok',
+      cta: 'Paramètres'
+    }
+  ] : [];
+
+  const quickCardsHtml = quickCards.length > 0 ? `
+    <div class="dash-section">
+      <div class="dash-section-head">
+        <h3 class="dash-section-title"><i class="fas fa-compass"></i> Accès rapide par domaine</h3>
+      </div>
+      <div class="dash-quick-grid">
+        ${quickCards.map(qc => `
+          <button onclick="showTab('${qc.tab}')" class="dash-quick-card dash-quick-card--${qc.group}">
+            <span class="dash-quick-card-icon"><i class="fas ${qc.icon}"></i></span>
+            <span class="dash-quick-card-title">${qc.title}</span>
+            <span class="dash-quick-card-metric">${qc.metric}<small>${qc.metricLabel}</small></span>
+            <span class="dash-quick-sub ${qc.subClass}">${qc.sub}</span>
+            <span class="dash-quick-card-cta">${qc.cta} <i class="fas fa-arrow-right"></i></span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
+
   container.innerHTML = `
     ${alertsHtml}
-    
-    <!-- Absence System -->
-    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 border dark:border-gray-700 mb-8">
-      <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-3">
-        <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-          <i class="fas fa-user-times text-indigo-600"></i> Absences des employés
-        </h3>
-        <button onclick="openAbsenceHistoryModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-all">
-          <i class="fas fa-history mr-2"></i> Historique
+
+    ${isAdmin ? `
+    <!-- ═══ Vue globale : Trésorerie totale + Prévision ═══ -->
+    <div class="dash-money-row">
+      <div class="dash-hero">
+        <div class="dash-hero-glow dash-hero-glow--1"></div>
+        <div class="dash-hero-glow dash-hero-glow--2"></div>
+        <div class="dash-hero-top">
+          <div>
+            <div class="dash-hero-label"><i class="fas fa-wallet"></i> Trésorerie totale (équivalent DZD)</div>
+            <div class="dash-hero-value">${formatCurrency(netWorthDzd)}</div>
+            ${netWorthTrend !== null ? `
+              <div class="dash-hero-trend ${netWorthTrend >= 0 ? 'is-up' : 'is-down'}">
+                <i class="fas ${netWorthTrend >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}"></i>
+                ${formatCurrency(Math.abs(netWorthTrend))} ${netWorthTrend >= 0 ? 'de profit' : 'de perte'} hier
+              </div>
+            ` : ''}
+            <div class="dash-hero-sub">
+              + ${formatCurrency(totalDettesAmount)} de créances clients
+              <strong>→ ${formatCurrency(netWorthWithReceivables)} au total</strong>
+            </div>
+          </div>
+          <div class="dash-hero-profits">
+            <div>
+              <div class="dash-hero-profit-label">Profit aujourd'hui</div>
+              <div class="dash-hero-profit-value ${pToday && pToday.netProfit < 0 ? 'is-neg' : 'is-pos'}">${pToday ? formatCurrency(pToday.netProfit) : '—'}</div>
+            </div>
+            <div>
+              <div class="dash-hero-profit-label">Profit du mois</div>
+              <div class="dash-hero-profit-value ${pMonth && pMonth.netProfit < 0 ? 'is-neg' : 'is-pos'}">${pMonth ? formatCurrency(pMonth.netProfit) : '—'}</div>
+            </div>
+          </div>
+        </div>
+        <div class="dash-hero-bar">
+          <div class="dash-hero-bar-track">
+            <div class="dash-hero-bar-seg" style="width:${shareLiquide}%; background:#86efac;" title="Liquide"></div>
+            <div class="dash-hero-bar-seg" style="width:${shareBaridimob}%; background:#93c5fd;" title="BaridiMob"></div>
+            <div class="dash-hero-bar-seg" style="width:${shareUsdt}%; background:#d8b4fe;" title="USDT"></div>
+          </div>
+          <div class="dash-hero-legend">
+            <span><i class="dash-dot" style="background:#86efac"></i>Liquide ${safeToFixed(shareLiquide,0)}%</span>
+            <span><i class="dash-dot" style="background:#93c5fd"></i>BaridiMob ${safeToFixed(shareBaridimob,0)}%</span>
+            <span><i class="dash-dot" style="background:#d8b4fe"></i>USDT ${safeToFixed(shareUsdt,0)}% <em>(taux ${formatCurrency(redotpayRate)})</em></span>
+          </div>
+        </div>
+        <button onclick="exportFinancialReportPdf()" class="dash-hero-export">
+          <i class="fas fa-file-pdf"></i> Exporter le rapport financier (PDF)
         </button>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        ${employees.filter(e => e.active).map(e => {
-          const today = getAlgeriaNow();
-          const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-          const absence = (appState.absences || []).find(a => a.employeeId === e.id && a.date === todayStr);
-          const isAbsent = !!absence;
-          return `
-            <div class="p-4 border rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
-              <div>
-                <div class="font-bold text-gray-800 dark:text-white">${e.name || e.login}</div>
-                <div class="text-xs text-gray-500">${isAbsent ? `Absent (marqué à ${new Date(absence.time).toLocaleTimeString('fr-FR', { timeZone: 'Africa/Algiers' })})` : 'Présent'}</div>
-              </div>
-              <button onclick="${isAbsent ? `removeAbsence('${e.id}')` : `markAbsent('${e.id}')`}" 
-                class="px-4 py-2 rounded-xl font-bold text-xs ${isAbsent ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}">
-                ${isAbsent ? 'Annuler absence' : 'Marquer absent'}
-              </button>
-            </div>
-          `;
-        }).join('')}
-        ${employees.filter(e => e.active).length === 0 ? `
-          <div class="col-span-full text-center py-8 text-gray-500 dark:text-gray-400 italic">
-            Aucun employé actif
-          </div>
+
+      ${pLast30 ? `
+      <div class="dash-forecast">
+        <div class="dash-forecast-title"><i class="fas fa-chart-line"></i> Prévision 30 jours</div>
+        <div class="dash-forecast-sub">Rythme des 30 derniers jours</div>
+        <div class="dash-forecast-row">
+          <span>Aujourd'hui</span>
+          <strong>${formatCurrency(netWorthDzd)}</strong>
+        </div>
+        <div class="dash-forecast-row">
+          <span>Rythme / jour</span>
+          <strong class="${pLast30.netProfit >= 0 ? 'is-pos' : 'is-neg'}">${formatCurrency(pLast30.netProfit / 30)}</strong>
+        </div>
+        <div class="dash-forecast-highlight">
+          <div class="dash-forecast-highlight-label">Estimé dans 30 jours</div>
+          <div class="dash-forecast-highlight-value">${formatCurrency(netWorthDzd + pLast30.netProfit)}</div>
+        </div>
+        ${pLast30.netProfit < 0 ? `
+          <div class="dash-forecast-warning"><i class="fas fa-exclamation-triangle"></i> Rythme actuel négatif</div>
         ` : ''}
       </div>
-    </div>
-    
-    ${isAdmin ? `
-    <!-- Hero Trésorerie : patrimoine net consolidé -->
-    <div class="relative overflow-hidden rounded-3xl shadow-xl mb-8 bg-gradient-to-br from-indigo-600 via-blue-600 to-purple-700 p-6 md:p-8 text-white fade-in">
-      <div class="absolute -right-10 -top-10 w-52 h-52 rounded-full bg-white/10"></div>
-      <div class="absolute -right-6 bottom-0 w-32 h-32 rounded-full bg-white/10"></div>
-      <div class="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-        <div>
-          <div class="flex items-center gap-2 text-indigo-100 text-xs font-black uppercase tracking-widest mb-2">
-            <i class="fas fa-wallet"></i> Trésorerie totale (équivalent DZD)
-          </div>
-          <div class="text-4xl md:text-5xl font-black tracking-tight">${formatCurrency(netWorthDzd)}</div>
-          <div class="mt-2 text-sm text-indigo-100">
-            + ${formatCurrency(totalDettesAmount)} de créances clients en attente
-            <span class="font-black text-white">→ ${formatCurrency(netWorthWithReceivables)} au total</span>
-          </div>
-          <button onclick="exportFinancialReportPdf()" class="mt-4 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/30 text-white text-sm font-black flex items-center gap-2">
-            <i class="fas fa-file-pdf"></i> Exporter le rapport financier (PDF)
-          </button>
-        </div>
-        <div class="flex gap-6 md:gap-8">
-          <div class="text-right">
-            <div class="text-xs text-indigo-100 uppercase font-bold">Profit aujourd'hui</div>
-            <div class="text-xl font-black ${pToday && pToday.netProfit < 0 ? 'text-red-200' : 'text-green-200'}">${pToday ? formatCurrency(pToday.netProfit) : '—'}</div>
-          </div>
-          <div class="text-right">
-            <div class="text-xs text-indigo-100 uppercase font-bold">Profit du mois</div>
-            <div class="text-xl font-black ${pMonth && pMonth.netProfit < 0 ? 'text-red-200' : 'text-green-200'}">${pMonth ? formatCurrency(pMonth.netProfit) : '—'}</div>
-          </div>
-        </div>
-      </div>
-      <!-- Répartition de la trésorerie -->
-      <div class="relative mt-6">
-        <div class="flex h-3 w-full rounded-full overflow-hidden bg-white/20">
-          <div class="bg-green-300" style="width:${shareLiquide}%" title="Liquide"></div>
-          <div class="bg-blue-300" style="width:${shareBaridimob}%" title="BaridiMob"></div>
-          <div class="bg-purple-300" style="width:${shareUsdt}%" title="USDT"></div>
-        </div>
-        <div class="flex flex-wrap gap-4 mt-3 text-xs font-bold text-indigo-100">
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-green-300"></span>Liquide ${safeToFixed(shareLiquide,0)}%</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-300"></span>BaridiMob ${safeToFixed(shareBaridimob,0)}%</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-purple-300"></span>USDT ${safeToFixed(shareUsdt,0)}% <span class="opacity-75">(taux ${formatCurrency(redotpayRate)}/USDT)</span></span>
-        </div>
-      </div>
-    </div>
-
-    <div class="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-4">
-      <div class="text-sm text-gray-500 dark:text-gray-400 font-bold">Soldes par poche</div>
-      <div class="flex gap-2">
-        <button onclick="openActivityLogModal()" class="px-4 py-2 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:bg-gray-50 dark:hover:bg-gray-700">
-          <i class="fas fa-shield-alt mr-1"></i> Journal
-        </button>
-        <button onclick="openModal('balancesModal')" class="px-4 py-2 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:bg-gray-50 dark:hover:bg-gray-700">
-          Ajuster
-        </button>
-      </div>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border-l-8 border-green-500 fade-in card-hover dark:border-gray-700">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center text-green-600 dark:text-green-400">
-            <i class="fas fa-money-bill-wave text-2xl"></i>
-          </div>
-          <div>
-            <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Liquide</h3>
-            <p class="text-3xl font-black text-gray-800 dark:text-white">${formatCurrency(b.liquide)}</p>
-          </div>
-        </div>
-      </div>
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border-l-8 border-blue-500 fade-in card-hover dark:border-gray-700">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400">
-            <i class="fas fa-university text-2xl"></i>
-          </div>
-          <div>
-            <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">BaridiMob</h3>
-            <p class="text-3xl font-black text-gray-800 dark:text-white">${formatCurrency(b.baridimob)}</p>
-          </div>
-        </div>
-      </div>
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border-l-8 border-purple-500 fade-in card-hover dark:border-gray-700">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center text-purple-600 dark:text-purple-400">
-            <i class="fas fa-coins text-2xl"></i>
-          </div>
-          <div>
-            <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stock USDT</h3>
-            <p class="text-3xl font-black text-gray-800 dark:text-white">${safeToFixed(b.usdt)} <span class="text-sm font-bold text-purple-400">USDT</span></p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 mb-8">
-      <div class="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-6">
-        <div>
-          <h3 class="text-xl font-bold flex items-center gap-2 dark:text-white">
-            <i class="fas fa-chart-pie text-indigo-500"></i> Profit
-          </h3>
-          <div class="text-xs text-gray-500 dark:text-gray-400">Basé sur ventes - coût (taux achat) - frais</div>
-        </div>
-        <div class="flex flex-col md:flex-row gap-2 md:items-center">
-          <input id="profitFrom" type="date" value="${selFrom}" class="w-full md:w-44 p-3 border dark:border-gray-700 rounded-xl outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <input id="profitTo" type="date" value="${selTo}" class="w-full md:w-44 p-3 border dark:border-gray-700 rounded-xl outline-none bg-gray-50 dark:bg-gray-900 dark:text-white">
-          <button onclick="applyProfitRange()" class="px-4 py-3 rounded-xl bg-indigo-600 text-white font-black">Appliquer</button>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/40 border dark:border-gray-700">
-          <div class="text-xs font-black text-gray-500 dark:text-gray-400 uppercase">Aujourd'hui</div>
-          <div class="text-2xl font-black ${pToday && pToday.netProfit < 0 ? 'text-red-600' : 'text-green-600'}">${pToday ? formatCurrency(pToday.netProfit) : '—'}</div>
-          <div class="text-xs text-gray-500 dark:text-gray-400">${pToday ? `${pToday.txCount} tx • CA ${formatCurrency(pToday.revenue)} • Frais ${formatCurrency(pToday.expenses)}` : ''}</div>
-        </div>
-        <div class="p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/40 border dark:border-gray-700">
-          <div class="text-xs font-black text-gray-500 dark:text-gray-400 uppercase">Hier</div>
-          <div class="text-2xl font-black ${pYesterday && pYesterday.netProfit < 0 ? 'text-red-600' : 'text-green-600'}">${pYesterday ? formatCurrency(pYesterday.netProfit) : '—'}</div>
-          <div class="text-xs text-gray-500 dark:text-gray-400">${pYesterday ? `${pYesterday.txCount} tx • CA ${formatCurrency(pYesterday.revenue)} • Frais ${formatCurrency(pYesterday.expenses)}` : ''}</div>
-        </div>
-        <div class="p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/40 border dark:border-gray-700">
-          <div class="text-xs font-black text-gray-500 dark:text-gray-400 uppercase">Semaine</div>
-          <div class="text-2xl font-black ${pWeek && pWeek.netProfit < 0 ? 'text-red-600' : 'text-green-600'}">${pWeek ? formatCurrency(pWeek.netProfit) : '—'}</div>
-          <div class="text-xs text-gray-500 dark:text-gray-400">${pWeek ? `${pWeek.txCount} tx • CA ${formatCurrency(pWeek.revenue)} • Frais ${formatCurrency(pWeek.expenses)}` : ''}</div>
-        </div>
-        <div class="p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/40 border dark:border-gray-700">
-          <div class="text-xs font-black text-gray-500 dark:text-gray-400 uppercase">Mois</div>
-          <div class="text-2xl font-black ${pMonth && pMonth.netProfit < 0 ? 'text-red-600' : 'text-green-600'}">${pMonth ? formatCurrency(pMonth.netProfit) : '—'}</div>
-          <div class="text-xs text-gray-500 dark:text-gray-400">${pMonth ? `${pMonth.txCount} tx • CA ${formatCurrency(pMonth.revenue)} • Frais ${formatCurrency(pMonth.expenses)}` : ''}</div>
-        </div>
-      </div>
-
-      <div class="mt-6 p-5 rounded-2xl bg-white dark:bg-gray-800 border dark:border-gray-700">
-        <div class="flex flex-col md:flex-row justify-between md:items-center gap-3">
-          <div class="font-black text-gray-800 dark:text-gray-200">Intervalle</div>
-          <div class="text-xs text-gray-500 dark:text-gray-400">${pCustom ? `Profit net: ${formatCurrency(pCustom.netProfit)} • CA: ${formatCurrency(pCustom.revenue)} • Frais: ${formatCurrency(pCustom.expenses)}` : 'Sélectionne une période'}</div>
-        </div>
-      </div>
-
-      <div class="mt-6 p-5 rounded-2xl bg-gray-50 dark:bg-gray-900/40 border dark:border-gray-700">
-        <div class="font-black text-gray-800 dark:text-gray-200 mb-3">Performance employés</div>
-        ${employeeStatsHtml}
-      </div>
+      ` : `<div class="dash-forecast dash-forecast--empty"><i class="fas fa-chart-line"></i><span>Prévision indisponible</span></div>`}
     </div>
     ` : `
-    <div class="p-8 bg-blue-50 dark:bg-blue-900/20 rounded-3xl mb-8 text-center border dark:border-blue-800">
-       <h2 class="text-2xl font-black text-blue-800 dark:text-blue-300">Bienvenue, Session Employé</h2>
-       <p class="text-blue-600 dark:text-blue-400 font-bold">Consultez la To-Do List pour commencer votre travail.</p>
+    <div class="dash-employee-welcome">
+       <h2>Bienvenue, Session Employé</h2>
+       <p>Consultez la To-Do List pour commencer votre travail.</p>
     </div>
     `}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    ${quickCardsHtml}
+
+    ${isAdmin ? `
+    <!-- ═══ Aujourd'hui en un coup d'œil : profit par période ═══ -->
+    <div class="dash-section">
+      <div class="dash-section-head">
+        <h3 class="dash-section-title"><i class="fas fa-chart-pie"></i> Profit — aperçu rapide</h3>
+        <button onclick="showTab('performance')" class="dash-link-btn">Performance complète <i class="fas fa-arrow-right"></i></button>
+      </div>
+      <div class="dash-stat-strip">
+        <div class="dash-stat-pill">
+          <div class="dash-stat-pill-label">Aujourd'hui</div>
+          <div class="dash-stat-pill-value ${pToday && pToday.netProfit < 0 ? 'is-neg' : 'is-pos'}">${pToday ? formatCurrency(pToday.netProfit) : '—'}</div>
+          <div class="dash-stat-pill-meta">${pToday ? `${pToday.txCount} tx` : ''}</div>
+        </div>
+        <div class="dash-stat-pill">
+          <div class="dash-stat-pill-label">Hier</div>
+          <div class="dash-stat-pill-value ${pYesterday && pYesterday.netProfit < 0 ? 'is-neg' : 'is-pos'}">${pYesterday ? formatCurrency(pYesterday.netProfit) : '—'}</div>
+          <div class="dash-stat-pill-meta">${pYesterday ? `${pYesterday.txCount} tx` : ''}</div>
+        </div>
+        <div class="dash-stat-pill">
+          <div class="dash-stat-pill-label">Semaine</div>
+          <div class="dash-stat-pill-value ${pWeek && pWeek.netProfit < 0 ? 'is-neg' : 'is-pos'}">${pWeek ? formatCurrency(pWeek.netProfit) : '—'}</div>
+          <div class="dash-stat-pill-meta">${pWeek ? `${pWeek.txCount} tx` : ''}</div>
+        </div>
+        <div class="dash-stat-pill">
+          <div class="dash-stat-pill-label">Mois</div>
+          <div class="dash-stat-pill-value ${pMonth && pMonth.netProfit < 0 ? 'is-neg' : 'is-pos'}">${pMonth ? formatCurrency(pMonth.netProfit) : '—'}</div>
+          <div class="dash-stat-pill-meta">${pMonth ? `${pMonth.txCount} tx` : ''}</div>
+        </div>
+      </div>
+      <details class="dash-disclosure">
+        <summary>Personnaliser une période <i class="fas fa-chevron-down"></i></summary>
+        <div class="dash-disclosure-body">
+          <input id="profitFrom" type="date" value="${selFrom}" class="dash-input">
+          <input id="profitTo" type="date" value="${selTo}" class="dash-input">
+          <button onclick="applyProfitRange()" class="dash-btn-primary">Appliquer</button>
+          ${pCustom ? `<div class="dash-disclosure-result">Profit net: <strong>${formatCurrency(pCustom.netProfit)}</strong> • CA: ${formatCurrency(pCustom.revenue)} • Frais: ${formatCurrency(pCustom.expenses)}</div>` : ''}
+        </div>
+      </details>
+    </div>
+    ` : ''}
+
+    ${isAdmin ? `
+    <!-- ═══ Soldes par poche ═══ -->
+    <div class="dash-section">
+      <div class="dash-section-head">
+        <h3 class="dash-section-title"><i class="fas fa-vault"></i> Soldes par poche</h3>
+        <div class="dash-section-actions">
+          <button onclick="openActivityLogModal()" class="dash-link-btn dash-link-btn--outline"><i class="fas fa-shield-alt"></i> Journal</button>
+          <button onclick="openModal('balancesModal')" class="dash-link-btn dash-link-btn--outline">Ajuster</button>
+        </div>
+      </div>
+      <div class="dash-balance-grid">
+        <div class="dash-balance-card dash-balance-card--green">
+          <div class="dash-balance-icon"><i class="fas fa-money-bill-wave"></i></div>
+          <div>
+            <div class="dash-balance-title">Liquide</div>
+            <div class="dash-balance-value">${formatCurrency(b.liquide)}</div>
+          </div>
+        </div>
+        <div class="dash-balance-card dash-balance-card--blue">
+          <div class="dash-balance-icon"><i class="fas fa-university"></i></div>
+          <div>
+            <div class="dash-balance-title">BaridiMob</div>
+            <div class="dash-balance-value">${formatCurrency(b.baridimob)}</div>
+          </div>
+        </div>
+        <div class="dash-balance-card dash-balance-card--purple">
+          <div class="dash-balance-icon"><i class="fas fa-coins"></i></div>
+          <div>
+            <div class="dash-balance-title">Stock USDT</div>
+            <div class="dash-balance-value">${safeToFixed(b.usdt)} <small>USDT</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- ═══ To-Do + Clients récents ═══ -->
+    <div class="dash-two-col">
        ${expiringCampaigns.length > 0 ? `
-       <div class="lg:col-span-2 bg-red-50 p-6 rounded-3xl shadow-xl border border-red-200 fade-in mb-2 mt-2">
-         <h3 class="text-xl font-black mb-4 flex items-center gap-2 text-red-600">
-           <i class="fas fa-exclamation-triangle"></i> Alertes: ${expiringCampaigns.length} Compagne(s) se termine(nt) dans moins de 24H
-         </h3>
-         <div class="space-y-3">
+       <div class="dash-panel dash-panel--alert dash-two-col-full">
+         <h3 class="dash-panel-title dash-panel-title--danger"><i class="fas fa-exclamation-triangle"></i> ${expiringCampaigns.length} campagne(s) se termine(nt) dans moins de 24h</h3>
+         <div class="dash-alert-list">
             ${expiringCampaigns.map(c => {
                 const hoursLeft = Math.floor((c.endDate - nowMs) / (1000 * 60 * 60));
                 return `
-                <div class="p-3 bg-white rounded-xl shadow-sm border border-red-100 flex justify-between items-center">
+                <div class="dash-alert-row">
                     <div>
-                        <div class="font-bold text-gray-800">${c.clientName} - ${c.offerName}</div>
-                        <div class="text-xs text-gray-500">Ad Account: ${c.adAccountId ? ((appState.adAccounts || []).find(a => a.id === c.adAccountId)?.name || 'Inconnu') : 'Organique'}</div>
+                        <div class="dash-alert-row-title">${c.clientName} - ${c.offerName}</div>
+                        <div class="dash-alert-row-sub">Ad Account: ${c.adAccountId ? ((appState.adAccounts || []).find(a => a.id === c.adAccountId)?.name || 'Inconnu') : 'Organique'}</div>
                     </div>
-                    <div class="text-sm font-black text-red-500 bg-red-100 px-3 py-1 rounded-full">
-                        Dans ${hoursLeft} heure(s)
-                    </div>
+                    <div class="dash-alert-row-badge">Dans ${hoursLeft} heure(s)</div>
                 </div>
                 `;
             }).join('')}
          </div>
        </div>
        ` : ''}
-       <div id="dashboardTodoContainer" class="lg:col-span-1 border-t md:border-t-0 md:border-l border-gray-100 dark:border-gray-700"></div>
-       <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700">
-          <h3 class="text-xl font-bold mb-4 flex items-center gap-2 dark:text-white">
-            <i class="fas fa-users text-blue-500"></i> Clients Récents
-          </h3>
-          <div id="topClientsPreview" class="space-y-3">
-             <!-- Rempli par renderTopClients -->
-          </div>
-          <button onclick="showTab('clients')" class="w-full mt-4 py-2 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition">
-            Gérer les clients
-          </button>
+       <div id="dashboardTodoContainer" class="dash-todo-wrap"></div>
+       <div class="dash-panel">
+          <h3 class="dash-panel-title"><i class="fas fa-users text-blue-500"></i> Clients récents</h3>
+          <div id="topClientsPreview" class="dash-clients-preview"></div>
+          <button onclick="showTab('clients')" class="dash-link-btn dash-link-btn--block">Gérer les clients <i class="fas fa-arrow-right"></i></button>
        </div>
     </div>
 
     ${isAdmin && totalDettesCount > 0 ? `
-    <!-- Créances clients à relancer -->
-    <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700">
-      <div class="flex flex-col md:flex-row justify-between md:items-center gap-2 mb-5">
-        <h3 class="text-xl font-bold flex items-center gap-2 dark:text-white">
-          <i class="fas fa-hand-holding-usd text-red-500"></i> Créances à relancer
-        </h3>
-        <div class="text-sm font-black text-red-600">${formatCurrency(totalDettesAmount)} au total</div>
+    <!-- ═══ Créances clients à relancer ═══ -->
+    <div class="dash-section">
+      <div class="dash-section-head">
+        <h3 class="dash-section-title"><i class="fas fa-hand-holding-usd text-red-500"></i> Créances à relancer</h3>
+        <div class="dash-section-total-danger">${formatCurrency(totalDettesAmount)} au total</div>
       </div>
-      <div class="space-y-2">
+      <div class="dash-debts-list">
         ${allClients.filter(c => Number(c.unpaid || 0) > 0)
           .sort((a, b) => Number(b.unpaid || 0) - Number(a.unpaid || 0))
           .slice(0, 5)
           .map(c => `
-            <div class="flex items-center justify-between p-3 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30">
-              <div class="font-bold text-gray-800 dark:text-gray-200">${c.name || 'Client'}</div>
-              <div class="flex items-center gap-3">
-                <div class="font-black text-red-600">${formatCurrency(c.unpaid)}</div>
-                <button onclick="showTab('clients')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-red-600 text-white hover:bg-red-700">Relancer</button>
+            <div class="dash-debt-row">
+              <div class="dash-debt-row-name">${c.name || 'Client'}</div>
+              <div class="dash-debt-row-actions">
+                <div class="dash-debt-row-amount">${formatCurrency(c.unpaid)}</div>
+                <button onclick="showTab('clients')" class="dash-btn-danger-sm">Relancer</button>
               </div>
             </div>
           `).join('')}
       </div>
-      ${totalDettesCount > 5 ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-3 text-center">+ ${totalDettesCount - 5} autre(s) client(s) débiteur(s) — voir l'onglet Clients</div>` : ''}
+      ${totalDettesCount > 5 ? `<div class="dash-debts-more">+ ${totalDettesCount - 5} autre(s) client(s) débiteur(s) — voir l'onglet Clients</div>` : ''}
     </div>
     ` : ''}
 
-    ${isAdmin && pLast30 ? `
-    <!-- Prévision de trésorerie à 30 jours -->
-    <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700">
-      <h3 class="text-xl font-bold mb-1 flex items-center gap-2 dark:text-white">
-        <i class="fas fa-chart-line text-purple-500"></i> Prévision de trésorerie (30 jours)
-      </h3>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mb-5">Estimation basée sur le rythme des 30 derniers jours (${formatCurrency(pLast30.netProfit)} de profit net)</div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/40 border dark:border-gray-700">
-          <div class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase">Trésorerie aujourd'hui</div>
-          <div class="text-lg font-black text-gray-800 dark:text-white mt-1">${formatCurrency(netWorthDzd)}</div>
-        </div>
-        <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/40 border dark:border-gray-700">
-          <div class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase">Rythme / jour (moy. 30j)</div>
-          <div class="text-lg font-black ${pLast30.netProfit >= 0 ? 'text-green-600' : 'text-red-600'} mt-1">${formatCurrency(pLast30.netProfit / 30)}</div>
-        </div>
-        <div class="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-900/30">
-          <div class="text-xs text-purple-600 dark:text-purple-300 font-bold uppercase">Estimé dans 30 jours</div>
-          <div class="text-lg font-black text-purple-700 dark:text-purple-300 mt-1">${formatCurrency(netWorthDzd + pLast30.netProfit)}</div>
+    <!-- ═══ Absences des employés (compact, repliable) ═══ -->
+    <div class="dash-section">
+      <div class="dash-section-head">
+        <h3 class="dash-section-title"><i class="fas fa-user-clock text-indigo-600"></i> Présence aujourd'hui</h3>
+        <div class="dash-section-actions">
+          <span class="dash-presence-summary">${presentCount} présent(s) • ${absentCount} absent(s)</span>
+          <button onclick="openAbsenceHistoryModal()" class="dash-link-btn dash-link-btn--outline"><i class="fas fa-history"></i> Historique</button>
         </div>
       </div>
-      ${pLast30.netProfit < 0 ? `
-        <div class="mt-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 text-sm text-red-700 dark:text-red-300 font-bold flex items-center gap-2">
-          <i class="fas fa-exclamation-triangle"></i> Rythme actuel négatif : les dépenses dépassent les revenus sur les 30 derniers jours.
-        </div>
-      ` : ''}
+      <div class="dash-employee-chips">
+        ${activeEmployees.map(e => {
+          const absence = (appState.absences || []).find(a => a.employeeId === e.id && a.date === todayStrAlg);
+          const isAbsent = !!absence;
+          return `
+            <div class="dash-employee-chip ${isAbsent ? 'is-absent' : 'is-present'}">
+              <span class="dash-employee-chip-dot"></span>
+              <span class="dash-employee-chip-name">${e.name || e.login}</span>
+              <span class="dash-employee-chip-status">${isAbsent ? `Absent depuis ${new Date(absence.time).toLocaleTimeString('fr-FR', { timeZone: 'Africa/Algiers', hour: '2-digit', minute: '2-digit' })}` : 'Présent'}</span>
+              <button onclick="${isAbsent ? `removeAbsence('${e.id}')` : `markAbsent('${e.id}')`}" class="dash-employee-chip-btn">
+                ${isAbsent ? 'Annuler' : 'Marquer absent'}
+              </button>
+            </div>
+          `;
+        }).join('')}
+        ${activeEmployees.length === 0 ? `<div class="dash-empty-note">Aucun employé actif</div>` : ''}
+      </div>
     </div>
-    ` : ''}
 
     ${isAdmin ? `
-    <!-- Analytics Section -->
-    <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700">
-       <h3 class="text-xl font-bold mb-6 flex items-center gap-2 dark:text-white">
-         <i class="fas fa-chart-line text-green-500"></i> Performance Mensuelle
-       </h3>
-       <div class="h-64">
+    <!-- ═══ Performance mensuelle (graphique) ═══ -->
+    <div class="dash-section">
+       <h3 class="dash-section-title"><i class="fas fa-chart-line text-green-500"></i> Performance Mensuelle</h3>
+       <div class="dash-chart-wrap">
           <canvas id="monthlyStatsChart"></canvas>
        </div>
     </div>
@@ -670,7 +590,7 @@ window.renderDashboard = function(container) {
   `;
   renderTopClients();
   if (isAdmin) renderMonthlyStatsChart();
-  
+
   const todoContainer = document.getElementById('dashboardTodoContainer');
   if (todoContainer && typeof window.renderTodoTable === 'function') {
       window.renderTodoTable(todoContainer);
