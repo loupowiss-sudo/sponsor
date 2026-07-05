@@ -127,7 +127,7 @@ function toTs(item) {
 function getLastUpdatedLabel(items) {
   const ts = Math.max(0, ...(items || []).map(toTs));
   if (!ts) return '—';
-  return new Date(ts).toLocaleString('fr-FR');
+  return new Date(ts).toLocaleString('fr-FR', { timeZone: 'Africa/Algiers' });
 }
 
 function pageRange(current, total) {
@@ -188,6 +188,12 @@ window.renderDashboard = function(container) {
   const pWeek = defaultRanges ? sum(defaultRanges.week.from, defaultRanges.week.to) : null;
   const pMonth = defaultRanges ? sum(defaultRanges.month.from, defaultRanges.month.to) : null;
   const pCustom = (selFrom && selTo) ? sum(selFrom, selTo) : null;
+
+  // --- Prévision de trésorerie à 30 jours (basée sur le rythme des 30 derniers jours) ---
+  const last30ToDate = new Date(); last30ToDate.setHours(0,0,0,0);
+  const last30FromDate = new Date(last30ToDate); last30FromDate.setDate(last30FromDate.getDate() - 29);
+  const toYmdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const pLast30 = sum(toYmdLocal(last30FromDate), toYmdLocal(last30ToDate));
 
   const employees = appState.employees || [];
   const txs = appState.transactions || [];
@@ -384,7 +390,7 @@ window.renderDashboard = function(container) {
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         ${employees.filter(e => e.active).map(e => {
-          const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+          const today = getAlgeriaNow();
           const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
           const absence = (appState.absences || []).find(a => a.employeeId === e.id && a.date === todayStr);
           const isAbsent = !!absence;
@@ -392,7 +398,7 @@ window.renderDashboard = function(container) {
             <div class="p-4 border rounded-2xl bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
               <div>
                 <div class="font-bold text-gray-800 dark:text-white">${e.name || e.login}</div>
-                <div class="text-xs text-gray-500">${isAbsent ? `Absent (marqué à ${new Date(absence.time).toLocaleTimeString('fr-FR')})` : 'Présent'}</div>
+                <div class="text-xs text-gray-500">${isAbsent ? `Absent (marqué à ${new Date(absence.time).toLocaleTimeString('fr-FR', { timeZone: 'Africa/Algiers' })})` : 'Présent'}</div>
               </div>
               <button onclick="${isAbsent ? `removeAbsence('${e.id}')` : `markAbsent('${e.id}')`}" 
                 class="px-4 py-2 rounded-xl font-bold text-xs ${isAbsent ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}">
@@ -424,6 +430,9 @@ window.renderDashboard = function(container) {
             + ${formatCurrency(totalDettesAmount)} de créances clients en attente
             <span class="font-black text-white">→ ${formatCurrency(netWorthWithReceivables)} au total</span>
           </div>
+          <button onclick="exportFinancialReportPdf()" class="mt-4 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/30 text-white text-sm font-black flex items-center gap-2">
+            <i class="fas fa-file-pdf"></i> Exporter le rapport financier (PDF)
+          </button>
         </div>
         <div class="flex gap-6 md:gap-8">
           <div class="text-right">
@@ -453,12 +462,17 @@ window.renderDashboard = function(container) {
 
     <div class="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-4">
       <div class="text-sm text-gray-500 dark:text-gray-400 font-bold">Soldes par poche</div>
-      <button onclick="openModal('balancesModal')" class="px-4 py-2 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:bg-gray-50 dark:hover:bg-gray-700">
-        Ajuster
-      </button>
+      <div class="flex gap-2">
+        <button onclick="openActivityLogModal()" class="px-4 py-2 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:bg-gray-50 dark:hover:bg-gray-700">
+          <i class="fas fa-shield-alt mr-1"></i> Journal
+        </button>
+        <button onclick="openModal('balancesModal')" class="px-4 py-2 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:bg-gray-50 dark:hover:bg-gray-700">
+          Ajuster
+        </button>
+      </div>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border-l-8 border-green-500 fade-in dark:border-gray-700">
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border-l-8 border-green-500 fade-in card-hover dark:border-gray-700">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center text-green-600 dark:text-green-400">
             <i class="fas fa-money-bill-wave text-2xl"></i>
@@ -469,7 +483,7 @@ window.renderDashboard = function(container) {
           </div>
         </div>
       </div>
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border-l-8 border-blue-500 fade-in dark:border-gray-700">
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border-l-8 border-blue-500 fade-in card-hover dark:border-gray-700">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400">
             <i class="fas fa-university text-2xl"></i>
@@ -480,7 +494,7 @@ window.renderDashboard = function(container) {
           </div>
         </div>
       </div>
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border-l-8 border-purple-500 fade-in dark:border-gray-700">
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border-l-8 border-purple-500 fade-in card-hover dark:border-gray-700">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center text-purple-600 dark:text-purple-400">
             <i class="fas fa-coins text-2xl"></i>
@@ -611,6 +625,35 @@ window.renderDashboard = function(container) {
           `).join('')}
       </div>
       ${totalDettesCount > 5 ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-3 text-center">+ ${totalDettesCount - 5} autre(s) client(s) débiteur(s) — voir l'onglet Clients</div>` : ''}
+    </div>
+    ` : ''}
+
+    ${isAdmin && pLast30 ? `
+    <!-- Prévision de trésorerie à 30 jours -->
+    <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700">
+      <h3 class="text-xl font-bold mb-1 flex items-center gap-2 dark:text-white">
+        <i class="fas fa-chart-line text-purple-500"></i> Prévision de trésorerie (30 jours)
+      </h3>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mb-5">Estimation basée sur le rythme des 30 derniers jours (${formatCurrency(pLast30.netProfit)} de profit net)</div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/40 border dark:border-gray-700">
+          <div class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase">Trésorerie aujourd'hui</div>
+          <div class="text-lg font-black text-gray-800 dark:text-white mt-1">${formatCurrency(netWorthDzd)}</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/40 border dark:border-gray-700">
+          <div class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase">Rythme / jour (moy. 30j)</div>
+          <div class="text-lg font-black ${pLast30.netProfit >= 0 ? 'text-green-600' : 'text-red-600'} mt-1">${formatCurrency(pLast30.netProfit / 30)}</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-900/30">
+          <div class="text-xs text-purple-600 dark:text-purple-300 font-bold uppercase">Estimé dans 30 jours</div>
+          <div class="text-lg font-black text-purple-700 dark:text-purple-300 mt-1">${formatCurrency(netWorthDzd + pLast30.netProfit)}</div>
+        </div>
+      </div>
+      ${pLast30.netProfit < 0 ? `
+        <div class="mt-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 text-sm text-red-700 dark:text-red-300 font-bold flex items-center gap-2">
+          <i class="fas fa-exclamation-triangle"></i> Rythme actuel négatif : les dépenses dépassent les revenus sur les 30 derniers jours.
+        </div>
+      ` : ''}
     </div>
     ` : ''}
 
@@ -1653,11 +1696,19 @@ window.renderNewTodoForm = function(container) {
           </div>
           <div>
             <label class="block text-sm font-bold text-gray-700 mb-2">Statut Paiement</label>
-            <div class="flex items-center gap-4 p-4 border rounded-2xl bg-gray-50">
+            <div class="p-4 border rounded-2xl bg-gray-50 space-y-3">
               <label class="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" id="todoPaid" class="w-5 h-5 text-indigo-600">
+                <input type="checkbox" id="todoPaid" onchange="document.getElementById('todoPaidAccountWrap').classList.toggle('hidden', !this.checked)" class="w-5 h-5 text-indigo-600">
                 <span class="font-bold text-gray-700">Payé</span>
               </label>
+              <div id="todoPaidAccountWrap" class="hidden">
+                <label class="block text-xs font-bold text-gray-500 mb-1">L'argent va dans la caisse :</label>
+                <select id="todoPaidAccount" class="w-full p-3 border rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="liquide">💵 Liquide</option>
+                  <option value="baridimob">🏦 BaridiMob</option>
+                  <option value="usdt">🪙 USDT</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -2105,7 +2156,7 @@ window.renderEmployeePerformance = function(container) {
   }
   
   const now = new Date();
-  const algeriaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+  const algeriaTime = getAlgeriaNow();
   const today = new Date(algeriaTime);
   today.setHours(0,0,0,0);
   
@@ -2521,7 +2572,7 @@ window.renderEmployeePerformance = function(container) {
 window.perfFilter = function(period) {
   const toYmd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const now = new Date();
-  const algeriaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+  const algeriaTime = getAlgeriaNow();
   const today = new Date(algeriaTime);
   today.setHours(0,0,0,0);
   let start, end;

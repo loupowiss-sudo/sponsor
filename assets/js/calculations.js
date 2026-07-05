@@ -28,8 +28,18 @@ window.calculateTheoreticalBalance = function() {
       if (t.status === 'problem') return;
       
       if (t.paid) {
-          // L'argent d'une transaction directement cochée comme payée entre par défaut en liquide
-          liq += Number(t.priceDzd || 0);
+          // L'argent d'une transaction marquée payée va dans le compte choisi
+          // (liquide par défaut si non précisé, pour compatibilité avec les
+          // anciennes transactions créées avant l'ajout de cette option).
+          const acc = t.paidAccount || 'liquide';
+          const amt = Number(t.priceDzd || 0);
+          if (acc === 'baridimob') bar += amt;
+          else if (acc === 'usdt') {
+              const rate = getRedotpayRate();
+              usdt += (amt / rate);
+          } else {
+              liq += amt;
+          }
       }
   });
 
@@ -199,7 +209,7 @@ window.getProfitSummaryYmd = function(fromYmd, toYmd) {
 };
 
 window.getDefaultProfitRanges = function() {
-  const now = new Date();
+  const now = (typeof getAlgeriaNow === 'function') ? getAlgeriaNow() : new Date();
   now.setHours(0, 0, 0, 0);
   const today = new Date(now);
   const yesterday = new Date(now);

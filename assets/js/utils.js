@@ -66,6 +66,40 @@ window.verifyAccountPassword = async function(account, password) {
 };
 
 /**
+ * === JOURNAL D'ACTIVITÉ (AUDIT LOG) ===
+ * Trace les actions financières/administratives importantes : qui a fait
+ * quoi et quand. Utile pour la responsabilisation quand plusieurs employés
+ * ont accès à l'application.
+ */
+window.logActivity = function(action, details) {
+  if (!appState.activityLog) appState.activityLog = [];
+
+  let actor = 'Système';
+  try {
+    const role = (typeof getUserRole === 'function') ? getUserRole() : 'none';
+    if (role === 'admin') {
+      actor = (window.auth && auth.currentUser && auth.currentUser.email) || 'Admin';
+    } else if (appState.session && appState.session.type === 'employee') {
+      actor = appState.session.name || appState.session.login || 'Employé';
+    } else if (appState.session && appState.session.type === 'client') {
+      actor = `Client: ${appState.session.name || appState.session.username || ''}`;
+    }
+  } catch (e) {}
+
+  appState.activityLog.unshift({
+    id: generateId('log'),
+    ts: Date.now(),
+    actor,
+    action,
+    details: details || ''
+  });
+
+  // On garde un historique raisonnable (évite de faire gonfler le document
+  // de réglages synchronisé sur Firestore).
+  if (appState.activityLog.length > 150) appState.activityLog.length = 150;
+};
+
+/**
  * Formate un montant en monnaie (DZD)
  * @param {number} amount 
  * @returns {string}
@@ -138,6 +172,21 @@ window.buildClientInstagramLink = function(client) {
 };
 
 /**
+ * Retourne la date/heure actuelle, calée sur le fuseau horaire de l'Algérie
+ * (Africa/Algiers, UTC+1 toute l'année, pas d'heure d'été). À utiliser à la
+ * place de `new Date()` partout où on calcule "aujourd'hui" / "maintenant",
+ * pour que l'app reste cohérente même si l'appareil qui l'affiche est réglé
+ * sur un autre fuseau horaire.
+ */
+window.getAlgeriaNow = function() {
+  try {
+    return new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+  } catch (e) {
+    return new Date();
+  }
+};
+
+/**
  * Formate une date au format fr-FR
  * @param {any} date 
  * @returns {string}
@@ -148,15 +197,16 @@ window.formatDate = function(date) {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
+    timeZone: 'Africa/Algiers'
   });
 };
 
 /**
- * Retourne la date locale au format YYYY-MM-DD
+ * Retourne la date locale (Algérie) au format YYYY-MM-DD
  * @param {Date} date 
  * @returns {string}
  */
-window.getLocalDateString = function(date = new Date()) {
+window.getLocalDateString = function(date = getAlgeriaNow()) {
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 };
 

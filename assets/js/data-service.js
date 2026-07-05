@@ -115,6 +115,7 @@ window.saveToCloud = async function() {
       globalConfig: appState.globalConfig || null,
       settings: appState.settings || null,
       manualBalances: appState.manualBalances || null,
+      activityLog: (appState.activityLog || []).slice(0, 150),
       lastUpdated: appState.lastUpdated || Date.now()
     }));
     

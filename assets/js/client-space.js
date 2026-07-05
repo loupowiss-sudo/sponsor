@@ -552,7 +552,7 @@ async function renderClientRequests() {
     div.innerHTML = `
       <div>
         <div class="font-bold text-gray-800">${req.offer || 'Offre'}</div>
-        <div class="text-xs text-gray-500 mt-1"><i class="far fa-clock mr-1"></i> ${new Date(req.date).toLocaleDateString('fr-FR')}</div>
+        <div class="text-xs text-gray-500 mt-1"><i class="far fa-clock mr-1"></i> ${new Date(req.date).toLocaleDateString('fr-FR', { timeZone: 'Africa/Algiers' })}</div>
         ${req.pubLink ? `<div class="text-xs mt-1"><a class="text-blue-600 hover:underline" target="_blank" href="${req.pubLink}"><i class="fas fa-link mr-1"></i> Lien Pub</a></div>` : ''}
         ${req.instagram ? `<div class="text-xs text-gray-400 mt-0.5">@${req.instagram}</div>` : ''}
       </div>

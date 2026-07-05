@@ -79,12 +79,51 @@ window.closeModal = function(modalId) {
 };
 
 function populatePaymentClientDropdown() {
-  const select = document.getElementById('paymentClientId');
-  if (!select) return;
+  const dropdown = document.getElementById('paymentClientDropdown');
+  const search = document.getElementById('paymentClientSearch');
+  const hidden = document.getElementById('paymentClientId');
+  if (!dropdown) return;
   const clients = appState.clients || [];
-  select.innerHTML = '<option value="">-- Sélectionner un client --</option>' +
-    clients.map(c => `<option value="${c.id}">${c.name} (Dette: ${formatCurrency(c.unpaid || 0)})</option>`).join('');
+  dropdown.innerHTML = clients.map(c => `
+    <div class="p-3 hover:bg-orange-50 cursor-pointer payment-client-option" data-id="${c.id}" data-name="${c.name}">
+      ${c.name} <span class="text-xs text-gray-400">(Dette: ${formatCurrency(c.unpaid || 0)})</span>
+    </div>
+  `).join('');
+  dropdown.querySelectorAll('.payment-client-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      if (hidden) hidden.value = opt.dataset.id;
+      if (search) search.value = opt.dataset.name;
+      dropdown.style.display = 'none';
+    });
+  });
+  if (search) search.value = '';
+  if (hidden) hidden.value = '';
 }
+
+window.filterPaymentClientOptions = function(query) {
+  const dropdown = document.getElementById('paymentClientDropdown');
+  if (!dropdown) return;
+  const q = (query || '').toLowerCase();
+  let visibleCount = 0;
+  dropdown.querySelectorAll('.payment-client-option').forEach(opt => {
+    const name = (opt.dataset.name || '').toLowerCase();
+    const show = q === '' || name.includes(q);
+    opt.style.display = show ? 'block' : 'none';
+    if (show) visibleCount++;
+  });
+  dropdown.style.display = visibleCount > 0 ? 'block' : 'none';
+  // Si l'utilisateur retape à la main, on invalide la sélection précédente
+  const hidden = document.getElementById('paymentClientId');
+  if (hidden) hidden.value = '';
+};
+
+document.addEventListener('click', function(e) {
+  const search = document.getElementById('paymentClientSearch');
+  const dropdown = document.getElementById('paymentClientDropdown');
+  if (search && dropdown && !search.contains(e.target) && !dropdown.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
 
 function populateBalancesModal() {
   if (typeof calculateTheoreticalBalance !== 'function') return;
@@ -129,6 +168,7 @@ window.saveBalancesAdjustments = function() {
     baridimob: desiredBaridi - Number(theo.baridimob || 0),
     usdt: desiredUsdt - Number(theo.usdt || 0)
   };
+  if (typeof logActivity === 'function') logActivity('Ajustement manuel des soldes', `Liquide: ${formatCurrency(desiredLiquide)} | BaridiMob: ${formatCurrency(desiredBaridi)} | USDT: ${safeToFixed(desiredUsdt,2)} $`);
 
   if (typeof autoSave === 'function') autoSave();
   if (typeof recalculateFinanceBalances === 'function') recalculateFinanceBalances();
@@ -396,6 +436,120 @@ window.generateInvoicePdf = function(txId) {
   });
 };
 
+// === RAPPORT FINANCIER PDF ===
+window.exportFinancialReportPdf = function() {
+  if (typeof html2pdf !== 'function') {
+    showToast('Export PDF indisponible (librairie non chargée)', 'error');
+    return;
+  }
+  if (typeof calculateTheoreticalBalance !== 'function' || typeof getProfitSummaryYmd !== 'function') {
+    showToast('Données financières indisponibles', 'error');
+    return;
+  }
+
+  const b = calculateTheoreticalBalance();
+  const redotpayRate = (typeof getRedotpayRate === 'function') ? getRedotpayRate() : 250;
+  const netWorthDzd = (b.liquide || 0) + (b.baridimob || 0) + (b.usdt || 0) * redotpayRate;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const toYmd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const pMonth = getProfitSummaryYmd(toYmd(monthStart), toYmd(today));
+
+  const clients = appState.clients || [];
+  const debtors = clients.filter(c => Number(c.unpaid || 0) > 0).sort((a,b2) => (b2.unpaid||0) - (a.unpaid||0));
+  const totalDettes = debtors.reduce((s,c) => s + Number(c.unpaid||0), 0);
+
+  const recurringList = appState.recurringExpenses || [];
+  const recurringTotal = recurringList.reduce((s,r) => s + Number(r.amount||0), 0);
+
+  // Dépenses du mois par catégorie
+  const monthKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const catTotals = {};
+  (appState.expenses || []).forEach(e => {
+    if (!e || !e.date || !String(e.date).startsWith(monthKey)) return;
+    const cat = e.category || 'Autre';
+    catTotals[cat] = (catTotals[cat] || 0) + Number(e.amount || 0);
+  });
+  const catRows = Object.entries(catTotals).sort((a,b2) => b2[1]-a[1]);
+
+  const genDate = new Date().toLocaleString('fr-FR', { timeZone: 'Africa/Algiers' });
+
+  const node = document.createElement('div');
+  node.style.padding = '40px';
+  node.style.fontFamily = 'Arial, sans-serif';
+  node.style.color = '#374151';
+  node.style.backgroundColor = '#ffffff';
+  node.style.maxWidth = '800px';
+  node.style.margin = '0 auto';
+
+  const rowsHtml = (rows, labelKey, valFmt) => rows.length === 0
+    ? `<tr><td colspan="2" style="padding:12px; color:#9ca3af; font-style:italic; text-align:center;">Aucune donnée</td></tr>`
+    : rows.map(r => `
+      <tr style="border-bottom:1px solid #f3f4f6;">
+        <td style="padding:10px 12px; font-size:13px; color:#374151;">${r[0]}</td>
+        <td style="padding:10px 12px; font-size:13px; color:#111827; font-weight:700; text-align:right;">${valFmt(r[1])}</td>
+      </tr>`).join('');
+
+  node.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px; border-bottom:2px solid #f3f4f6; padding-bottom:20px;">
+      <div>
+        <h1 style="font-size:28px; font-weight:900; color:#111827; margin:0;">Hichem Sponsor</h1>
+        <p style="font-size:13px; color:#6b7280; margin:4px 0 0 0;">Rapport Financier</p>
+      </div>
+      <div style="text-align:right; font-size:12px; color:#6b7280;">Généré le<br><b style="color:#111827;">${genDate}</b></div>
+    </div>
+
+    <h3 style="font-size:13px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin:0 0 10px 0;">Trésorerie</h3>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:25px;">
+      <tr style="background:#f9fafb;"><td style="padding:10px 12px; font-size:13px;">Liquide</td><td style="padding:10px 12px; text-align:right; font-weight:700;">${formatCurrency(b.liquide||0)}</td></tr>
+      <tr><td style="padding:10px 12px; font-size:13px;">BaridiMob</td><td style="padding:10px 12px; text-align:right; font-weight:700;">${formatCurrency(b.baridimob||0)}</td></tr>
+      <tr style="background:#f9fafb;"><td style="padding:10px 12px; font-size:13px;">USDT</td><td style="padding:10px 12px; text-align:right; font-weight:700;">${safeToFixed(b.usdt||0,2)} $ (≈ ${formatCurrency((b.usdt||0)*redotpayRate)})</td></tr>
+      <tr style="border-top:2px solid #e5e7eb;"><td style="padding:12px; font-size:15px; font-weight:900;">TOTAL TRÉSORERIE</td><td style="padding:12px; text-align:right; font-size:16px; font-weight:900; color:#4f46e5;">${formatCurrency(netWorthDzd)}</td></tr>
+    </table>
+
+    <h3 style="font-size:13px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin:0 0 10px 0;">Performance du mois en cours</h3>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:25px;">
+      <tr style="background:#f9fafb;"><td style="padding:10px 12px; font-size:13px;">Revenus</td><td style="padding:10px 12px; text-align:right; font-weight:700;">${formatCurrency(pMonth.revenue)}</td></tr>
+      <tr><td style="padding:10px 12px; font-size:13px;">Coût (achats/transactions)</td><td style="padding:10px 12px; text-align:right; font-weight:700;">${formatCurrency(pMonth.cost)}</td></tr>
+      <tr style="background:#f9fafb;"><td style="padding:10px 12px; font-size:13px;">Dépenses & frais</td><td style="padding:10px 12px; text-align:right; font-weight:700;">${formatCurrency(pMonth.expenses + pMonth.usdtExpensesDzd)}</td></tr>
+      <tr style="border-top:2px solid #e5e7eb;"><td style="padding:12px; font-size:15px; font-weight:900;">PROFIT NET</td><td style="padding:12px; text-align:right; font-size:16px; font-weight:900; color:${pMonth.netProfit>=0?'#059669':'#dc2626'};">${formatCurrency(pMonth.netProfit)}</td></tr>
+    </table>
+
+    <h3 style="font-size:13px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin:0 0 10px 0;">Dépenses du mois par catégorie</h3>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:25px;">${rowsHtml(catRows, 'cat', formatCurrency)}</table>
+
+    <h3 style="font-size:13px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin:0 0 10px 0;">Charges fixes mensuelles (${recurringList.length})</h3>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:10px;">${rowsHtml(recurringList.map(r=>[r.label, r.amount]), 'rec', formatCurrency)}</table>
+    <p style="text-align:right; font-size:13px; font-weight:800; margin:0 0 25px 0;">Total: ${formatCurrency(recurringTotal)}/mois</p>
+
+    <h3 style="font-size:13px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin:0 0 10px 0;">Créances clients en attente (${debtors.length})</h3>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:10px;">${rowsHtml(debtors.slice(0,15).map(c=>[c.name, c.unpaid]), 'debt', formatCurrency)}</table>
+    <p style="text-align:right; font-size:14px; font-weight:900; color:#dc2626; margin:0;">Total créances: ${formatCurrency(totalDettes)}</p>
+
+    <div style="margin-top:40px; padding-top:15px; border-top:1px solid #e5e7eb; text-align:center; font-size:11px; color:#9ca3af;">
+      Rapport généré automatiquement par Sponsor Manager.
+    </div>
+  `;
+
+  const opt = {
+    margin: [10, 10],
+    filename: `Rapport_Financier_${toYmd(today)}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  showToast('Génération du rapport...', 'info');
+  html2pdf().set(opt).from(node).save().then(() => {
+    if (typeof logActivity === 'function') logActivity('Rapport financier exporté', `PDF généré le ${genDate}`);
+    showToast('Rapport financier généré', 'success');
+  }).catch(err => {
+    console.error(err);
+    showToast('Erreur lors de la génération du rapport', 'error');
+  });
+};
+
 window.addClient = function() {
   const name = document.getElementById('newClientName')?.value?.trim();
   const phone = document.getElementById('newClientPhone')?.value?.trim();
@@ -475,12 +629,18 @@ window.updateClientDebtNote = function(id, note) {
 window.openPaymentModalPrefilled = function(clientId) {
   openModal('paymentModal');
   setTimeout(() => {
-    const sel = document.getElementById('paymentClientId');
-    if (sel) sel.value = clientId;
+    if (typeof populatePaymentClientDropdown === 'function') populatePaymentClientDropdown();
+    const hidden = document.getElementById('paymentClientId');
+    const search = document.getElementById('paymentClientSearch');
+    const client = (appState.clients || []).find(c => c.id === clientId);
+    if (hidden) hidden.value = clientId;
+    if (search && client) search.value = client.name;
   }, 10);
 };
 window.deleteClient = function(id) {
   if (!confirm('Supprimer ce client ?')) return;
+  const cl = (appState.clients || []).find(c => c.id === id);
+  if (cl && typeof logActivity === 'function') logActivity('Client supprimé', `${cl.name || ''}${cl.unpaid > 0 ? ` (dette en cours: ${formatCurrency(cl.unpaid)})` : ''}`);
   appState.clients = (appState.clients || []).filter(c => c.id !== id);
   if (!appState.sync) appState.sync = {};
   if (!appState.sync.pendingDeletions) appState.sync.pendingDeletions = [];
@@ -548,6 +708,7 @@ window.handleNewTodoSubmit = function(actionMode, event) {
   const offerId = document.getElementById('todoOfferId')?.value;
   const priceDzd = Number(document.getElementById('todoPrice')?.value || 0);
   const paid = !!document.getElementById('todoPaid')?.checked;
+  const paidAccount = document.getElementById('todoPaidAccount')?.value || 'liquide';
 
   const client = (appState.clients || []).find(c => c.id === clientId);
   if (!client) return showToast('Client invalide', 'error');
@@ -597,6 +758,7 @@ window.handleNewTodoSubmit = function(actionMode, event) {
     priceDzd,
     amount: amountUsd,
     paid,
+    paidAccount: paid ? paidAccount : null,
     status: 'pending',
     date: todoDateStr,
     adAccountId: adAccountId,
@@ -762,7 +924,54 @@ window.toggleTodoPayment = function(id, currentType) {
   if (!sourceArray) return;
   const item = sourceArray.find(t => t.id === id);
   if (!item) return;
-  item.paid = !item.paid;
+
+  if (!item.paid) {
+    // Passage à "payé" : on demande dans quelle caisse l'argent entre.
+    window.openPaidAccountModal(id, currentType);
+    return;
+  }
+
+  // Passage à "non payé" : rien à demander.
+  item.paid = false;
+  item.paidAccount = null;
+  if (typeof logActivity === 'function') logActivity('Paiement annulé', `${item.clientName || ''} — ${formatCurrency(item.priceDzd)}`);
+  if (typeof recalculateFinanceBalances === 'function') recalculateFinanceBalances();
+  if (typeof autoSave === 'function') autoSave();
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+};
+
+// Petit modal pour choisir la caisse de destination quand on marque payé
+window.openPaidAccountModal = function(id, currentType) {
+  const modal = document.createElement('div');
+  modal.id = 'paidAccountModal';
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl w-full max-w-sm shadow-2xl fade-in border dark:border-gray-700">
+      <h3 class="text-lg font-bold mb-4 dark:text-white flex items-center gap-2">
+        <i class="fas fa-cash-register text-indigo-600"></i> L'argent va dans quelle caisse ?
+      </h3>
+      <div class="space-y-2">
+        <button onclick="confirmPaidAccount('${id}', '${currentType}', 'liquide')" class="w-full p-4 rounded-xl bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 font-bold flex items-center gap-3">💵 Liquide</button>
+        <button onclick="confirmPaidAccount('${id}', '${currentType}', 'baridimob')" class="w-full p-4 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-bold flex items-center gap-3">🏦 BaridiMob</button>
+        <button onclick="confirmPaidAccount('${id}', '${currentType}', 'usdt')" class="w-full p-4 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-bold flex items-center gap-3">🪙 USDT</button>
+      </div>
+      <button onclick="document.getElementById('paidAccountModal').remove()" class="mt-4 w-full py-2 text-gray-500 hover:text-gray-700 font-bold">Annuler</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+};
+
+window.confirmPaidAccount = function(id, currentType, account) {
+  let sourceArray = currentType === 'problem' ? appState.transactions : appState.todoTransactions;
+  const item = sourceArray ? sourceArray.find(t => t.id === id) : null;
+  if (item) {
+    item.paid = true;
+    item.paidAccount = account;
+    if (typeof logActivity === 'function') logActivity('Paiement reçu (tâche)', `${item.clientName || ''} — ${formatCurrency(item.priceDzd)} (${account})`);
+  }
+  const modal = document.getElementById('paidAccountModal');
+  if (modal) modal.remove();
+  if (typeof recalculateFinanceBalances === 'function') recalculateFinanceBalances();
   if (typeof autoSave === 'function') autoSave();
   if (typeof renderCurrentTab === 'function') renderCurrentTab();
 };
@@ -792,6 +1001,7 @@ window.addPayment = function() {
   appState.payments.push(payment);
   client.unpaid = (client.unpaid || 0) - amount;
   client.updatedAt = Date.now();
+  if (typeof logActivity === 'function') logActivity('Paiement reçu', `${client.name} — ${formatCurrency(amount)} (${method})`);
 
   closeModal('paymentModal');
   if (typeof autoSave === 'function') autoSave();
@@ -808,6 +1018,7 @@ window.deletePayment = function(id) {
       client.unpaid = (client.unpaid || 0) + (pay.amount || 0);
       client.updatedAt = Date.now();
     }
+    if (typeof logActivity === 'function') logActivity('Paiement supprimé', `${pay.clientName || ''} — ${formatCurrency(pay.amount)}`);
   }
   appState.payments = (appState.payments || []).filter(p => p.id !== id);
   if (!appState.sync) appState.sync = {};
@@ -841,6 +1052,7 @@ window.addExpense = function() {
 
   if (!appState.expenses) appState.expenses = [];
   appState.expenses.push(expense);
+  if (typeof logActivity === 'function') logActivity('Dépense ajoutée', `${category} — ${formatCurrency(amount)} (${account})`);
 
   closeModal('expenseModal');
   if (typeof autoSave === 'function') autoSave();
@@ -851,6 +1063,8 @@ window.addExpense = function() {
 
 window.deleteExpense = function(id) {
   if (!confirm('Supprimer ce frais ?')) return;
+  const exp = (appState.expenses || []).find(e => e.id === id);
+  if (exp && typeof logActivity === 'function') logActivity('Dépense supprimée', `${exp.category || ''} — ${formatCurrency(exp.amount)}`);
   appState.expenses = (appState.expenses || []).filter(e => e.id !== id);
   if (!appState.sync) appState.sync = {};
   if (!appState.sync.pendingDeletions) appState.sync.pendingDeletions = [];
@@ -883,6 +1097,7 @@ window.addRecurringExpense = function() {
 
   if (!appState.recurringExpenses) appState.recurringExpenses = [];
   appState.recurringExpenses.push(item);
+  if (typeof logActivity === 'function') logActivity('Charge fixe ajoutée', `${label} — ${formatCurrency(amount)}/mois`);
 
   ['recurringLabel', 'recurringCategory', 'recurringAmount'].forEach(id => {
     const el = document.getElementById(id);
@@ -896,6 +1111,8 @@ window.addRecurringExpense = function() {
 
 window.deleteRecurringExpense = function(id) {
   if (!confirm('Supprimer cette charge fixe ? Elle ne sera plus prélevée automatiquement chaque mois.')) return;
+  const rec = (appState.recurringExpenses || []).find(e => e.id === id);
+  if (rec && typeof logActivity === 'function') logActivity('Charge fixe supprimée', `${rec.label || ''} — ${formatCurrency(rec.amount)}/mois`);
   appState.recurringExpenses = (appState.recurringExpenses || []).filter(e => e.id !== id);
   if (!appState.sync) appState.sync = {};
   if (!appState.sync.pendingDeletions) appState.sync.pendingDeletions = [];
@@ -916,6 +1133,7 @@ window.applyRecurringExpensesNow = function() {
   }
   if (typeof applyRecurringExpensesForCurrentMonth === 'function') applyRecurringExpensesForCurrentMonth();
   if (typeof recalculateFinanceBalances === 'function') recalculateFinanceBalances();
+  if (typeof logActivity === 'function') logActivity('Charges fixes prélevées', `${(appState.recurringExpenses||[]).length} poste(s) pour le mois en cours`);
   if (typeof autoSave === 'function') autoSave();
   if (typeof renderCurrentTab === 'function') renderCurrentTab();
   showToast('Charges fixes du mois prélevées', 'success');
@@ -929,6 +1147,7 @@ window.addUsdPurchase = function() {
   const purchase = { id: generateId('usd'), date: getLocalDateString(), amount, rate, totalDzd: amount * rate, source, createdAt: Date.now() };
   if (!appState.usdPurchases) appState.usdPurchases = [];
   appState.usdPurchases.push(purchase);
+  if (typeof logActivity === 'function') logActivity('Achat USD/USDT', `${amount} $ au taux ${rate} — ${formatCurrency(amount * rate)}`);
   closeModal('usdPurchaseModal');
   if (typeof autoSave === 'function') autoSave();
   if (typeof renderCurrentTab === 'function') renderCurrentTab();
@@ -937,6 +1156,8 @@ window.addUsdPurchase = function() {
 
 window.deleteUsdPurchase = function(id) {
   if (!confirm('Supprimer cet achat USD ?')) return;
+  const p = (appState.usdPurchases || []).find(x => x.id === id);
+  if (p && typeof logActivity === 'function') logActivity('Achat USD supprimé', `${p.amount} $ — ${formatCurrency(p.totalDzd)}`);
   appState.usdPurchases = (appState.usdPurchases || []).filter(p => p.id !== id);
   if (!appState.sync) appState.sync = {};
   if (!appState.sync.pendingDeletions) appState.sync.pendingDeletions = [];
@@ -1073,6 +1294,54 @@ window.removeAdminEmail = function(idx) {
   showToast('Email retiré', 'info');
 };
 
+// === JOURNAL D'ACTIVITÉ : modal de consultation ===
+window.openActivityLogModal = function() {
+  const modal = document.createElement('div');
+  modal.id = 'activityLogModal';
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+
+  const log = appState.activityLog || [];
+
+  const actionIcon = (action) => {
+    if (/supprim/i.test(action)) return 'fa-trash-alt text-red-500';
+    if (/ajout|créé|reçu|prélevées/i.test(action)) return 'fa-plus-circle text-green-500';
+    if (/ajustement/i.test(action)) return 'fa-sliders-h text-indigo-500';
+    return 'fa-info-circle text-gray-400';
+  };
+
+  const rows = log.length === 0 ? `
+      <p class="text-center py-8 text-gray-500 dark:text-gray-400 italic">Aucune activité enregistrée pour le moment.</p>
+    ` : log.map(l => `
+      <div class="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-900/40 border dark:border-gray-700">
+        <i class="fas ${actionIcon(l.action)} mt-1"></i>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-gray-800 dark:text-gray-200 text-sm">${l.action}</div>
+          ${l.details ? `<div class="text-xs text-gray-500 dark:text-gray-400 truncate">${l.details}</div>` : ''}
+        </div>
+        <div class="text-right shrink-0">
+          <div class="text-xs font-bold text-indigo-500">${l.actor}</div>
+          <div class="text-[10px] text-gray-400">${new Date(l.ts).toLocaleString('fr-FR', { timeZone: 'Africa/Algiers' })}</div>
+        </div>
+      </div>
+    `).join('');
+
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl w-full max-w-2xl shadow-2xl fade-in border dark:border-gray-700">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold flex items-center gap-2 dark:text-white">
+          <i class="fas fa-shield-alt text-indigo-600"></i> Journal d'activité
+        </h3>
+        <button onclick="document.getElementById('activityLogModal').remove()" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+      </div>
+      <div class="space-y-2 max-h-[28rem] overflow-y-auto">${rows}</div>
+      <div class="mt-6 flex justify-end">
+        <button onclick="document.getElementById('activityLogModal').remove()" class="px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">Fermer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+};
+
 window.addEmployee = async function() {
   let name = (document.getElementById('employeeName')?.value || '').trim();
   const login = (document.getElementById('employeeLogin')?.value || '').trim();
@@ -1112,6 +1381,7 @@ window.addEmployee = async function() {
 
   if (typeof autoSave === 'function') autoSave();
   if (typeof renderCurrentTab === 'function') renderCurrentTab();
+  if (typeof logActivity === 'function') logActivity('Employé créé', `${name} (${login})`);
   showToast('Employé ajouté', 'success');
 };
 
@@ -1127,7 +1397,7 @@ window.updateEmployeeSalary = function(id) {
 };
 
 window.markAbsent = function(employeeId) {
-  const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+  const today = getAlgeriaNow();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   if (!appState.absences) appState.absences = [];
   const existing = appState.absences.find(a => a.employeeId === employeeId && a.date === todayStr);
@@ -1145,7 +1415,7 @@ window.markAbsent = function(employeeId) {
 };
 
 window.removeAbsence = function(employeeId) {
-  const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+  const today = getAlgeriaNow();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   if (!appState.absences) appState.absences = [];
   appState.absences = appState.absences.filter(a => !(a.employeeId === employeeId && a.date === todayStr));
@@ -1155,7 +1425,7 @@ window.removeAbsence = function(employeeId) {
 };
 
 window.openAbsenceHistoryModal = function() {
-  const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Algiers' }));
+  const today = getAlgeriaNow();
   const currentMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
   
   const modal = document.createElement('div');
@@ -1351,6 +1621,8 @@ window.toggleEmployeeActive = function(id) {
 
 window.deleteEmployee = function(id) {
   if (!confirm('Supprimer cet employé ?')) return;
+  const emp = (appState.employees || []).find(e => e.id === id);
+  if (emp && typeof logActivity === 'function') logActivity('Employé supprimé', emp.name || emp.login || '');
   appState.employees = (appState.employees || []).filter(e => e.id !== id);
   if (!appState.sync) appState.sync = {};
   if (!appState.sync.pendingDeletions) appState.sync.pendingDeletions = [];
