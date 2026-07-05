@@ -28,7 +28,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
   <!-- Custom Assets -->
-  <link rel="stylesheet" href="assets/css/style.css?v=33">
+  <link rel="stylesheet" href="assets/css/style.css?v=34">
 </head>
 
 <body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen p-4 md:p-6 font-sans text-slate-800">
@@ -551,90 +551,130 @@
 
   <!-- APP CONTAINER (DASHBOARD) -->
   <div id="appContainer"
-    class="max-w-7xl mx-auto space-y-6 min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 p-4 md:p-6"
+    class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100"
     style="display:none;">
-    <header class="bg-white dark:bg-gray-800 dark:border-gray-700 rounded-3xl shadow-2xl p-6 md:p-8 border fade-in">
-      <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <div>
-          <div class="flex items-center gap-3 mb-2">
-            <div
-              class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center">
-              <i class="fas fa-handshake text-white text-2xl"></i>
-            </div>
-            <div>
-              <h1
-                class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Hichem Sponsor</h1>
-              <p class="text-sm md:text-lg text-gray-600 dark:text-gray-400 mt-1">Gestion clients • Offres •
-                Transactions • Paiements • Achats USD</p>
-              <p id="globalLastUpdated" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Dernière mise à jour: —
-              </p>
-            </div>
+    <div class="app-shell">
+
+      <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
+
+      <!-- SIDEBAR -->
+      <aside id="appSidebar" class="app-sidebar">
+        <div class="sidebar-brand">
+          <div class="sidebar-brand-icon"><i class="fas fa-handshake"></i></div>
+          <div class="min-w-0">
+            <div class="sidebar-brand-title">Hichem Sponsor</div>
+            <div class="sidebar-brand-sub">Gestion & Trésorerie</div>
           </div>
+          <button type="button" onclick="toggleSidebar(false)" class="sidebar-close-btn"><i class="fas fa-times"></i></button>
         </div>
-        <div class="flex gap-2 md:gap-3 flex-wrap justify-center items-center">
-          <button onclick="toggleTheme()"
-            class="w-10 h-10 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-bold flex items-center justify-center hover:bg-gray-200 transition-all">
-            <i id="themeIcon" class="fas fa-moon"></i>
+
+        <nav class="sidebar-nav">
+          <button id="tabBtn-dashboard" onclick="showTab('dashboard')"
+            class="tab-btn nav-item bg-blue-600 text-white font-bold">
+            <i class="fas fa-gauge-high nav-item-icon"></i><span>Dashboard</span>
           </button>
-          <button onclick="exportPDF()" class="px-4 py-2 bg-red-600 text-white rounded-xl font-bold"><i
-              class="fas fa-file-pdf mr-2"></i>Export PDF</button>
-          <button onclick="exportLocalBackup()" class="px-4 py-2 bg-green-600 text-white rounded-xl font-bold"
-            title="Sauvegarder en local"><i class="fas fa-download"></i><span class="hidden md:inline ml-2">Sauvegarde
-              Locale</span></button>
-          <button onclick="document.getElementById('importBackupInput').click()"
-            class="px-4 py-2 bg-yellow-600 text-white rounded-xl font-bold" title="Restaurer depuis local"><i
-              class="fas fa-upload"></i><span class="hidden md:inline ml-2">Restaurer</span></button>
-          <input type="file" id="importBackupInput" accept=".json" class="hidden" onchange="importLocalBackup(event)">
-          <button onclick="forceCloudSave()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold"><i
-              class="fas fa-save mr-2"></i>Sauvegarder</button>
-          <button onclick="logout()" class="px-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-xl font-bold"><i
-              class="fas fa-sign-out-alt mr-2"></i>Déconnexion</button>
+
+          <div class="nav-group-label">Ventes & Clients</div>
+          <button onclick="showTab('clients')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-users nav-item-icon"></i><span>Clients</span>
+          </button>
+          <button onclick="showTab('transactions')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-right-left nav-item-icon"></i><span>Transactions</span>
+          </button>
+          <button onclick="showTab('history')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-clock-rotate-left nav-item-icon"></i><span>Historique</span>
+          </button>
+          <button onclick="showTab('todo')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-list-check nav-item-icon"></i><span>Nouvelle To-Do</span>
+          </button>
+          <button onclick="showTab('offers')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-gift nav-item-icon"></i><span>Offres</span>
+          </button>
+          <button onclick="showTab('reminders')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-bell nav-item-icon"></i><span>Dettes/Relances</span>
+          </button>
+
+          <div class="nav-group-label">Finances</div>
+          <button id="tabBtn-expenses" onclick="showTab('expenses')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-receipt nav-item-icon"></i><span>Frais</span>
+          </button>
+          <button id="tabBtn-paiements" onclick="showTab('paiements')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-money-bill-wave nav-item-icon"></i><span>Paiements</span>
+          </button>
+          <button id="tabBtn-achats" onclick="showTab('achats')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-coins nav-item-icon"></i><span>Achats USD</span>
+          </button>
+
+          <div class="nav-group-label">Gestion</div>
+          <button onclick="showTab('ad-accounts')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-bullhorn nav-item-icon"></i><span>Comptes Pub</span>
+          </button>
+          <button onclick="showTab('requests')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-inbox nav-item-icon"></i><span>Demandes</span>
+            <span id="requestsBadge" class="hidden bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto">0</span>
+          </button>
+          <button id="tabBtn-performance" onclick="showTab('performance')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-chart-line nav-item-icon"></i><span>Performance Salariés</span>
+          </button>
+
+          <div class="nav-group-label">Système</div>
+          <button id="tabBtn-settings" onclick="showTab('settings')"
+            class="tab-btn nav-item bg-gray-100 text-gray-700 font-bold">
+            <i class="fas fa-gear nav-item-icon"></i><span>Paramètres</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button onclick="logout()" class="sidebar-logout-btn">
+            <i class="fas fa-sign-out-alt"></i><span>Déconnexion</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- MAIN COLUMN -->
+      <div class="app-main">
+        <header class="app-topbar fade-in">
+          <button type="button" onclick="toggleSidebar(true)" class="sidebar-toggle-btn">
+            <i class="fas fa-bars"></i>
+          </button>
+          <div class="flex-1 min-w-0">
+            <p id="globalLastUpdated" class="text-xs text-gray-500 dark:text-gray-400 truncate">Dernière mise à jour: —</p>
+          </div>
+          <div class="flex gap-2 md:gap-3 flex-wrap justify-end items-center">
+            <button onclick="toggleTheme()"
+              class="w-10 h-10 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-bold flex items-center justify-center hover:bg-gray-200 transition-all">
+              <i id="themeIcon" class="fas fa-moon"></i>
+            </button>
+            <button onclick="exportPDF()" class="px-4 py-2 bg-red-600 text-white rounded-xl font-bold"><i
+                class="fas fa-file-pdf mr-2"></i><span class="hidden lg:inline">Export PDF</span></button>
+            <button onclick="exportLocalBackup()" class="px-4 py-2 bg-green-600 text-white rounded-xl font-bold"
+              title="Sauvegarder en local"><i class="fas fa-download"></i><span class="hidden lg:inline ml-2">Sauvegarde
+                Locale</span></button>
+            <button onclick="document.getElementById('importBackupInput').click()"
+              class="px-4 py-2 bg-yellow-600 text-white rounded-xl font-bold" title="Restaurer depuis local"><i
+                class="fas fa-upload"></i><span class="hidden lg:inline ml-2">Restaurer</span></button>
+            <input type="file" id="importBackupInput" accept=".json" class="hidden" onchange="importLocalBackup(event)">
+            <button onclick="forceCloudSave()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold"><i
+                class="fas fa-save mr-2"></i><span class="hidden lg:inline">Sauvegarder</span></button>
+          </div>
+        </header>
+
+        <div class="app-content">
+          <div id="tabContentContainer" class="space-y-6"></div>
         </div>
       </div>
-    </header>
-
-    <nav class="bg-white dark:bg-gray-800 dark:border-gray-700 rounded-3xl shadow-xl p-4 md:p-6 border mb-6 fade-in">
-      <div class="flex flex-wrap gap-2">
-        <button onclick="showTab('dashboard')"
-          class="tab-btn px-4 py-2 rounded-xl bg-blue-600 text-white font-bold">Dashboard</button>
-        <button onclick="showTab('clients')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Clients</button>
-        <button onclick="showTab('transactions')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Transactions</button>
-        <button onclick="showTab('history')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Historique</button>
-        <button onclick="showTab('todo')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Nouvelle
-          To-Do</button>
-        <button onclick="showTab('offers')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Offres</button>
-        <button id="tabBtn-expenses" onclick="showTab('expenses')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Frais</button>
-        <button id="tabBtn-paiements" onclick="showTab('paiements')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Paiements</button>
-        <button id="tabBtn-achats" onclick="showTab('achats')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Achats USD</button>
-
-        <button onclick="showTab('reminders')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Dettes/Relances</button>
-        <button onclick="showTab('ad-accounts')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Comptes
-          Pub</button>
-        <button onclick="showTab('requests')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Demandes
-          <span id="requestsBadge"
-            class="hidden bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">0</span></button>
-        <button id="tabBtn-performance" onclick="showTab('performance')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Performance Salariés</button>
-        <button id="tabBtn-settings" onclick="showTab('settings')"
-          class="tab-btn px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold">Paramètres</button>
-      </div>
-    </nav>
-
-    <div class="space-y-6">
-      <!-- TABS CONTENT (DASHBOARD, CLIENTS, ETC.) WILL BE MANAGED BY JS -->
-      <div id="tabContentContainer"></div>
     </div>
   </div>
 
@@ -1106,20 +1146,20 @@
   <!-- External Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="assets/js/theme.js?v=33"></script>
-  <script src="assets/js/state.js?v=33"></script>
-  <script src="assets/js/firebase-init.js?v=33"></script>
-  <script src="assets/js/utils.js?v=33"></script>
-  <script src="assets/js/calculations.js?v=33"></script>
-  <script src="assets/js/core.js?v=33"></script>
-  <script src="assets/js/auth.js?v=33"></script>
-  <script src="assets/js/data-service.js?v=33"></script>
-  <script src="assets/js/ui-render.js?v=33"></script>
-  <script src="assets/js/ui-handlers.js?v=33"></script>
-  <script src="assets/js/client-space.js?v=33"></script>
-  <script src="assets/js/meta-live.js?v=33"></script>
-  <script src="assets/js/app.js?v=33"></script>
-  <script src="assets/js/demo.js?v=33"></script>
+  <script src="assets/js/theme.js?v=34"></script>
+  <script src="assets/js/state.js?v=34"></script>
+  <script src="assets/js/firebase-init.js?v=34"></script>
+  <script src="assets/js/utils.js?v=34"></script>
+  <script src="assets/js/calculations.js?v=34"></script>
+  <script src="assets/js/core.js?v=34"></script>
+  <script src="assets/js/auth.js?v=34"></script>
+  <script src="assets/js/data-service.js?v=34"></script>
+  <script src="assets/js/ui-render.js?v=34"></script>
+  <script src="assets/js/ui-handlers.js?v=34"></script>
+  <script src="assets/js/client-space.js?v=34"></script>
+  <script src="assets/js/meta-live.js?v=34"></script>
+  <script src="assets/js/app.js?v=34"></script>
+  <script src="assets/js/demo.js?v=34"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
