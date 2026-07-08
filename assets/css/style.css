@@ -696,3 +696,26 @@ div[class*="bg-gradient-to-br"][class*="rounded-2xl"][class*="flex"][class*="ite
 .dash-empty-note { font-size: 0.82rem; color: #94a3b8; font-style: italic; padding: 0.5rem 0; }
 
 .dash-chart-wrap { height: 16rem; }
+
+/* ── Notification compacte (ex: campagnes qui expirent) ──── */
+.dash-notify {
+  display: flex; align-items: center; gap: 1rem; border-radius: 18px; padding: 1rem 1.25rem;
+  border: 1px solid #fecaca; background: #fef2f2;
+}
+.dark .dash-notify { background: rgba(127,29,29,0.16); border-color: rgba(248,113,113,0.3); }
+.dash-notify-icon {
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(220,38,38,0.12); color: #dc2626; font-size: 1.1rem;
+}
+.dash-notify-text { flex: 1; min-width: 0; }
+.dash-notify-title { font-weight: 900; color: #991b1b; font-size: 0.9rem; }
+.dark .dash-notify-title { color: #fca5a5; }
+.dash-notify-sub { font-size: 0.76rem; color: #b91c1c; margin-top: 0.15rem; }
+.dash-notify-btn {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.45rem;
+  background: #dc2626; color: #fff; font-weight: 800; font-size: 0.8rem;
+  padding: 0.65rem 1.1rem; border-radius: 12px; border: none; cursor: pointer;
+  transition: background 0.2s ease;
+}
+.dash-notify-btn:hover { background: #b91c1c; }
