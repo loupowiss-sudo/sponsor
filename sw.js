@@ -1,5 +1,9 @@
-// === SERVICE WORKER v5 ===
-const CACHE_NAME = 'sponsor-crm-cache-v5';
+// === SERVICE WORKER v6 ===
+// v6: passage en stratégie "réseau d'abord" pour éviter le bug d'affichage
+// où une ancienne version mise en cache (CSS/JS) s'affichait tant que le
+// cache n'était pas invalidé manuellement. Le nom de cache est aussi changé
+// pour purger automatiquement l'ancien cache v5 chez tous les utilisateurs.
+const CACHE_NAME = 'sponsor-crm-cache-v6';
 const urlsToCache = [
   './',
   './index.html',
@@ -14,6 +18,7 @@ const urlsToCache = [
   './assets/js/data-service.js',
   './assets/js/ui-render.js',
   './assets/js/ui-handlers.js',
+  './assets/js/nav-groups.js',
   './assets/js/client-space.js',
   './assets/js/meta-live.js',
   './assets/js/app.js',
@@ -41,7 +46,16 @@ self.addEventListener('fetch', event => {
   if (event.request.url.includes('firebase') || event.request.url.includes('googleapis') || event.request.url.includes('cdn')) {
     return;
   }
+  // Réseau d'abord : on essaie toujours d'avoir la dernière version en ligne,
+  // et on ne retombe sur le cache que si le réseau est indisponible (offline).
+  // Le cache est aussi remis à jour à chaque requête réussie.
   event.respondWith(
-    caches.match(event.request).then(cached => cached || fetch(event.request))
+    fetch(event.request)
+      .then(response => {
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone)).catch(() => {});
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
