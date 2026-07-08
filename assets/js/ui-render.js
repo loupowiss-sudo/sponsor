@@ -499,22 +499,13 @@ window.renderDashboard = function(container) {
     <!-- ═══ To-Do + Clients récents ═══ -->
     <div class="dash-two-col">
        ${expiringCampaigns.length > 0 ? `
-       <div class="dash-panel dash-panel--alert dash-two-col-full">
-         <h3 class="dash-panel-title dash-panel-title--danger"><i class="fas fa-exclamation-triangle"></i> ${expiringCampaigns.length} campagne(s) se termine(nt) dans moins de 24h</h3>
-         <div class="dash-alert-list">
-            ${expiringCampaigns.map(c => {
-                const hoursLeft = Math.floor((c.endDate - nowMs) / (1000 * 60 * 60));
-                return `
-                <div class="dash-alert-row">
-                    <div>
-                        <div class="dash-alert-row-title">${c.clientName} - ${c.offerName}</div>
-                        <div class="dash-alert-row-sub">Ad Account: ${c.adAccountId ? ((appState.adAccounts || []).find(a => a.id === c.adAccountId)?.name || 'Inconnu') : 'Organique'}</div>
-                    </div>
-                    <div class="dash-alert-row-badge">Dans ${hoursLeft} heure(s)</div>
-                </div>
-                `;
-            }).join('')}
+       <div class="dash-notify dash-notify--danger dash-two-col-full">
+         <div class="dash-notify-icon"><i class="fas fa-triangle-exclamation"></i></div>
+         <div class="dash-notify-text">
+           <div class="dash-notify-title">${expiringCampaigns.length} campagne(s) se termine(nt) dans moins de 24h</div>
+           <div class="dash-notify-sub">La plus urgente dans ${Math.max(0, Math.min(...expiringCampaigns.map(c => Math.floor((c.endDate - nowMs) / (1000 * 60 * 60)))))} heure(s)</div>
          </div>
+         <button onclick="showTab('history')" class="dash-notify-btn">Voir les campagnes <i class="fas fa-arrow-right"></i></button>
        </div>
        ` : ''}
        <div id="dashboardTodoContainer" class="dash-todo-wrap"></div>
@@ -756,7 +747,10 @@ window.renderTransactionsTable = function(container) {
   const query = (ui.filters[key] || '').trim().toLowerCase();
   const all = [...(appState.transactions || [])].sort((a, b) => toTs(b) - toTs(a));
   const filtered = query
-    ? all.filter(t => `${t.clientName || ''} ${t.offerName || ''} ${t.status || ''}`.toLowerCase().includes(query))
+    ? all.filter(t => {
+        const adAccName = t.adAccountId ? ((appState.adAccounts || []).find(a => a.id === t.adAccountId)?.name || '') : 'organique';
+        return `${t.clientName || ''} ${t.offerName || ''} ${t.status || ''} ${adAccName}`.toLowerCase().includes(query);
+      })
     : all;
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const page = clampPage(ui.pages[key] || 1, totalPages);
@@ -786,6 +780,7 @@ window.renderTransactionsTable = function(container) {
               <th class="p-4">Date</th>
               <th class="p-4">Client</th>
               <th class="p-4">Offre</th>
+              <th class="p-4">Compte Pub</th>
               <th class="p-4 text-right">Montant ($)</th>
               <th class="p-4 text-right">Prix (DZD)</th>
               <th class="p-4 text-center">Statut</th>
@@ -798,6 +793,11 @@ window.renderTransactionsTable = function(container) {
                 <td class="p-4 text-gray-500">${formatDate(t.date)}</td>
                 <td class="p-4 font-bold">${t.clientName}</td>
                 <td class="p-4 text-gray-600">${t.offerName}</td>
+                <td class="p-4 text-gray-600">
+                  <span class="px-2 py-1 rounded-full text-[10px] font-black ${t.adAccountId ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}">
+                    ${t.adAccountId ? ((appState.adAccounts || []).find(a => a.id === t.adAccountId)?.name || 'Inconnu') : 'Organique'}
+                  </span>
+                </td>
                 <td class="p-4 text-right font-mono">${t.amount} $</td>
                 <td class="p-4 text-right font-black text-indigo-600">${formatCurrency(t.priceDzd)}</td>
                 <td class="p-4 text-center">
