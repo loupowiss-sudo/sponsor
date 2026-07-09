@@ -125,6 +125,10 @@ window.applyRecurringExpensesForCurrentMonth = function () {
       category: re.category || 'Récurrent',
       account: re.account || 'liquide',
       note: 'Auto (mensuel)',
+      recurringGenerated: true, // Marque cette dépense comme issue d'une charge fixe :
+                                 // sert uniquement à la vue comptable (accrual) pour ne pas
+                                 // compter cette charge deux fois (elle y est étalée par jour).
+                                 // N'affecte ni les soldes, ni le profit "cash" existant.
       createdAt: Date.now()
     };
     if (!appState.expenses) appState.expenses = [];

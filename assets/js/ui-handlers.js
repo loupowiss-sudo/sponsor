@@ -80,9 +80,44 @@ window.applyProfitRange = function() {
   if (typeof renderCurrentTab === 'function') renderCurrentTab();
 };
 
+// === Vue comptable (Finance) : sélecteur de période pour le compte de résultat ===
+window.setFinanceRangePreset = function(preset) {
+  if (!appState.ui) appState.ui = {};
+  const ranges = (typeof getDefaultProfitRanges === 'function') ? getDefaultProfitRanges() : null;
+  if (!ranges) return;
+  const map = { today: ranges.today, week: ranges.week, month: ranges.month };
+  appState.ui.financeRangePreset = preset;
+  if (map[preset]) {
+    appState.ui.financeRange = { from: map[preset].from, to: map[preset].to };
+  }
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+};
+
+window.applyFinanceRange = function() {
+  const from = document.getElementById('financeRangeFrom')?.value || '';
+  const to = document.getElementById('financeRangeTo')?.value || '';
+  if (!from || !to) {
+    showToast('Choisis une date de début et une date de fin', 'error');
+    return;
+  }
+  if (!appState.ui) appState.ui = {};
+  appState.ui.financeRangePreset = 'custom';
+  appState.ui.financeRange = { from, to };
+  if (typeof renderCurrentTab === 'function') renderCurrentTab();
+};
+
 window.closeModal = function(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return;
+  if (modalId === 'clientModal') {
+    // Fix: reset le formulaire + l'état d'édition à chaque fermeture (save, annuler, X)
+    // pour éviter que les anciennes valeurs / l'édition en cours ne polluent le prochain ajout.
+    window.editingClientId = null;
+    ['newClientName', 'newClientPhone', 'newClientInstagram', 'newClientFacebook', 'newClientNotes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
   modal.classList.add('hidden');
   modal.classList.remove('flex');
 };

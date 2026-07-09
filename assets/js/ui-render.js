@@ -187,6 +187,10 @@ window.renderDashboard = function(container) {
   const pWeek = defaultRanges ? sum(defaultRanges.week.from, defaultRanges.week.to) : null;
   const pMonth = defaultRanges ? sum(defaultRanges.month.from, defaultRanges.month.to) : null;
   const pCustom = (selFrom && selTo) ? sum(selFrom, selTo) : null;
+  // Charges fixes réellement prélevées aujourd'hui (comptabilité) : sert à expliquer
+  // pourquoi "Aujourd'hui" peut paraître mauvais alors que les ventes vont bien.
+  const aToday = (defaultRanges && typeof getAccrualProfitSummaryYmd === 'function')
+    ? getAccrualProfitSummaryYmd(defaultRanges.today.from, defaultRanges.today.to) : null;
 
   // --- Prévision de trésorerie à 30 jours (basée sur le rythme des 30 derniers jours) ---
   const last30ToDate = new Date(); last30ToDate.setHours(0,0,0,0);
@@ -424,13 +428,16 @@ window.renderDashboard = function(container) {
     <div class="dash-section">
       <div class="dash-section-head">
         <h3 class="dash-section-title"><i class="fas fa-chart-pie"></i> Profit — aperçu rapide</h3>
-        <button onclick="showTab('performance')" class="dash-link-btn">Performance complète <i class="fas fa-arrow-right"></i></button>
+        <div class="dash-section-actions">
+          <button onclick="showTab('expenses')" class="dash-link-btn dash-link-btn--outline"><i class="fas fa-scale-balanced"></i> Rentabilité réelle</button>
+          <button onclick="showTab('performance')" class="dash-link-btn">Performance complète <i class="fas fa-arrow-right"></i></button>
+        </div>
       </div>
       <div class="dash-stat-strip">
         <div class="dash-stat-pill">
           <div class="dash-stat-pill-label">Aujourd'hui</div>
           <div class="dash-stat-pill-value ${pToday && pToday.netProfit < 0 ? 'is-neg' : 'is-pos'}">${pToday ? formatCurrency(pToday.netProfit) : '—'}</div>
-          <div class="dash-stat-pill-meta">${pToday ? `${pToday.txCount} tx` : ''}</div>
+          <div class="dash-stat-pill-meta">${pToday ? `${pToday.txCount} tx` : ''}${aToday && aToday.recurringPaidThisPeriod > 0 ? ` • dont ${formatCurrency(aToday.recurringPaidThisPeriod)} de charges fixes` : ''}</div>
         </div>
         <div class="dash-stat-pill">
           <div class="dash-stat-pill-label">Hier</div>
@@ -1264,7 +1271,119 @@ window.renderExpensesTab = function(container) {
     return sum + Number(e.amount || 0);
   }, 0);
 
+  // === Vue comptable (Rentabilité réelle) : caisse vs. comptabilité d'engagement ===
+  const defaultRanges = (typeof getDefaultProfitRanges === 'function') ? getDefaultProfitRanges() : null;
+  const financePreset = ui.financeRangePreset || 'month';
+  const financeRange = ui.financeRange || (defaultRanges ? defaultRanges.month : { from: '', to: '' });
+  const pnlCash = (financeRange.from && financeRange.to && typeof getProfitSummaryYmd === 'function')
+    ? getProfitSummaryYmd(financeRange.from, financeRange.to) : null;
+  const pnlAccrual = (financeRange.from && financeRange.to && typeof getAccrualProfitSummaryYmd === 'function')
+    ? getAccrualProfitSummaryYmd(financeRange.from, financeRange.to) : null;
+  const pnlDiff = (pnlCash && pnlAccrual) ? (pnlCash.netProfit - pnlAccrual.netProfit) : 0;
+  const presetBtn = (id, label) => `
+    <button onclick="setFinanceRangePreset('${id}')" class="px-3 py-2 rounded-xl text-xs font-bold border ${financePreset === id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'}">${label}</button>
+  `;
+
+  const pnlPanelHtml = `
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 border dark:border-gray-700 fade-in mb-6">
+      <div class="flex flex-col lg:flex-row justify-between lg:items-center gap-3 mb-5">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+            <i class="fas fa-chart-line text-indigo-500"></i> Rentabilité réelle
+          </h2>
+          <div class="text-xs text-gray-500 dark:text-gray-400 max-w-2xl mt-1">
+            Deux lectures de la même période : ce qui a réellement bougé en caisse, et ce que le business a gagné une fois les charges fixes (salaires, loyer, internet...) étalées sur les jours qu'elles couvrent — la mesure la plus fiable de ta vraie rentabilité.
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2 items-center">
+          ${presetBtn('today', "Aujourd'hui")}
+          ${presetBtn('week', 'Semaine')}
+          ${presetBtn('month', 'Mois')}
+          <details class="dash-disclosure">
+            <summary>Personnalisé <i class="fas fa-chevron-down"></i></summary>
+            <div class="dash-disclosure-body">
+              <input id="financeRangeFrom" type="date" value="${financeRange.from || ''}" class="dash-input">
+              <input id="financeRangeTo" type="date" value="${financeRange.to || ''}" class="dash-input">
+              <button onclick="applyFinanceRange()" class="dash-btn-primary">Appliquer</button>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      ${pnlCash && pnlAccrual ? `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        <div class="p-4 rounded-2xl border dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
+          <div class="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400 flex items-center gap-2">
+            <i class="fas fa-wallet"></i> Trésorerie (caisse)
+          </div>
+          <div class="text-xs text-gray-400 dark:text-gray-500 mb-2">Argent réellement entré/sorti sur la période</div>
+          <div class="text-2xl font-black ${pnlCash.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}">${formatCurrency(pnlCash.netProfit)}</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">CA ${formatCurrency(pnlCash.revenue)} • Frais payés ${formatCurrency(pnlCash.expenses + pnlCash.usdtExpensesDzd)}</div>
+        </div>
+        <div class="p-4 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20">
+          <div class="text-xs font-black uppercase tracking-wide text-indigo-600 dark:text-indigo-300 flex items-center gap-2">
+            <i class="fas fa-scale-balanced"></i> Rentabilité comptable
+          </div>
+          <div class="text-xs text-indigo-400 dark:text-indigo-300/70 mb-2">Charges fixes étalées au prorata des jours</div>
+          <div class="text-2xl font-black ${pnlAccrual.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}">${formatCurrency(pnlAccrual.netProfit)}</div>
+          <div class="text-xs text-indigo-500 dark:text-indigo-300/70 mt-1">
+            Marge nette ${pnlAccrual.netMarginPct === null ? '—' : safeToFixed(pnlAccrual.netMarginPct, 1) + '%'}
+          </div>
+        </div>
+      </div>
+
+      ${Math.abs(pnlDiff) > 1 ? `
+      <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-start gap-2 mb-5">
+        <i class="fas fa-circle-info mt-0.5"></i>
+        <span>
+          Écart de ${formatCurrency(Math.abs(pnlDiff))} entre les deux vues sur cette période
+          ${pnlAccrual.recurringPaidThisPeriod > 0 ? `— ${formatCurrency(pnlAccrual.recurringPaidThisPeriod)} de charges fixes ont été prélevées en bloc en caisse, alors qu'elles ne représentent que ${formatCurrency(pnlAccrual.accruedRecurring)} de charge comptable sur ces ${pnlAccrual.days} jour(s).` : `— principalement dû à l'étalement des charges fixes sur la période.`}
+        </span>
+      </div>
+      ` : ''}
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <tbody class="divide-y dark:divide-gray-700">
+            <tr>
+              <td class="py-2 text-gray-600 dark:text-gray-400">Chiffre d'affaires</td>
+              <td class="py-2 text-right font-bold text-gray-800 dark:text-gray-200">${formatCurrency(pnlAccrual.revenue)}</td>
+            </tr>
+            <tr>
+              <td class="py-2 text-gray-600 dark:text-gray-400">Coût des ventes (USDT au taux d'achat)</td>
+              <td class="py-2 text-right font-bold text-rose-500">− ${formatCurrency(pnlAccrual.cost)}</td>
+            </tr>
+            <tr class="border-y-2 dark:border-gray-600">
+              <td class="py-2 font-black text-gray-800 dark:text-white">Marge brute</td>
+              <td class="py-2 text-right font-black text-gray-800 dark:text-white">${formatCurrency(pnlAccrual.grossProfit)} <span class="text-xs font-bold text-gray-400">(${pnlAccrual.grossMarginPct === null ? '—' : safeToFixed(pnlAccrual.grossMarginPct, 1) + '%'})</span></td>
+            </tr>
+            <tr>
+              <td class="py-2 text-gray-600 dark:text-gray-400">Charges ponctuelles (frais isolés)</td>
+              <td class="py-2 text-right font-bold text-rose-500">− ${formatCurrency(pnlAccrual.oneTimeExpenses)}</td>
+            </tr>
+            <tr>
+              <td class="py-2 text-gray-600 dark:text-gray-400">Dépenses en USDT</td>
+              <td class="py-2 text-right font-bold text-rose-500">− ${formatCurrency(pnlAccrual.usdtExpensesDzd)}</td>
+            </tr>
+            <tr>
+              <td class="py-2 text-gray-600 dark:text-gray-400">
+                Charges fixes étalées <span class="text-xs font-normal">(${formatCurrency(pnlAccrual.recurringMonthlyTotal)}/mois ÷ 30 × ${pnlAccrual.days} j)</span>
+              </td>
+              <td class="py-2 text-right font-bold text-rose-500">− ${formatCurrency(pnlAccrual.accruedRecurring)}</td>
+            </tr>
+            <tr class="border-t-2 dark:border-gray-600">
+              <td class="py-3 font-black text-lg text-gray-800 dark:text-white">Résultat net</td>
+              <td class="py-3 text-right font-black text-lg ${pnlAccrual.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}">${formatCurrency(pnlAccrual.netProfit)} <span class="text-xs font-bold text-gray-400">(${pnlAccrual.netMarginPct === null ? '—' : safeToFixed(pnlAccrual.netMarginPct, 1) + '%'})</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      ` : `<div class="text-center py-6 text-gray-400 italic">Sélectionne une période pour voir le compte de résultat.</div>`}
+    </div>
+  `;
+
   container.innerHTML = `
+    ${pnlPanelHtml}
     <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 border dark:border-gray-700 fade-in">
       <div class="flex flex-col md:flex-row justify-between md:items-center gap-3 mb-6">
         <div>

@@ -208,6 +208,97 @@ window.getProfitSummaryYmd = function(fromYmd, toYmd) {
   return { revenue, cost, expenses, usdtExpensesDzd, grossProfit, netProfit, txCount, fromYmd, toYmd };
 };
 
+/**
+ * Nombre de jours (inclusif) couverts par une période Ymd -> Ymd.
+ */
+function daysBetweenYmdInclusive(fromYmd, toYmd) {
+  const from = parseYmd(fromYmd);
+  const to = parseYmd(toYmd);
+  if (!from || !to) return 0;
+  const start = from.getTime() <= to.getTime() ? from : to;
+  const end = from.getTime() <= to.getTime() ? to : from;
+  return Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+}
+
+/**
+ * Résumé de rentabilité "comptable" (comptabilité d'engagement / accrual) sur une période.
+ *
+ * Différence avec getProfitSummaryYmd (vue caisse) :
+ * - Le CA et le coût des ventes sont déjà reconnus au jour de la vente dans les deux vues (pas de changement).
+ * - Les charges ponctuelles (frais isolés, achats USD dépensés, etc.) restent comptées le jour où elles sont
+ *   engagées, comme en caisse.
+ * - Les CHARGES FIXES RÉCURRENTES (salaires, loyer, internet...) ne sont plus comptées en bloc le jour du
+ *   prélèvement : elles sont étalées au prorata sur les jours de la période demandée. C'est ce qui évite
+ *   qu'une seule journée de paiement écrase artificiellement le profit de ce jour-là, et donne une image
+ *   plus fidèle de la rentabilité réelle du business.
+ *
+ * Ne modifie et ne remplace rien : calculateTheoreticalBalance / recalculateFinanceBalances (soldes réels)
+ * et getProfitSummaryYmd (profit caisse, utilisé pour les soldes/trésorerie) restent inchangés.
+ */
+window.getAccrualProfitSummaryYmd = function(fromYmd, toYmd) {
+  const from = parseYmd(fromYmd);
+  const to = parseYmd(toYmd);
+  if (!from || !to) return null;
+  const start = from.getTime() <= to.getTime() ? from : to;
+  const end = from.getTime() <= to.getTime() ? to : from;
+
+  const buyRate = typeof getBuyRate === 'function' ? getBuyRate() : 255;
+  const days = daysBetweenYmdInclusive(fromYmd, toYmd) || 1;
+
+  let revenue = 0;
+  let cost = 0;
+  let txCount = 0;
+  (appState.transactions || []).forEach(t => {
+    if (!t || !t.date) return;
+    if (t.status === 'problem') return;
+    if (!inRangeYmd(t.date, start, end)) return;
+    const price = Number(t.priceDzd || 0);
+    const amt = Number(t.amount || 0);
+    revenue += Number.isFinite(price) ? price : 0;
+    cost += (Number.isFinite(amt) ? amt : 0) * buyRate;
+    txCount += 1;
+  });
+
+  // Charges ponctuelles : tout sauf les dépenses auto-générées par une charge fixe
+  // (celles-ci sont étalées plus bas, pour ne pas être comptées deux fois).
+  let oneTimeExpenses = 0;
+  let recurringPaidThisPeriod = 0;
+  (appState.expenses || []).forEach(e => {
+    if (!e || !e.date) return;
+    if (!inRangeYmd(e.date, start, end)) return;
+    const amt = Number.isFinite(Number(e.amount)) ? Number(e.amount) : 0;
+    if (e.recurringGenerated) {
+      recurringPaidThisPeriod += amt;
+    } else {
+      oneTimeExpenses += amt;
+    }
+  });
+
+  let usdtExpensesDzd = 0;
+  (appState.usdtExpenses || []).forEach(e => {
+    if (!e || !e.date) return;
+    if (!inRangeYmd(e.date, start, end)) return;
+    const amt = Number(e.amount || 0);
+    usdtExpensesDzd += (Number.isFinite(amt) ? amt : 0) * buyRate;
+  });
+
+  // Charges fixes étalées au prorata (comptabilité d'engagement)
+  const recurringMonthlyTotal = (appState.recurringExpenses || []).reduce((s, r) => s + Number(r && r.amount || 0), 0);
+  const accruedRecurring = (recurringMonthlyTotal / 30) * days;
+
+  const grossProfit = revenue - cost;
+  const netProfit = grossProfit - oneTimeExpenses - usdtExpensesDzd - accruedRecurring;
+
+  const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : null;
+  const netMarginPct = revenue > 0 ? (netProfit / revenue) * 100 : null;
+
+  return {
+    revenue, cost, grossProfit, oneTimeExpenses, usdtExpensesDzd,
+    accruedRecurring, recurringMonthlyTotal, recurringPaidThisPeriod,
+    netProfit, txCount, days, grossMarginPct, netMarginPct, fromYmd, toYmd
+  };
+};
+
 window.getDefaultProfitRanges = function() {
   const now = (typeof getAlgeriaNow === 'function') ? getAlgeriaNow() : new Date();
   now.setHours(0, 0, 0, 0);
