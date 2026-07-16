@@ -211,9 +211,8 @@ window.getLocalDateString = function(date = getAlgeriaNow()) {
 };
 
 /**
- * Ajuste le montant impayé (dette) d'un client et maintient l'historique
- * de ses dettes à jour : date de début de la dette en cours, et compteur
- * du nombre de fois où ce client est entré en dette.
+ * Ajuste le montant impayé (dette) d'un client et maintient la date de
+ * début de la dette en cours à jour (utile pour l'affichage "Depuis le...").
  * À utiliser à la place d'une modification directe de `client.unpaid`
  * partout dans le code, pour que le suivi Dettes & Relances reste exact.
  * @param {object} client 
@@ -226,13 +225,10 @@ window.adjustClientUnpaid = function(client, delta) {
   client.unpaid = after;
 
   if (before <= 0 && after > 0) {
-    // Nouvelle dette qui démarre : on marque la date de début et on
-    // incrémente le compteur d'occurrences.
+    // Nouvelle période de dette qui démarre : on marque la date de début.
     client.debtStartDate = getLocalDateString();
-    client.debtCount = (client.debtCount || 0) + 1;
   } else if (after <= 0) {
-    // La dette est soldée : on efface la date de début en cours, mais
-    // on conserve le compteur (historique du nombre de fois en dette).
+    // La dette est soldée : on efface la date de début en cours.
     client.debtStartDate = null;
   }
 };
@@ -240,7 +236,11 @@ window.adjustClientUnpaid = function(client, delta) {
 /**
  * Calcule les statistiques de dette d'un client pour la section
  * "Gestion des Dettes & Relances" :
- * - le nombre de fois où le client est entré en dette
+ * - le nombre de fois où le client a été mis en dette (= le nombre de
+ *   tâches/sponsors créés comme impayés pour ce client, quel que soit
+ *   leur statut de paiement actuel — chaque lancement marqué "impayé"
+ *   compte une fois, calculé directement à partir des transactions/
+ *   tâches existantes, pas d'un compteur stocké qui pourrait désynchroniser)
  * - la date de début de la dette en cours
  * - le pourcentage de ses lancements (tâches/sponsors) payés vs impayés
  * @param {object} client 
@@ -262,7 +262,7 @@ window.getClientDebtStats = function(client) {
   const paidPercent = totalLaunches > 0 ? (100 - unpaidPercent) : 0;
 
   return {
-    debtCount: client.debtCount || 0,
+    debtCount: unpaidLaunches,
     debtStartDate: client.debtStartDate || null,
     totalLaunches,
     unpaidLaunches,
