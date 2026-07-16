@@ -211,6 +211,68 @@ window.getLocalDateString = function(date = getAlgeriaNow()) {
 };
 
 /**
+ * Ajuste le montant impayé (dette) d'un client et maintient l'historique
+ * de ses dettes à jour : date de début de la dette en cours, et compteur
+ * du nombre de fois où ce client est entré en dette.
+ * À utiliser à la place d'une modification directe de `client.unpaid`
+ * partout dans le code, pour que le suivi Dettes & Relances reste exact.
+ * @param {object} client 
+ * @param {number} delta - montant à ajouter (positif) ou retirer (négatif)
+ */
+window.adjustClientUnpaid = function(client, delta) {
+  if (!client) return;
+  const before = Number(client.unpaid || 0);
+  const after = before + Number(delta || 0);
+  client.unpaid = after;
+
+  if (before <= 0 && after > 0) {
+    // Nouvelle dette qui démarre : on marque la date de début et on
+    // incrémente le compteur d'occurrences.
+    client.debtStartDate = getLocalDateString();
+    client.debtCount = (client.debtCount || 0) + 1;
+  } else if (after <= 0) {
+    // La dette est soldée : on efface la date de début en cours, mais
+    // on conserve le compteur (historique du nombre de fois en dette).
+    client.debtStartDate = null;
+  }
+};
+
+/**
+ * Calcule les statistiques de dette d'un client pour la section
+ * "Gestion des Dettes & Relances" :
+ * - le nombre de fois où le client est entré en dette
+ * - la date de début de la dette en cours
+ * - le pourcentage de ses lancements (tâches/sponsors) payés vs impayés
+ * @param {object} client 
+ * @returns {{debtCount:number, debtStartDate:(string|null), totalLaunches:number, unpaidLaunches:number, paidLaunches:number, unpaidPercent:number, paidPercent:number}}
+ */
+window.getClientDebtStats = function(client) {
+  const empty = { debtCount: 0, debtStartDate: null, totalLaunches: 0, unpaidLaunches: 0, paidLaunches: 0, unpaidPercent: 0, paidPercent: 0 };
+  if (!client) return empty;
+
+  const all = [
+    ...((appState && appState.todoTransactions) || []),
+    ...((appState && appState.transactions) || [])
+  ].filter(t => t && t.clientId === client.id);
+
+  const totalLaunches = all.length;
+  const unpaidLaunches = all.filter(t => !t.paid).length;
+  const paidLaunches = totalLaunches - unpaidLaunches;
+  const unpaidPercent = totalLaunches > 0 ? Math.round((unpaidLaunches / totalLaunches) * 100) : 0;
+  const paidPercent = totalLaunches > 0 ? (100 - unpaidPercent) : 0;
+
+  return {
+    debtCount: client.debtCount || 0,
+    debtStartDate: client.debtStartDate || null,
+    totalLaunches,
+    unpaidLaunches,
+    paidLaunches,
+    unpaidPercent,
+    paidPercent
+  };
+};
+
+/**
  * Affiche un toast de notification moderne et non bloquant
  * @param {string} message 
  * @param {string} type 'success' | 'error' | 'info' | 'warning'

@@ -1836,6 +1836,24 @@ window.renderRemindersTable = function(container) {
               <div class="flex-grow">
                 <div class="font-bold text-gray-800 dark:text-white text-lg">${c.name}</div>
                 <div class="text-sm text-red-600 dark:text-red-400 font-black mb-2">Dette: ${formatCurrency(c.unpaid)}</div>
+                ${(() => {
+                  const stats = (typeof getClientDebtStats === 'function') ? getClientDebtStats(c) : null;
+                  if (!stats) return '';
+                  return `
+                  <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                    ${stats.debtStartDate ? `
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 flex items-center gap-1">
+                      <i class="fas fa-calendar-day"></i> Depuis le ${formatDate(stats.debtStartDate)}
+                    </span>` : ''}
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 flex items-center gap-1">
+                      <i class="fas fa-history"></i> ${stats.debtCount} fois en dette
+                    </span>
+                    ${stats.totalLaunches > 0 ? `
+                    <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-1" title="${stats.unpaidLaunches} impayé(s) / ${stats.paidLaunches} payé(s) sur ${stats.totalLaunches} lancement(s)">
+                      <i class="fas fa-chart-pie"></i> ${stats.unpaidPercent}% dette · ${stats.paidPercent}% payé
+                    </span>` : ''}
+                  </div>`;
+                })()}
                 <input type="text" value="${c.debtNote || ''}" onchange="updateClientDebtNote('${c.id}', this.value)" placeholder="Ajouter une note de relance..." class="w-full text-xs p-2 border border-red-200 dark:border-red-900/50 rounded-lg outline-none bg-white/60 dark:bg-gray-800 focus:ring-1 focus:ring-red-400 text-gray-700 dark:text-gray-300">
               </div>
             </div>

@@ -54,6 +54,25 @@ window.normalizeAppState = function() {
     }
   });
 
+  // Migration : pour les clients déjà en dette avant l'ajout du suivi
+  // "Dettes & Relances" (date de début + compteur), on initialise ces
+  // champs rétroactivement afin qu'ils s'affichent correctement.
+  if (Array.isArray(appState.clients)) {
+    appState.clients.forEach(c => {
+      if (!c || typeof c !== 'object') return;
+      if (Number(c.unpaid || 0) > 0) {
+        if (!c.debtStartDate) {
+          c.debtStartDate = c.updatedAt ? getLocalDateString(new Date(c.updatedAt)) : getLocalDateString();
+          changed = true;
+        }
+        if (!c.debtCount) {
+          c.debtCount = 1;
+          changed = true;
+        }
+      }
+    });
+  }
+
   if (Array.isArray(appState.offers)) {
     appState.offers.forEach(o => {
       if (!o || typeof o !== 'object') return;

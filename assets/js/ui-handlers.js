@@ -818,7 +818,7 @@ window.handleNewTodoSubmit = function(actionMode, event) {
     const tx = { ...todo, id: generateId('tx'), status: 'active', completedAt: Date.now() };
     appState.transactions.push(tx);
     client.totalSpent = (client.totalSpent || 0) + (todo.priceDzd || 0);
-    if (!todo.paid) client.unpaid = (client.unpaid || 0) + (todo.priceDzd || 0);
+    if (!todo.paid) adjustClientUnpaid(client, todo.priceDzd || 0);
     client.updatedAt = Date.now();
     if (typeof autoSave === 'function') autoSave();
     showToast('Sponsor validé (direct)', 'success');
@@ -918,7 +918,7 @@ window.changeTodoStatus = function(id, newStatus, currentType) {
          const client = (appState.clients || []).find(c => c.id === item.clientId);
          if (client) {
            client.totalSpent = (client.totalSpent || 0) + (item.priceDzd || 0);
-           if (!item.paid) client.unpaid = (client.unpaid || 0) + (item.priceDzd || 0);
+           if (!item.paid) adjustClientUnpaid(client, item.priceDzd || 0);
            client.updatedAt = Date.now();
          }
          showToast('Problème résolu, transaction validée', 'success');
@@ -931,7 +931,7 @@ window.changeTodoStatus = function(id, newStatus, currentType) {
          const client = (appState.clients || []).find(c => c.id === item.clientId);
          if (client) {
            client.totalSpent = (client.totalSpent || 0) + (item.priceDzd || 0);
-           if (!item.paid) client.unpaid = (client.unpaid || 0) + (item.priceDzd || 0);
+           if (!item.paid) adjustClientUnpaid(client, item.priceDzd || 0);
            client.updatedAt = Date.now();
          }
        }
@@ -1043,7 +1043,7 @@ window.addPayment = function() {
   const payment = { id: generateId('pay'), date: getLocalDateString(), clientId: client.id, clientName: client.name, amount, method, note, createdAt: Date.now() };
   if (!appState.payments) appState.payments = [];
   appState.payments.push(payment);
-  client.unpaid = (client.unpaid || 0) - amount;
+  adjustClientUnpaid(client, -amount);
   client.updatedAt = Date.now();
   if (typeof logActivity === 'function') logActivity('Paiement reçu', `${client.name} — ${formatCurrency(amount)} (${method})`);
 
@@ -1059,7 +1059,7 @@ window.deletePayment = function(id) {
   if (pay) {
     const client = (appState.clients || []).find(c => c.id === pay.clientId);
     if (client) {
-      client.unpaid = (client.unpaid || 0) + (pay.amount || 0);
+      adjustClientUnpaid(client, pay.amount || 0);
       client.updatedAt = Date.now();
     }
     if (typeof logActivity === 'function') logActivity('Paiement supprimé', `${pay.clientName || ''} — ${formatCurrency(pay.amount)}`);
@@ -1891,8 +1891,8 @@ window.saveEditTransaction = function() {
       if (client) {
           client.totalSpent = (client.totalSpent || 0) - oldPrice + priceDzd;
           
-          if (!oldPaid) client.unpaid = (client.unpaid || 0) - oldPrice;
-          if (!paid) client.unpaid = (client.unpaid || 0) + priceDzd;
+          if (!oldPaid) adjustClientUnpaid(client, -oldPrice);
+          if (!paid) adjustClientUnpaid(client, priceDzd);
           
           client.updatedAt = Date.now();
       }
